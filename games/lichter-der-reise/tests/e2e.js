@@ -37,7 +37,8 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
     if(k<r.length&&Math.hypot(T.x-pl.x,T.z-pl.z)>40){ const A=k>0?r[k-1]:{x:pl.x,z:pl.z}, Bn=r[k]; const ux=Bn.x-A.x, uz=Bn.z-A.z, L=Math.hypot(ux,uz)||1; const s0=((pl.x-A.x)*ux+(pl.z-A.z)*uz)/L; const s1=Math.min(L,s0+12); t={x:A.x+ux/L*s1,z:A.z+uz/L*s1}; } }
   const want=Math.atan2(-(t.x-pl.x),-(t.z-pl.z)); let d=want-pl.h; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI; const K=SET.ctl.keys;
   if(B.rev>0){ B.rev-=dt; keys[K.down]=true; keys[K.up]=false; keys[K.left]=d<0; keys[K.right]=d>0; return; }
-  keys[K.left]=d>0.06; keys[K.right]=d<-0.06; const sharp=Math.abs(d)>0.6; keys[K.up]=!(sharp&&Math.abs(pl.v)>9); keys[K.down]=sharp&&Math.abs(pl.v)>12;
+  let turnAhead=false; { const T=globalThis.__target||currentTarget(); const r=globalThis.__target&&T?findRoute(pl.x,pl.z,T.x,T.z):(G.route||[]); if(r.length>1){ const n0=r[0], n1=r[1]; const a0=Math.atan2(n0.x-pl.x,n0.z-pl.z), a1=Math.atan2(n1.x-n0.x,n1.z-n0.z); let da=Math.abs(a1-a0); if(da>Math.PI) da=2*Math.PI-da; turnAhead=da>.5&&Math.hypot(n0.x-pl.x,n0.z-pl.z)<28; } }
+  keys[K.left]=d>0.06; keys[K.right]=d<-0.06; const sharp=Math.abs(d)>0.6; const slow=(sharp||turnAhead)&&Math.abs(pl.v)>(turnAhead?8:9); keys[K.up]=!slow; keys[K.down]=slow&&Math.abs(pl.v)>11;
   if(Math.abs(pl.v)<1.2){ B.stuck+=dt; if(B.stuck>2.5){ B.rev=1.4; B.stuck=0; B.stuckTotal++; } } else B.stuck=0; }`;
 
 (async () => {
@@ -75,7 +76,7 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
     while (frames < 60 * 60 * 25) { await sim(p, 600, true); frames += 600;
       const st = await p.evaluate(() => G.state + '/m' + G.mission + '/' + (G.event || '') + '/' + G.camMode);
       if (st !== last) { log.push(st); last = st; if (/m[0-5]\/\/(orbit|standing|finale)/.test(st)) await shot(p, '07_story_' + String(log.length).padStart(2, '0')); }
-      if (await p.evaluate(() => !document.getElementById('endO').hidden)) break; }
+      const endV = await p.evaluate(() => ({ h: document.getElementById('endO').hidden, st: G.state })); if (process.env.DEBUG) console.log('dbg', frames, st, JSON.stringify(endV)); if (!endV.h) break; }
     await shot(p, '08_end');
     const end = await p.evaluate(() => ({ title: document.getElementById('endTitle').textContent, light: G.light, total: G.total, stuck: __bot.stuckTotal }));
     if (!/leuchten/.test(end.title)) throw new Error('story did not finish: ' + JSON.stringify({ end, log }));
@@ -93,7 +94,7 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
       const t1 = performance.now(); let inst = 0; for (let i = 0; i < 60; i++) { buildFrame(); inst = lists.reduce((a, L) => a + L.nop + L.ngl, 0); for (const L of lists) { L.nop = 0; L.ngl = 0; } lightsTmp.length = 0; } const tb = (performance.now() - t1) / 60;
       return { updateMs: +tu.toFixed(2), buildFrameMs: +tb.toFixed(2), instances: inst, traffic: TRAFFIC.length }; }); });
   await test('locations', async () => { const L = [['belval', -40, 252, Math.PI / 2, 18.6], ['bruecke', -150, 84, Math.PI / 2, 22], ['tal', -163, -128, Math.PI / 2, 9], ['altstadt', -84, -150, 0, 21], ['kirchberg', 252, -60, 0, 12.5], ['autobahn', 800, 4, -Math.PI / 2, 19], ['kanal', 1900, 84, -Math.PI / 2, 23.5], ['glutplatz', 1942, -170, Math.PI, 0.5], ['lichtturm', 1858, -86, Math.PI, 6.3], ['strijp', 1648, -200, 0, 15.5]];
-    for (const [n, x, z, h, hr] of L) { await p.evaluate(([x, z, h, hr]) => { G.player = newCar(G.player.car, x, z, h); G.camYaw = h; G.hour = hr; G.state = 'drive'; G.camMode = 'chase'; TRAFFIC.length = 0; G.camK = 1; }, [x, z, h, hr]); await sim(p, 90); await sleep(900); await shot(p, '10_loc_' + n); }
+    for (const [n, x, z, h, hr] of L) { await p.evaluate(([x, z, h, hr]) => { G.player = newCar(G.player.car, x, z, h); G.player.v = 0; G.camYaw = h; PEDS.length = 0; BIKES.length = 0; G.hour = hr; G.state = 'drive'; G.camMode = 'chase'; TRAFFIC.length = 0; G.camK = 1; }, [x, z, h, hr]); await sim(p, 90); await sleep(900); await shot(p, '10_loc_' + n); }
     return { count: L.length }; });
   await b.close();
   ({ b, p } = await launch({ width: 390, height: 844 }, true));

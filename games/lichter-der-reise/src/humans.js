@@ -10,7 +10,7 @@ function sidewalks(){ if(SIDEWALKS) return SIDEWALKS; SIDEWALKS=mapItems.filter(
 function loopPoint(w,s){ const W=w.x1-w.x0, D=w.z1-w.z0, P=2*(W+D); s=((s%P)+P)%P;
   if(s<W) return [w.x0+s,w.z0,-Math.PI/2]; s-=W; if(s<D) return [w.x1,w.z0+s,Math.PI]; s-=D; if(s<W) return [w.x1-s,w.z1,Math.PI/2]; s-=W; return [w.x0,w.z1-s,0]; }
 function spawnPeds(px,pz){ const S=sidewalks(); if(!S.length) return; const max=SET.gfx.traffic>0?Math.round(18+SET.gfx.traffic*1.6):0;
-  for(let tries=0;tries<10&&PEDS.length<max;tries++){ const w=S[(Math.random()*S.length)|0]; const cx=(w.x0+w.x1)/2, cz=(w.z0+w.z1)/2; const d=Math.hypot(cx-px,cz-pz); if(d<40||d>170) continue;
+  for(let tries=0;tries<40&&PEDS.length<max;tries++){ const w=S[(Math.random()*S.length)|0]; const cx=(w.x0+w.x1)/2, cz=(w.z0+w.z1)/2; const d=Math.hypot(cx-px,cz-pz); if(d>150) continue;
     const per=2*((w.x1-w.x0)+(w.z1-w.z0)); const stand=Math.random()<.18; const look=pedLook();
     const p={w,s:Math.random()*per,dir:Math.random()<.5?1:-1,v:stand?0:rr(1.1,1.6),ph:Math.random()*6,look,stand,x:0,z:0,h:0,dodge:0};
     PEDS.push(p); if(stand&&Math.random()<.6) PEDS.push({...p,s:p.s+1.1,look:pedLook(),ph:p.ph+2,partner:true}); } }
@@ -96,5 +96,5 @@ function updateBanter(dt,pl){ if(G.state!=='drive') return; const kmh=Math.abs(p
   if(LM.licht&&Math.hypot(pl.x-CANAL.x0-300,pl.z-126)<120&&pl.x>CANAL.x0) banter('canal');
   if(pl.z>230&&pl.x<-200&&pl.x>-430) banter('furnace');
   for(const k of CAFES) if(Math.hypot(k.x-pl.x,k.z-pl.z)<25){ banter('people'); break; } }
-function updateHumans(dt,pl){ if(Math.random()<dt*3) spawnPeds(pl.x,pl.z); if(Math.random()<dt) spawnBikes(pl.x,pl.z); updatePeds(dt,pl); updateBikes(dt,pl); updateBanter(dt,pl); }
+function updateHumans(dt,pl){ spawnPeds(pl.x,pl.z); if(Math.random()<dt) spawnBikes(pl.x,pl.z); updatePeds(dt,pl); updateBikes(dt,pl); updateBanter(dt,pl); }
 function drawHumans(cx,cz){ drawPeds(cx,cz); drawBikes(cx,cz); drawCafes(cx,cz); }

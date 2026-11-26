@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Lichter der Reise</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307060c'/%3E%3Ccircle cx='32' cy='32' r='12' fill='%23ffd27a'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23ff8a3d' stroke-width='3' opacity='.6'/%3E%3C/svg%3E">
 <meta name="description" content="Eine WebGPU-Roadstory in vier Kapiteln: von Belval über Luxemburg nach Monte-Carlo.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1571,7 +1572,7 @@ function sidewalks(){ if(SIDEWALKS) return SIDEWALKS; SIDEWALKS=mapItems.filter(
 function loopPoint(w,s){ const W=w.x1-w.x0, D=w.z1-w.z0, P=2*(W+D); s=((s%P)+P)%P;
   if(s<W) return [w.x0+s,w.z0,-Math.PI/2]; s-=W; if(s<D) return [w.x1,w.z0+s,Math.PI]; s-=D; if(s<W) return [w.x1-s,w.z1,Math.PI/2]; s-=W; return [w.x0,w.z1-s,0]; }
 function spawnPeds(px,pz){ const S=sidewalks(); if(!S.length) return; const max=SET.gfx.traffic>0?Math.round(18+SET.gfx.traffic*1.6):0;
-  for(let tries=0;tries<10&&PEDS.length<max;tries++){ const w=S[(Math.random()*S.length)|0]; const cx=(w.x0+w.x1)/2, cz=(w.z0+w.z1)/2; const d=Math.hypot(cx-px,cz-pz); if(d<40||d>170) continue;
+  for(let tries=0;tries<40&&PEDS.length<max;tries++){ const w=S[(Math.random()*S.length)|0]; const cx=(w.x0+w.x1)/2, cz=(w.z0+w.z1)/2; const d=Math.hypot(cx-px,cz-pz); if(d>150) continue;
     const per=2*((w.x1-w.x0)+(w.z1-w.z0)); const stand=Math.random()<.18; const look=pedLook();
     const p={w,s:Math.random()*per,dir:Math.random()<.5?1:-1,v:stand?0:rr(1.1,1.6),ph:Math.random()*6,look,stand,x:0,z:0,h:0,dodge:0};
     PEDS.push(p); if(stand&&Math.random()<.6) PEDS.push({...p,s:p.s+1.1,look:pedLook(),ph:p.ph+2,partner:true}); } }
@@ -1657,7 +1658,7 @@ function updateBanter(dt,pl){ if(G.state!=='drive') return; const kmh=Math.abs(p
   if(LM.licht&&Math.hypot(pl.x-CANAL.x0-300,pl.z-126)<120&&pl.x>CANAL.x0) banter('canal');
   if(pl.z>230&&pl.x<-200&&pl.x>-430) banter('furnace');
   for(const k of CAFES) if(Math.hypot(k.x-pl.x,k.z-pl.z)<25){ banter('people'); break; } }
-function updateHumans(dt,pl){ if(Math.random()<dt*3) spawnPeds(pl.x,pl.z); if(Math.random()<dt) spawnBikes(pl.x,pl.z); updatePeds(dt,pl); updateBikes(dt,pl); updateBanter(dt,pl); }
+function updateHumans(dt,pl){ spawnPeds(pl.x,pl.z); if(Math.random()<dt) spawnBikes(pl.x,pl.z); updatePeds(dt,pl); updateBikes(dt,pl); updateBanter(dt,pl); }
 function drawHumans(cx,cz){ drawPeds(cx,cz); drawBikes(cx,cz); drawCafes(cx,cz); }
 
 /* ===== Story missions in the open world =====
@@ -1868,9 +1869,9 @@ const ENV_K={
  night:{sunCol:[.16,.2,.32],shadow:.55,skyTop:[.006,.009,.03],skyHor:[.045,.042,.09],skyGround:[.01,.01,.015],ambTop:[.028,.032,.06],ambBot:[.012,.01,.016],fog:.0016,stars:1,clouds:.35,sunSize:.0008,windows:1.0,wet:.45,exposure:1.55,sat:1.08,tint:[.97,.98,1.04],lamps:1},
  blue:{sunCol:[.5,.3,.35],shadow:.3,skyTop:[.02,.04,.12],skyHor:[.3,.18,.25],skyGround:[.03,.03,.05],ambTop:[.06,.07,.13],ambBot:[.03,.025,.035],fog:.0017,stars:.6,clouds:.4,sunSize:0,windows:1.0,wet:.3,exposure:1.35,sat:1.1,tint:[1,.98,1.02],lamps:1},
  dawn:{sunCol:[2.6,1.3,.7],shadow:.8,skyTop:[.08,.14,.32],skyHor:[.95,.55,.42],skyGround:[.06,.05,.05],ambTop:[.15,.17,.26],ambBot:[.08,.06,.06],fog:.0018,stars:.15,clouds:.5,sunSize:.004,windows:.6,wet:.3,exposure:1.0,sat:1.06,tint:[1.02,.99,.97],lamps:.7},
- morning:{sunCol:[4.6,4.0,3.3],shadow:.9,skyTop:[.12,.28,.62],skyHor:[.55,.66,.8],skyGround:[.1,.1,.1],ambTop:[.32,.4,.55],ambBot:[.18,.16,.13],fog:.0011,stars:0,clouds:.5,sunSize:.003,windows:.05,wet:.05,exposure:.6,sat:1.04,tint:[1,1,1],lamps:0},
- noon:{sunCol:[5.2,4.8,4.3],shadow:.9,skyTop:[.1,.26,.62],skyHor:[.55,.68,.85],skyGround:[.1,.1,.1],ambTop:[.36,.44,.6],ambBot:[.2,.18,.15],fog:.001,stars:0,clouds:.55,sunSize:.003,windows:.03,wet:.03,exposure:.55,sat:1.04,tint:[1,1,1],lamps:0},
- afternoon:{sunCol:[4.6,3.6,2.6],shadow:.9,skyTop:[.1,.22,.5],skyHor:[.72,.66,.64],skyGround:[.1,.09,.09],ambTop:[.3,.34,.46],ambBot:[.18,.14,.11],fog:.0012,stars:0,clouds:.55,sunSize:.0035,windows:.1,wet:.05,exposure:.62,sat:1.05,tint:[1.02,1,.97],lamps:0},
+ morning:{sunCol:[4.8,4.1,3.3],shadow:.85,skyTop:[.05,.18,.58],skyHor:[.48,.62,.86],skyGround:[.1,.1,.1],ambTop:[.3,.38,.56],ambBot:[.2,.17,.13],fog:.0009,stars:0,clouds:.45,sunSize:.003,windows:.05,wet:.05,exposure:.72,sat:1.04,tint:[1,1,1],lamps:0},
+ noon:{sunCol:[5.4,5.0,4.4],shadow:.85,skyTop:[.04,.17,.6],skyHor:[.45,.62,.88],skyGround:[.1,.1,.1],ambTop:[.34,.42,.6],ambBot:[.22,.19,.15],fog:.0008,stars:0,clouds:.5,sunSize:.003,windows:.03,wet:.03,exposure:.66,sat:1.04,tint:[1,1,1],lamps:0},
+ afternoon:{sunCol:[4.8,3.7,2.6],shadow:.85,skyTop:[.06,.18,.52],skyHor:[.7,.64,.62],skyGround:[.1,.09,.09],ambTop:[.3,.34,.48],ambBot:[.2,.15,.11],fog:.001,stars:0,clouds:.5,sunSize:.0035,windows:.1,wet:.05,exposure:.72,sat:1.05,tint:[1.02,1,.97],lamps:0},
  dusk:{sunCol:[3.4,1.65,.8],shadow:.9,skyTop:[.07,.13,.32],skyHor:[1.0,.5,.28],skyGround:[.06,.05,.05],ambTop:[.2,.22,.32],ambBot:[.09,.065,.05],fog:.0018,stars:.15,clouds:.55,sunSize:.004,windows:.75,wet:.1,exposure:.95,sat:1.05,tint:[1.02,.99,.96],lamps:.8}
 };
 const KEYS=[[0,'night'],[5.0,'night'],[6.1,'dawn'],[8,'morning'],[12.5,'noon'],[16.5,'afternoon'],[18.7,'dusk'],[19.9,'blue'],[21,'night'],[24,'night']];
