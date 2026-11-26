@@ -33,6 +33,9 @@ html = f'''<!doctype html>
 '''
 (root / 'index.html').write_text(html, encoding='utf-8')
 print('index.html', len(html) // 1024, 'KB')
+# play.html: same page with absolute photo URLs, for HTML preview services that load the page from another origin
+RAW = 'https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/'
+(root / 'play.html').write_text(html.replace('"assets/', '"' + RAW).replace("'assets/", "'" + RAW), encoding='utf-8')
 import sys
 if len(sys.argv) > 2 and sys.argv[1] == '--fragment':
     # same page without the document skeleton (for hosts that wrap the page themselves)
