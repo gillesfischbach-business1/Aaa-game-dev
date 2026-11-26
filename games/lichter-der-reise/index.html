@@ -41,7 +41,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .icon-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--glass);color:var(--ink);font-size:15px;display:grid;place-items:center;padding:0}
 
 /* Subtitle barks */
-#bark{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 132px);max-width:min(620px,calc(100vw - 32px));
+#bark{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 132px);width:max-content;max-width:min(620px,calc(100vw - 32px));box-sizing:border-box;
   display:flex;gap:10px;align-items:center;background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:8px 14px 8px 8px;opacity:0;transition:opacity .35s;pointer-events:none}
 #bark.show{opacity:1}
 #bark .av{width:38px;height:38px;flex:none}
@@ -58,11 +58,11 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .tgroup{display:flex;gap:14px;align-items:flex-end}
 
 /* Cards / overlays */
-.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+.overlay{position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;
   padding-top:calc(env(safe-area-inset-top,0px) + 16px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   background:radial-gradient(ellipse at center,rgba(7,6,12,.25),rgba(7,6,12,.78));overflow:auto}
-.card{width:min(640px,100%);display:flex;flex-direction:column;gap:16px}
+.card{width:min(640px,100%);display:flex;flex-direction:column;gap:16px;margin:auto}
 .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--ember);font-weight:800}
 h1,h2{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;line-height:.95}
 h1{font-size:clamp(52px,11vw,112px);letter-spacing:-.01em}
@@ -111,6 +111,7 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
 #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s}
 .err{max-width:560px}
 @media (max-width:560px){ .album{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px} .polaroid{padding:5px 5px 20px} .polaroid span{font-size:11px;bottom:4px} #dlgAv{width:54px;height:54px} #bark{bottom:calc(env(safe-area-inset-bottom,0px) + 112px)} }
+@media (max-height:620px){ .album{width:min(460px,100%)} .polaroid img{aspect-ratio:4/3} .card{gap:11px} h2{font-size:clamp(30px,5.5vw,46px)} .lede{line-height:1.45} .stats b{font-size:22px} }
 @media (prefers-reduced-motion: reduce){ #chapCard,#bark,#fade{transition:none} }
 </style>
 
@@ -264,7 +265,7 @@ fn lighting(P:vec3f,N:vec3f,V:vec3f,alb:vec3f,gloss:f32,wet:f32)->vec3f{
   let hemi=mix(S.ambBot.rgb,S.ambTop.rgb,N.y*0.5+0.5);
   var dif=hemi; var spe=vec3f(0.0);
   let sd=normalize(S.sunDir.xyz);
-  dif+=S.sunCol.rgb*max(dot(N,sd),0.0)*0.55;
+  dif+=S.sunCol.rgb*max(dot(N,sd),0.0)*0.4;
   let sp=mix(8.0,180.0,gloss);
   let H0=normalize(sd+V); spe+=S.sunCol.rgb*pow(max(dot(N,H0),0.0),sp)*gloss*0.8;
   let cnt=i32(S.misc.x);
@@ -319,7 +320,7 @@ fn lighting(P:vec3f,N:vec3f,V:vec3f,alb:vec3f,gloss:f32,wet:f32)->vec3f{
       let hsh=hash2(cell+vec2f(i.mat.z*3.1,i.mat.z*1.7)+on.xz*7.0);
       let isLit=step(0.42,hsh);
       let tint=mix(vec3f(1.0,0.62,0.28),vec3f(0.85,0.85,1.0),step(0.86,hsh));
-      let glassC=skyColor(reflect(-V,N))*0.35;
+      let glassC=skyColor(reflect(-V,N))*0.12+vec3f(0.01,0.012,0.02);
       lit=mix(lit, glassC + tint*isLit*2.2*S.misc.w*(0.6+0.4*hash2(cell*1.3)), win);
     }
     col=lit;
@@ -343,7 +344,7 @@ fn lighting(P:vec3f,N:vec3f,V:vec3f,alb:vec3f,gloss:f32,wet:f32)->vec3f{
   let fogD=S.misc2.z;
   let f=1.0-exp(-dist*fogD - max(0.0,-i.wp.y)*0.02);
   let hf=exp(-max(i.wp.y,0.0)*0.06);
-  col=mix(col,skyColor(-V)*0.95,clamp(f*mix(0.75,1.0,hf),0.0,1.0));
+  col=mix(col,skyColor(-V)*0.85,clamp(f*mix(0.7,1.0,hf),0.0,0.97));
   return vec4f(col,1.0);
 }`;
 
@@ -509,16 +510,16 @@ const Audio_={ctx:null,master:null,muted:false,engine:null,engGain:null,engFilte
 
 // ---------- environments ----------
 const ENVS=[
- {name:'Die Hochöfen',sub:'Kapitel I',skyTop:[.04,.06,.2],skyHor:[.95,.42,.2],skyGround:[.05,.04,.05],sunDir:[.28,.07,-1],sunCol:[1.5,.62,.28],ambTop:[.2,.21,.34],ambBot:[.13,.08,.06],
-  fog:.0065,stars:.35,clouds:.6,sunSize:.0035,windows:1.0,rain:0,exposure:1.0,sat:1.08,tint:[1.02,.98,.95],lamp:[1,.55,.22]},
- {name:'Die Stadt der Brücken',sub:'Kapitel II',skyTop:[.012,.016,.07],skyHor:[.16,.11,.34],skyGround:[.02,.02,.04],sunDir:[-.45,.32,-1],sunCol:[.38,.44,.7],ambTop:[.07,.08,.17],ambBot:[.04,.03,.06],
-  fog:.0075,stars:1,clouds:.35,sunSize:.0012,windows:1.35,rain:0,exposure:1.15,sat:1.12,tint:[.98,.97,1.05],lamp:[1,.78,.5]},
- {name:'Der Glutplatz',sub:'Kapitel III',skyTop:[.03,.006,.006],skyHor:[.5,.09,.02],skyGround:[.04,.01,.0],sunDir:[0,.12,-1],sunCol:[.9,.22,.05],ambTop:[.13,.045,.03],ambBot:[.11,.035,.015],
-  fog:.016,stars:0,clouds:.9,sunSize:0,windows:.7,rain:1,exposure:1.05,sat:1.15,tint:[1.05,.95,.9],lamp:[1,.42,.15]},
- {name:'Der Hafen der Lichter',sub:'Kapitel IV',skyTop:[.16,.2,.48],skyHor:[1.45,.66,.44],skyGround:[.08,.06,.09],sunDir:[-.6,.06,-1],sunCol:[2.3,1.1,.55],ambTop:[.36,.33,.46],ambBot:[.26,.16,.13],
-  fog:.0045,stars:.05,clouds:.7,sunSize:.006,windows:1.0,rain:0,exposure:.95,sat:1.1,tint:[1.03,1,.97],lamp:[1,.72,.45]},
- {name:'Epilog',sub:'',skyTop:[.03,.04,.14],skyHor:[.55,.28,.42],skyGround:[.04,.03,.06],sunDir:[-.6,.0,-1],sunCol:[.9,.45,.35],ambTop:[.12,.12,.22],ambBot:[.08,.06,.08],
-  fog:.004,stars:.8,clouds:.4,sunSize:.0,windows:1.6,rain:0,exposure:1.1,sat:1.12,tint:[1,.98,1],lamp:[1,.72,.45]}
+ {name:'Die Hochöfen',sub:'Kapitel I',skyTop:[.04,.06,.2],skyHor:[.85,.34,.15],skyGround:[.05,.04,.05],sunDir:[.28,.07,-1],sunCol:[1.3,.5,.2],ambTop:[.07,.075,.13],ambBot:[.05,.03,.025],
+  fog:.0035,stars:.35,clouds:.6,sunSize:.0035,windows:1.1,rain:0,exposure:.9,sat:1.08,tint:[1.02,.98,.95],lamp:[1,.55,.22]},
+ {name:'Die Stadt der Brücken',sub:'Kapitel II',skyTop:[.012,.016,.07],skyHor:[.1,.07,.22],skyGround:[.02,.02,.04],sunDir:[-.45,.32,-1],sunCol:[.22,.26,.45],ambTop:[.03,.035,.08],ambBot:[.02,.015,.03],
+  fog:.004,stars:1,clouds:.35,sunSize:.0007,windows:1.4,rain:0,exposure:1.15,sat:1.12,tint:[.98,.97,1.05],lamp:[1,.78,.5]},
+ {name:'Der Glutplatz',sub:'Kapitel III',skyTop:[.03,.006,.006],skyHor:[.32,.05,.012],skyGround:[.04,.01,.0],sunDir:[0,.12,-1],sunCol:[.55,.12,.03],ambTop:[.05,.018,.012],ambBot:[.05,.015,.008],
+  fog:.0085,stars:0,clouds:.9,sunSize:0,windows:.45,rain:1,exposure:.8,sat:1.15,tint:[1.05,.95,.9],lamp:[1,.42,.15]},
+ {name:'Der Hafen der Lichter',sub:'Kapitel IV',skyTop:[.16,.2,.48],skyHor:[1.0,.4,.26],skyGround:[.08,.06,.09],sunDir:[-.6,.06,-1],sunCol:[2.0,.85,.4],ambTop:[.15,.13,.2],ambBot:[.1,.06,.05],
+  fog:.0022,stars:.05,clouds:.7,sunSize:.006,windows:1.0,rain:0,exposure:.78,sat:1.1,tint:[1.03,1,.97],lamp:[1,.72,.45]},
+ {name:'Epilog',sub:'',skyTop:[.03,.04,.14],skyHor:[.55,.28,.42],skyGround:[.04,.03,.06],sunDir:[-.6,.0,-1],sunCol:[.9,.45,.35],ambTop:[.05,.05,.1],ambBot:[.03,.025,.035],
+  fog:.003,stars:.8,clouds:.4,sunSize:.0,windows:1.6,rain:0,exposure:1.1,sat:1.12,tint:[1,.98,1],lamp:[1,.72,.45]}
 ];
 const envCur=JSON.parse(JSON.stringify(ENVS[0])); let envFrom=null, envTo=ENVS[0], envT=1;
 function setEnv(i,instant){ envFrom=JSON.parse(JSON.stringify(envCur)); envTo=ENVS[i]; envT=instant?1:0; if(instant)blendEnv(1); }
@@ -611,7 +612,7 @@ function genGlut(z0,z1){
     return d; });
   // hanging lava orbs (decor), like lanterns of fire over the plaza
   for(let z=z0-rr(4,12); z>z1; z-=rr(10,16)){ const x=rr(-14,14), y=rr(7,13), r=rr(1.6,3.2);
-    const o=S(M_SPH,x,y,z,r,r,r,MAT.LAVA,[1,1,1],1.0); o.bob=rnd()*6; lightAt(o,x,y-1,z,[1,.4,.1],3.5,22);
+    const o=S(M_SPH,x,y,z,r,r,r,MAT.LAVA,[1,1,1],0.55); o.bob=rnd()*6; lightAt(o,x,y-1,z,[1,.4,.1],2.6,22);
     for(let k=0;k<3;k++) S(M_SPH,x+rr(-.4,.4),y-r*0.5-1.2-k*1.1,z+rr(-.4,.4),0.18,1.6,0.18,MAT.EMI,[1,.45,.12],3.5);
   }
 }
@@ -725,7 +726,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden&&G.state==
 function toggleMute(){ Audio_.setMuted(!Audio_.muted); $('btnMute').textContent=Audio_.muted?'✕':'♪'; $('btnMute').setAttribute('aria-pressed',Audio_.muted); }
 $('btnMute').onclick=toggleMute;
 $('btnPause').onclick=()=>togglePause();
-function togglePause(){ if(G.state==='play'){ G.state='pause'; $('pauseO').hidden=false; Audio_.setEngine(0,false); } else if(G.state==='pause'){ G.state='play'; $('pauseO').hidden=true; Audio_.resume(); } }
+function togglePause(){ if(G.state==='play'){ G.state='pause'; $('pauseO').hidden=false; UI.chapCard.classList.remove('show'); UI.bark.classList.remove('show'); barkT=0; Audio_.setEngine(0,false); } else if(G.state==='pause'){ G.state='play'; $('pauseO').hidden=true; Audio_.resume(); } }
 $('btnResume').onclick=()=>togglePause();
 $('btnRestartCh').onclick=()=>{ $('pauseO').hidden=true; startChapter(G.chapter,true); };
 $('btnRetry').onclick=()=>{ $('crashO').hidden=true; startChapter(G.chapter,true); };
@@ -764,7 +765,7 @@ function ending(good){ G.choiceMade=good; G.state='ending'; Audio_.setEngine(0,f
     say([{w:'narr',t:'Die Funken wechseln den Besitzer. Der Motor des Smaragds schnurrt wie eine Katze. Hinter euch bleibt das Leuchtfeuer dunkel.'},{w:'mira',t:'Er fährt sich toll. Er fühlt sich nur nach nichts an.'},{w:'leo',t:'Fidèle steht da hinten ganz allein. Das war falsch, oder?'}],()=>showEnd(false)); }
 }
 function showEnd(good){ const o=$('endO'); o.hidden=false; $('btnRethink').hidden=good; $('albumWrap').hidden=!good||!albumReady;
-  const stars=G.light>=180?3:G.light>=110?2:1;
+  const stars=G.light>=350?3:G.light>=200?2:1;
   if(good){ $('endEyebrow').textContent='Epilog'; $('endTitle').textContent='Der Hafen leuchtet.';
     $('endText').textContent='Es ist nicht der Wagen, der dich ans Ziel bringt. Es ist der Mensch, der neben dir sitzt. Léo und Mira fahren noch am selben Abend weiter. Irgendwo da draußen gibt es noch dunkle Städte.';
     $('endStats').innerHTML=`<div><b>${G.light}</b><small>Funken entzündet</small></div><div><b>${G.totalCollected}</b><small>gesammelt</small></div><div><b>${G.boosts}</b><small>Lichtstöße</small></div><div><b>${G.hits}</b><small>Treffer</small></div><div><span class="stars">${'★'.repeat(stars)}<span class="dim">${'★'.repeat(3-stars)}</span></span><small>Leuchtkraft</small></div>`;
@@ -876,6 +877,10 @@ const VAN=[
  [M_CYLX,0.9,0.36,1.35,0.2,0.38,0.38,MAT.STD+.6,[.6,.6,.62]],[M_CYLX,-0.9,0.36,1.35,0.2,0.38,0.38,MAT.STD+.6,[.6,.6,.62]],
  [M_CUBE,0.6,0.85,-1.83,0.42,0.24,0.04,MAT.EMI,[1,.85,.6],7],[M_CUBE,-0.6,0.85,-1.83,0.42,0.24,0.04,MAT.EMI,[1,.85,.6],7],
  [M_CUBE,0.8,0.75,2.06,0.16,0.4,0.04,MAT.EMI,[1,.08,.04],5],[M_CUBE,-0.8,0.75,2.06,0.16,0.4,0.04,MAT.EMI,[1,.08,.04],5],
+ [M_CUBE,0,1.25,2.06,0.03,1.6,0.03,MAT.STD,[.35,.36,.4]],
+ [M_CUBE,0.42,1.75,2.06,0.62,0.42,0.03,MAT.GLASS,[.05,.06,.08]],[M_CUBE,-0.42,1.75,2.06,0.62,0.42,0.03,MAT.GLASS,[.05,.06,.08]],
+ [M_CUBE,0.2,1.15,2.07,0.12,0.05,0.04,MAT.STD+.7,[.6,.6,.62]],
+ [M_CUBE,0,0.75,2.07,0.5,0.14,0.02,MAT.STD,[.9,.85,.3]],
  [M_CUBE,0,0.25,0.2,2.2,0.02,4.6,MAT.STD,[0,0,0]]
 ];
 const SUPER=[
@@ -907,14 +912,14 @@ function buildFrame(){
   // van
   const blink=G.inv>0&&G.state==='play'&&G.boostT<=0&&((t*14|0)%2===0);
   const vanY=Math.abs(Math.sin(G.dist*0.9))*0.03*Math.min(1,G.speed/10);
-  if(!blink) model(VAN,G.x,vanY,vz,G.yaw);
+  if(!blink&&G.camMode!=='standing') model(VAN,G.x,vanY,vz,G.yaw);
   const hc=Math.cos(G.yaw),hs=Math.sin(G.yaw);
-  L(G.x-hs*-6,1.1,vz-hc*6,4.5,3.8,2.8,18); L(G.x,0.9,vz+3,1.4,0.05,0.02,5);
+  if(G.camMode!=='standing'){ L(G.x-hs*-6,1.1,vz-hc*6,4.5,3.8,2.8,18); L(G.x,0.5,vz+3.2,0.5,0.02,0.01,3.5); }
   if(G.boostT>0){ L(G.x,1.5,vz,3,2.2,1,10); for(let i=0;i<3;i++) P(M_SPLO,G.x+rr(-1,1),rr(0.4,2.2),vz+rr(1.5,4),0,0.12,0.12,rr(.6,1.6),MAT.EMI,1,.8,.4,8); }
   // rival + parked cars
   for(const rv of G.rivals){ if(rv.active||G.camMode==='finale'||G.camMode==='ignite'||G.camMode==='dark'){ model(SUPER,rv.x,0,rv.z,0); L(rv.x,0.8,rv.z-6,2.4,2.6,3,14); } }
   for(const o of G.dyn){ if(o.alive===false||o.z>zNear||o.z<zFar)continue; const dz=o.z-vz;
-    if(o.type==='spark'){ const y=o.y+Math.sin(t*3+o.ph)*0.18; P(M_SPH,o.x,y,o.z,0,0.42,0.42,0.42,MAT.EMI,1,.78,.35,7); P(M_SPLO,o.x,y,o.z,0,0.75,0.75,0.75,MAT.EMI,1,.6,.2,0.6);
+    if(o.type==='spark'){ const y=o.y+Math.sin(t*3+o.ph)*0.18; P(M_SPH,o.x,y,o.z,t*2+o.ph,0.4,0.4,0.4,MAT.EMI,1,.78,.35,9);
       if(dz<0&&dz>-45&&lightsTmp.length<60) L(o.x,y,o.z,0.9,0.6,0.2,5); }
     else if(o.type==='orb'){ P(M_SPH,o.x,o.y,o.z,t*0.3+o.ph,o.r*2,o.r*2,o.r*2,MAT.LAVA,1,1,1,1.1); L(o.x,o.y+0.5,o.z,3.2,1.1,0.25,o.landed?16:22);
       if(!o.landed){ const pulse=0.5+0.5*Math.sin(t*14); const sz=o.r*2.4*(1.2-o.y/30); P(M_CYLY,o.x,0.03,o.z,0,sz,0.02,sz,MAT.EMI,1,.12,.05,2+pulse*4); P(M_CYLY,o.x,0.035,o.z,0,sz*0.7,0.02,sz*0.7,MAT.STD,.05,0,0,0);
@@ -937,12 +942,14 @@ function buildFrame(){
   }
   // camera
   const sh=G.shake*0.35; const fovB=G.boostT>0?10:0;
-  if(G.camMode==='chase'){ const cx=G.x*0.55; cam.pos=[cx+rr(-sh,sh),3.1+rr(-sh,sh),vz+7.6]; cam.tgt=[G.x*0.75,1.15,vz-14]; cam.fov=lerp(cam.fov,60+fovB+G.speed*0.12,0.08); }
+  if(G.camMode==='chase'){ const cx=G.x*0.55; cam.pos=[cx+rr(-sh,sh),3.9+rr(-sh,sh),vz+10.5]; cam.tgt=[G.x*0.75,1.0,vz-16]; cam.fov=lerp(cam.fov,60+fovB+G.speed*0.12,0.08); }
   else if(G.camMode==='orbit'){ const a=G.time*0.12; cam.pos=[Math.sin(a)*9,3.4+Math.sin(G.time*0.3)*0.6,vz+Math.cos(a)*9]; cam.tgt=[0,1.4,vz]; cam.fov=55; }
-  else if(G.camMode==='standing'){ const a=G.time*0.08; cam.pos=[Math.sin(a)*14,2.2,vz+Math.cos(a)*14]; cam.tgt=[0,4.5,vz]; cam.fov=62;
+  else if(G.camMode==='standing'){ const a=Math.sin(G.time*0.15)*0.35; cam.pos=[Math.sin(a)*6.5,1.4,vz-Math.cos(a)*6.5]; cam.tgt=[0,3.0,vz]; cam.fov=58;
+    for(const [ox,oy,oz,r] of [[-4.5,7.5,3,1.5],[0,9.5,4,2.1],[4.2,7,2.5,1.4],[-7,5.5,1,1.1],[7.5,5.8,0,1.2],[-2.5,6,6,1.0],[2.6,10.5,8,1.6]]){ const y=oy+Math.sin(G.time*0.8+ox)*0.3;
+      P(M_SPH,ox,y,vz+oz,G.time*0.2,r*2,r*2,r*2,MAT.LAVA,1,1,1,0.5); L(ox,y-0.5,vz+oz,2.4,0.8,0.18,16); for(let k=1;k<4;k++) P(M_SPH,ox,y-r-k*0.9,vz+oz,0,0.12,1.2,0.12,MAT.EMI,1,.45,.12,3.5/k); }
     // the figure among the orbs
     P(M_CUBE,0,0.55,vz,0,0.42,1.1,0.3,MAT.STD,.55,.55,.58,0); P(M_CUBE,0,1.45,vz,0,0.62,0.85,0.36,MAT.STD+.3,.07,.07,.1,0); P(M_SPH,0,2.05,vz,0,0.36,0.42,0.36,MAT.STD,.75,.5,.38,0); P(M_SPH,0,2.18,vz,0,0.38,0.24,0.38,MAT.STD,.06,.06,.07,0); P(M_CYLY,0,1.82,vz,0,0.44,0.2,0.44,MAT.STD,.4,.36,.3,0);
-    model(VAN,3.5,0,vz+6,0.3); }
+    model(VAN,-4.5,0,vz+9,0.4); }
   else { const a=0.6+G.endT*0.05; const vzc=vz-6; cam.pos=[Math.sin(a)*15-2,4+G.endT*0.05,vzc+Math.cos(a)*15]; cam.tgt=[-4,G.camMode==='ignite'?7:3,vzc-14]; cam.fov=60;
     if(G.rivals.length===0) G.rivals.push({x:LANES[0],z:vz-0.5,active:true}); else { G.rivals[0].x=-2.2; G.rivals[0].z=vz-0.5; } }
 }
