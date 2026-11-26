@@ -39,7 +39,7 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
   if(B.rev>0){ B.rev-=dt; keys[K.down]=true; keys[K.up]=false; keys[K.left]=d<0; keys[K.right]=d>0; return; }
   let turnAhead=false; { const T=globalThis.__target||currentTarget(); const r=globalThis.__target&&T?findRoute(pl.x,pl.z,T.x,T.z):(G.route||[]); if(r.length>1){ const n0=r[0], n1=r[1]; const a0=Math.atan2(n0.x-pl.x,n0.z-pl.z), a1=Math.atan2(n1.x-n0.x,n1.z-n0.z); let da=Math.abs(a1-a0); if(da>Math.PI) da=2*Math.PI-da; turnAhead=da>.5&&Math.hypot(n0.x-pl.x,n0.z-pl.z)<28; } }
   keys[K.left]=d>0.06; keys[K.right]=d<-0.06; const sharp=Math.abs(d)>0.6; const slow=(sharp||turnAhead)&&Math.abs(pl.v)>(turnAhead?8:9); keys[K.up]=!slow; keys[K.down]=slow&&Math.abs(pl.v)>11;
-  if(Math.abs(pl.v)<1.2){ B.stuck+=dt; if(B.stuck>2.5){ B.rev=1.4; B.stuck=0; B.stuckTotal++; } } else B.stuck=0; }`;
+  if(Math.abs(pl.v)<1.2){ B.stuck+=dt; if(B.stuck>2.5){ B.rev=1.4; B.stuck=0; B.stuckTotal++; (B.spots||(B.spots=[])).push([Math.round(pl.x),Math.round(pl.z),G.mission]); } } else B.stuck=0; }`;
 
 (async () => {
   let { b, p } = await launch({ width: 960, height: 540 });
@@ -88,7 +88,7 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
       for (let j = 0; j < 12; j++) { await sim(p, 600, true); if (await p.evaluate(() => Math.hypot(__target.x - G.player.x, __target.z - G.player.z) < 15)) { reached++; break; } } }
     await p.evaluate(() => { globalThis.__target = null; });
     const stuck = (await p.evaluate(() => __bot.stuckTotal)) - stuck0; await shot(p, '09_free_roam');
-    if (reached < tries - 1) throw new Error(JSON.stringify({ reached, tries, stuck })); return { nodes: r, reached, tries, stuckEvents: stuck }; });
+    const spots = await p.evaluate(() => (__bot.spots || []).slice(-40)); if (reached < tries - 1) throw new Error(JSON.stringify({ reached, tries, stuck, spots })); return { nodes: r, reached, tries, stuckEvents: stuck, spots }; });
   await test('performance', async () => { // CPU time of simulation and frame building in the browser
     return await p.evaluate(() => { const t0 = performance.now(); for (let i = 0; i < 300; i++) update(1 / 60); const tu = (performance.now() - t0) / 300;
       const t1 = performance.now(); let inst = 0; for (let i = 0; i < 60; i++) { buildFrame(); inst = lists.reduce((a, L) => a + L.nop + L.ngl, 0); for (const L of lists) { L.nop = 0; L.ngl = 0; } lightsTmp.length = 0; } const tb = (performance.now() - t1) / 60;

@@ -135,10 +135,10 @@ function renderFrame(cam,env,time,post,shadowCenter,snapCb){
   compF.set([post.exposure,post.bloom,post.flash,post.fade, time,post.sat,post.grain===undefined?0.018:post.grain,0.01, post.tint[0],post.tint[1],post.tint[2],post.vignette]);
   d.queue.writeBuffer(R.compBuf,0,compF);
   const enc=d.createCommandEncoder();
-  const drawList=(pass,glass)=>{ for(let m=0;m<lists.length;m++){ const L=lists[m]; const n=glass?L.ngl:L.nop; if(!n)continue; const me=R.mesh[m]; pass.setVertexBuffer(0,me.vb); pass.setIndexBuffer(me.ib,me.fmt); pass.drawIndexed(me.n,n,0,0,glass?glF[m]:opF[m]); } };
+  const drawList=(pass,glass,shadow)=>{ for(let m=0;m<lists.length;m++){ const L=lists[m]; const n=glass?L.ngl:L.nop; if(!n)continue; if(shadow&&(m===MESHIDX.quad||m===MESHIDX.sphLo)) continue; const me=R.mesh[m]; pass.setVertexBuffer(0,me.vb); pass.setIndexBuffer(me.ib,me.fmt); pass.drawIndexed(me.n,n,0,0,glass?glF[m]:opF[m]); } };
   // shadow
   const sp=enc.beginRenderPass({colorAttachments:[],depthStencilAttachment:{view:R.shadow.createView(),depthLoadOp:'clear',depthStoreOp:'store',depthClearValue:1}});
-  if(env.shadow>0.01){ sp.setPipeline(R.pShadow); sp.setBindGroup(0,R.bgShadow); drawList(sp,false); } sp.end();
+  if(env.shadow>0.01){ sp.setPipeline(R.pShadow); sp.setBindGroup(0,R.bgShadow); drawList(sp,false,true); } sp.end();
   // scene
   const PP=R.pipes[R.ms];
   const pass=enc.beginRenderPass({colorAttachments:[R.ms>1?{view:TEX.msaa.createView(),resolveTarget:TEX.hdr.createView(),loadOp:'clear',storeOp:'discard',clearValue:{r:0,g:0,b:0,a:1}}:{view:TEX.hdr.createView(),loadOp:'clear',storeOp:'store',clearValue:{r:0,g:0,b:0,a:1}}],
