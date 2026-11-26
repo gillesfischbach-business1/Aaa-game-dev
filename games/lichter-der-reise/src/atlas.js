@@ -1,5 +1,5 @@
 /* ===== Texture atlas drawn with Canvas2D: number plates and signs (4 x 8 slots of 512 x 128) ===== */
-const ATLAS_W=2048, ATLAS_H=1024, SLOT={VAN_PLATE:0,SUP_PLATE:1,BELVAL:2,MONTE:3,CAFE:4,HOTEL:5,PHARMA:6,BOUL:7,PORT:8,RUE:9,BAR:10,SIGN_EHV:11,SIGN_LUX:12,BORDER:13,GLOW:14,LICHT:15,PONT:16,STRAAT:17,FRITES:18,TAXI:19};
+const ATLAS_W=2048, ATLAS_H=1024, SLOT={VAN_PLATE:0,SUP_PLATE:1,BELVAL:2,MONTE:3,CAFE:4,HOTEL:5,PHARMA:6,BOUL:7,PORT:8,RUE:9,BAR:10,SIGN_EHV:11,SIGN_LUX:12,BORDER:13,GLOW:14,LICHT:15,PONT:16,STRAAT:17,FRITES:18,TAXI:19,ZEBRA:20};
 function buildAtlas(){
   const cv=(typeof OffscreenCanvas!=='undefined')?new OffscreenCanvas(ATLAS_W,ATLAS_H):Object.assign(document.createElement('canvas'),{width:ATLAS_W,height:ATLAS_H});
   const g=cv.getContext('2d'); if(!g) return null;
@@ -34,5 +34,6 @@ function buildAtlas(){
   sign(SLOT.STRAAT,'#0b2f6b','#ffffff','',[['Gloeistraat','bold 64px Arial, sans-serif',64]]);
   sign(SLOT.FRITES,null,'#ffe066','',[['FRITES · Snackbar','bold 66px Arial, sans-serif',64]],true);
   sign(SLOT.TAXI,'#f7cf1c','#111111','',[['TAXI','bold 90px Arial, sans-serif',66]]);
+  { const [x,y]=cell(SLOT.ZEBRA); g.clearRect(x,y,512,128); g.fillStyle='rgba(236,236,228,1)'; for(let k=0;k<8;k++) g.fillRect(x+12+k*62,y+4,34,120); }
   return g.getImageData(0,0,ATLAS_W,ATLAS_H).data;
 }

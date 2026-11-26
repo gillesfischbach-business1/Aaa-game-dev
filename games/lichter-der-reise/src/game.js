@@ -149,7 +149,7 @@ function update(dt){
   if(G.state==='drive'){
     const [s,th,br]=readInput(); G.boostT=Math.max(0,G.boostT-dt);
     const hit=stepCar(pl,th,br,s,dt,G.boostT>0); if(hit>3){ G.shake=Math.min(1,hit/14); Audio_.noiseHit(.25,900,clamp(hit/20,.1,.5)); }
-    if(Math.random()<dt*2) spawnTraffic(pl.x,pl.z); updateTraffic(dt,pl);
+    if(Math.random()<dt*2) spawnTraffic(pl.x,pl.z); updateTraffic(dt,pl); updateHumans(dt,pl);
     const cx=Math.floor(pl.x/CELL), cz=Math.floor(pl.z/CELL), mag=pl.car==='fidele'?2.6:1.8;
     for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ const c=cells.get((cx+i)+','+(cz+j)); if(!c||!c.sparks) continue; for(const sp of c.sparks){ if(sp.alive&&Math.hypot(sp.x-pl.x,sp.z-pl.z)<mag+1){ sp.alive=false; collect(sp.x,sp.z); } } }
     for(const o of G.dyn){ if(o.alive===false) continue;
@@ -238,7 +238,9 @@ function buildFrame(){
   const lightsOn=E.lamps>.3;
   drawCar(pl,PEOPLE_SUP,lightsOn);
   if(G.parked) drawCar(G.parked,G.state==='drive'?null:VAL_SUP,false);
-  for(const c of TRAFFIC) drawParts(c.parts,c.x,0,c.z,c.h,{spin:-c.spin,headOn:lightsOn});
+  for(const c of TRAFFIC){ drawParts(c.parts,c.x,0,c.z,c.h,{spin:-c.spin,headOn:lightsOn}); if(Math.hypot(c.x-cam.pos[0],c.z-cam.pos[2])<90){ const cs=Math.cos(c.h), sn=Math.sin(c.h); const lx=-.38, lz=.15; if(!c.look) c.look=pedLook();
+    P(MESHIDX.head,c.x+lx*cs+lz*sn,1.2,c.z-lx*sn+lz*cs,c.h,.19,.23,.21,MAT.SKIN,...c.look.skin,0); P(MESHIDX.head,c.x+lx*cs+(lz+.02)*sn,1.28,c.z-lx*sn+(lz+.02)*cs,c.h,.21,.14,.23,MAT.STD+.85,...c.look.hair,0); P(MESHIDX.rbox,c.x+lx*cs+(lz+.05)*sn,.88,c.z-lx*sn+(lz+.05)*cs,c.h,.42,.42,.24,MAT.STD+.9,...c.look.top,0); } }
+  drawHumans(cam.pos[0],cam.pos[2]);
   if(G.boostT>0){ Lt(pl.x,1.5,pl.z,30,22,10,10); for(let i=0;i<3;i++) P(MESHIDX.sphLo,pl.x+rr(-1,1),rr(.4,2.2),pl.z+rr(-1,1),0,.12,.12,rr(.6,1.6),MAT.EMI,1,.8,.4,10); }
   const M=MISSIONS[G.mission]; const tg=G.state==='drive'&&!G.event&&M?M.target():null;
   if(tg){ const pulse=.6+.4*Math.sin(t*3); P(MESHIDX.cylY,tg.x,40,tg.z,0,2.2,80,2.2,MAT.EMI,1,.78,.35,1.2*pulse); P(MESHIDX.cylY,tg.x,.15,tg.z,0,M.r*1.4,.04,M.r*1.4,MAT.EMI,1,.7,.3,.8*pulse); Lt(tg.x,3,tg.z,40,28,10,24); }
@@ -260,6 +262,7 @@ function buildFrame(){
 let last=0, acc=0, frames=0, adaptT=0;
 function frame(now){
   const dtRaw=Math.max(0,(now-last)/1000); last=now; const dt=Math.min(.05,dtRaw);
+  if(window.__manual){ last=now; requestAnimationFrame(frame); return; }
   if(G.state!=='pause'&&G.state!=='map') update(dt);
   try{ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
     renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},[pl.x-Math.sin(G.camYaw)*14,0,pl.z-Math.cos(G.camYaw)*14],window.__snapReq||null);
@@ -268,3 +271,8 @@ function frame(now){
   if(adaptT>2.5){ const avg=acc/frames; const fb=$('fpsBox'); if(fb&&!fb.hidden) fb.textContent=Math.round(1/avg)+' FPS · '+R.W+'×'+R.H; if(!SET.gfx.adaptive){ acc=0; frames=0; adaptT=0; } else if(avg>.026&&R.scale>.5){ R.scale=Math.max(.5,R.scale*.82); R.needResize=true; } else if(avg<.012&&R.scale<R.maxScale){ R.scale=Math.min(R.maxScale,R.scale*1.12); R.needResize=true; } acc=0; frames=0; adaptT=0; }
   requestAnimationFrame(frame); }
 function onDeviceLost(info){ $('errText').textContent='Die Grafikkarte wurde zurückgesetzt ('+(info.message||info.reason)+'). Bitte lade die Seite neu.'; $('errO').hidden=false; }
+
+/* test hook: render exactly one frame and wait until the GPU has finished it */
+async function renderNow(){ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
+  renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},[pl.x-Math.sin(G.camYaw)*14,0,pl.z-Math.cos(G.camYaw)*14],null);
+  await R.device.queue.onSubmittedWorkDone(); }

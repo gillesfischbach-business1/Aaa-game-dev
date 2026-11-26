@@ -29,6 +29,14 @@ function lampAt(x,z,ry,col,style){ const c=Math.cos(ry), s=Math.sin(ry); // arm 
     S('box',ax,6.08,az,.6,.12,.28,MAT.STD+.4,[.2,.2,.22],.8,ry); const o=S('box',ax,6.0,az,.5,.03,.22,MAT.EMI,col,14,ry); lightAt(o,ax,5.7,az,col,55,20); }
   addCol(x-.25,z-.25,x+.25,z+.25); }
 
+// ---------- street furniture ----------
+function bench(x,z,ry){ S('box',x,.45,z,1.8,.06,.45,MAT.STD+.7,[.35,.22,.12],0,ry); S('box',x,.72,z,1.8,.4,.06,MAT.STD+.7,[.35,.22,.12],0,ry,-.15); for(const d of [-.75,.75]) S('box',x+Math.cos(ry)*d,.22,z-Math.sin(ry)*d,.06,.44,.4,MAT.STD+.4,[.1,.1,.11],.8,ry); }
+function bin(x,z){ S('cylY',x,.45,z,.42,.9,.42,MAT.STD+.5,[.12,.22,.15],.5); S('cylY',x,.92,z,.46,.06,.46,MAT.STD+.4,[.1,.1,.1],.8); }
+function bollard(x,z){ S('cylY',x,.45,z,.16,.9,.16,MAT.STD+.4,[.12,.12,.13],.6); S('cylY',x,.85,z,.17,.08,.17,MAT.STD+.3,[.8,.8,.8],1); }
+function parkedBike(x,z,ry){ const c=Math.cos(ry), s2=Math.sin(ry), col=pick([[.08,.08,.09],[.5,.1,.08],[.15,.3,.45],[.85,.85,.8],[.2,.4,.25]]);
+  for(const d of [-.5,.5]) S('cylX',x+s2*d,.34,z+c*d,.03,.66,.66,MAT.STD+.4,[.05,.05,.05],0,ry);
+  S('box',x,.55,z,.04,.05,.95,MAT.STD+.3,col,.5,ry); S('box',x+s2*.2,.72,z+c*.2,.05,.35,.05,MAT.STD+.3,col,.5,ry); S('box',x-s2*.47,.95,z-c*.47,.48,.03,.03,MAT.STD+.3,[.1,.1,.1],0,ry); S('box',x+s2*.22,.92,z+c*.22,.12,.04,.22,MAT.STD+.6,[.08,.06,.05],0,ry); }
+function awning(x,z,ry,w){ const col=pick([[.6,.1,.1],[.1,.3,.2],[.12,.2,.45],[.8,.6,.2],[.3,.3,.32]]); S('box',x,3.25,z,w,.06,1.6,MAT.STD+.95,col,0,ry,.32); }
 // ---------- districts ----------
 const STYLE={
  altstadt:{fac:2,cols:[[.72,.66,.56],[.66,.6,.5],[.75,.7,.62],[.7,.62,.5]],h:[11,17],d:[11,14],w:[7,11],gable:true,roof:[.14,.14,.16],lamp:'lantern',shops:.35,trees:.2},
@@ -55,7 +63,12 @@ function fillBlock(x0,z0,x1,z1,st,env){
       else if(st===STYLE.strijp){ const n=Math.max(2,Math.round((r.ax?sx:sz)/7)); for(let q=0;q<n;q++){ const o=-((r.ax?sx:sz)/2)+((r.ax?sx:sz)/n)*(q+.5); S('gable',r.ax?x+o:x,h+.1,r.ax?z:z+o,r.ax?(sx/n)*.98:sx*.98,3.2,r.ax?sz*.98:(sz/n)*.98,MAT.GLASSO,[.12,.14,.16],0,r.ax?0:Math.PI/2); } }
       else S('box',x,h+.4,z,sx*.96,.6,sz*.96,MAT.STONE,st.roof);
       if(rnd()<st.shops){ const slot=pick([SLOT.BOUL,SLOT.PHARMA,SLOT.CAFE,SLOT.HOTEL,SLOT.FRITES]); const off=.07; // sign on facade facing the street
-        const fx=r.ax?mid:r.fz-r.dir*off, fz2=r.ax?r.fz-r.dir*off:mid; S('quad',fx,4.2,fz2,Math.min(w*.8,5),Math.min(w*.8,5)/4,1,MAT.DECAL,[1,1,1],2.2,r.ax?(r.dir>0?Math.PI:0):(r.dir>0?-Math.PI/2:Math.PI/2),0,0,slot); }
+        const fx=r.ax?mid:r.fz-r.dir*off, fz2=r.ax?r.fz-r.dir*off:mid; const fr=r.ax?(r.dir>0?Math.PI:0):(r.dir>0?-Math.PI/2:Math.PI/2); S('quad',fx,4.2,fz2,Math.min(w*.8,5),Math.min(w*.8,5)/4,1,MAT.DECAL,[1,1,1],2.2,fr,0,0,slot);
+        if(st.fac!==3&&rnd()<.7){ const ax2=r.ax?mid:r.fz-r.dir*.8, az2=r.ax?r.fz-r.dir*.8:mid; awning(ax2,az2,fr,Math.min(w*.85,6)); } }
+      if((st.fac===1||st.fac===2)&&h>11&&rnd()<.35){ const fr=r.ax?(r.dir>0?Math.PI:0):(r.dir>0?-Math.PI/2:Math.PI/2); const fl=st.fac===2?3.2:3.2; for(let y=fl*1+.2;y<h-2;y+=fl){ for(const o of [-w*.25,w*.25]){ const bx=r.ax?mid+o:r.fz-r.dir*.6, bz=r.ax?r.fz-r.dir*.6:mid+o;
+          S('box',bx,y,bz,2.2,.14,1.2,MAT.STONE,[.7,.68,.64],0,fr); const rx2=r.ax?bx:bx-r.dir*.55, rz2=r.ax?bz-r.dir*.55:bz; S('box',rx2,y+.5,rz2,2.2,.9,.04,MAT.STD+.4,[.1,.1,.11],.6,fr); } } }
+      if(st.gable&&rnd()<.5){ const cx2=x+(r.ax?rr(-sx/3,sx/3):0), cz2=z+(r.ax?0:rr(-sz/3,sz/3)); S('box',cx2,h+Math.min(w,D)*.3,cz2,.7,1.6,.7,MAT.FACADE+.6,[.4,.2,.14],5); }
+      else if(!st.gable&&st!==STYLE.strijp&&rnd()<.6){ S('box',x+rr(-sx/4,sx/4),h+1.1,z+rr(-sz/4,sz/4),2.2,1.2,1.6,MAT.STD+.5,[.55,.56,.58],.6); }
       t+=w; } }
   // courtyard
   const ix0=x0+s+D, ix1=x1-s-D, iz0=z0+s+D, iz1=z1-s-D;
@@ -64,7 +77,12 @@ function fillBlock(x0,z0,x1,z1,st,env){
   // lamps and street trees along the four sidewalks
   for(const [ax,c,a,b,ry] of [[true,z0+1.4,x0+6,x1-6,-Math.PI/2],[true,z1-1.4,x0+6,x1-6,Math.PI/2],[false,x0+1.4,z0+6,z1-6,0],[false,x1-1.4,z0+6,z1-6,Math.PI]]){
     for(let t=a+rr(0,6);t<b;t+=26){ if(ax) lampAt(t,c,ry,env.lamp,st.lamp); else lampAt(c,t,ry,env.lamp,st.lamp); }
-    if(rnd()<st.trees) for(let t=a+13;t<b;t+=26){ const tx=ax?t:c, tz=ax?c:t; tree(tx,tz,rr(5,7)); addCol(tx-.3,tz-.3,tx+.3,tz+.3); } }
+    if(rnd()<st.trees) for(let t=a+13;t<b;t+=26){ const tx=ax?t:c, tz=ax?c:t; tree(tx,tz,rr(5,7)); addCol(tx-.3,tz-.3,tx+.3,tz+.3); }
+    // furniture between lamps: benches, bins, bike racks (Eindhoven), bollards at the corners
+    for(let t=a+6.5;t<b-2;t+=26){ const r2=rnd(); const tx=ax?t:c+(c<(x0+x1)/2?.4:-.4), tz=ax?c+(c<(z0+z1)/2?.4:-.4):t;
+      if(r2<.28) bench(tx,tz,ax?0:Math.PI/2); else if(r2<.45){ bin(tx,tz); addCol(tx-.25,tz-.25,tx+.25,tz+.25); }
+      else if(r2<.75&&(st===STYLE.brick||st===STYLE.strijp)) for(let q=0;q<4;q++) parkedBike(ax?tx+q*.7-1:tx,ax?tz:tz+q*.7-1,ax?0:Math.PI/2); }
+    for(const [bx,bz] of [[x0+.5,z0+.5],[x1-.5,z0+.5],[x0+.5,z1-.5],[x1-.5,z1-.5]]) if(rnd()<.5) bollard(bx,bz); }
 }
 function parkBlock(x0,z0,x1,z1){ S('box',(x0+x1)/2,.05,(z0+z1)/2,x1-x0,.1,z1-z0,MAT.GRASS,[.1,.19,.07]); mapRect('park',x0,z0,x1,z1);
   for(let k=0;k<14;k++){ const tx=rr(x0+4,x1-4), tz=rr(z0+4,z1-4); tree(tx,tz,rr(6,9)); addCol(tx-.4,tz-.4,tx+.4,tz+.4); }
@@ -160,7 +178,10 @@ function genCity(key,env){ const C=CITY[key], n=C.n, P=OW.P, h=OW.W/2;
   const hasH=(i,j)=>{ // horizontal road on line j between columns i and i+1
     if(key==='lux'&&i===-3&&j<3&&j>-5) return LUX_BRIDGES.includes(j); return true; };
   const hasV=(i,j)=>{ if(key==='ehv'&&j===1) return EHV_BRIDGES.includes(i); return true; };
-  for(let i=-n;i<=n;i++) for(let j=-n;j<=n;j++){ const x=X(i), z=Z(j); S('box',x,-.04,z,OW.W,.1,OW.W,MAT.ROAD+.6,[.075,.075,.08]); mapRect('road',x-h,z-h,x+h,z+h); }
+  for(let i=-n;i<=n;i++) for(let j=-n;j<=n;j++){ const x=X(i), z=Z(j); S('box',x,-.04,z,OW.W,.1,OW.W,MAT.ROAD+.6,[.075,.075,.08]); mapRect('road',x-h,z-h,x+h,z+h);
+    if(key==='lux'&&i===-3&&j<3&&j>-5) continue;
+    for(const [dx,dz,ry] of [[0,-h-2.2,0],[0,h+2.2,0],[-h-2.2,0,Math.PI/2],[h+2.2,0,Math.PI/2]]){ if((dz<0&&j===-n)||(dz>0&&j===n)||(dx<0&&i===-n)||(dx>0&&i===n)) continue;
+      S('quad',x+dx,.016,z+dz,OW.W-.6,3.2,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.ZEBRA); } }
   for(let j=-n;j<=n;j++) for(let i=-n;i<n;i++){ if(!hasH(i,j)) continue; const x0=X(i)+h, x1=X(i+1)-h, z=Z(j);
     const bridge=key==='lux'&&i===-3&&j<3; if(!bridge) roadRect(x0,z-h,x1,z+h); else { roadsList.push({x0,z0:z-h,x1,z1:z+h}); mapRect('road',x0,z-h,x1,z+h); S('box',(x0+x1)/2,-.04,z,x1-x0,.1,OW.W,MAT.ROAD+.6,[.075,.075,.08]); }
     edge(node(X(i),z),node(X(i+1),z)); }

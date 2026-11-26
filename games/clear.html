@@ -1,0 +1,5 @@
+<canvas id=c width=200 height=100></canvas><script>
+(async()=>{try{const a=await navigator.gpu.requestAdapter();if(!a){document.title='no adapter';return}const d=await a.requestDevice();const x=c.getContext('webgpu');const f=navigator.gpu.getPreferredCanvasFormat();x.configure({device:d,format:f,alphaMode:'opaque'});
+function fr(){const e=d.createCommandEncoder();const p=e.beginRenderPass({colorAttachments:[{view:x.getCurrentTexture().createView(),loadOp:'clear',storeOp:'store',clearValue:{r:1,g:0,b:0,a:1}}]});p.end();d.queue.submit([e.finish()]);requestAnimationFrame(fr)}fr();
+const b=d.createBuffer({size:16,usage:GPUBufferUsage.MAP_READ|GPUBufferUsage.COPY_DST}); try{await b.mapAsync(GPUMapMode.READ); document.title='map ok '+(a.info?a.info.description:'');}catch(err){document.title='map fail '+err.message}}catch(e){document.title='err '+e.message}})();
+</script>

@@ -47,7 +47,7 @@ function togglePause(){ if(G.state==='drive'){ G.state='pause'; $('pauseO').hidd
 function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false; drawBigMap(); } else if(G.state==='map'){ G.state='drive'; UI.mapO.hidden=true; } }
 
 (async()=>{
-  try{ loadSettings(); initUI(); await initGPU($('gfx')); initModels(); buildWorld({lamp:[1,.72,.42]}); buildMapImage();
+  try{ loadSettings(); initUI(); await initGPU($('gfx')); initModels(); buildWorld({lamp:[1,.72,.42]}); genCafes(); buildMapImage();
     R.scale=SET.gfx.scale*Math.min(window.devicePixelRatio||1,1.5); applySettings();
     placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; requestAnimationFrame(t=>{ last=t; frame(t); }); }
   catch(e){ console.error(e); $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
