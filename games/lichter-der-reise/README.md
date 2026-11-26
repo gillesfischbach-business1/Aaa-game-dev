@@ -1,26 +1,18 @@
 # Lichter der Reise
 
-A short WebGPU road story in four chapters (German). Léo and Mira drive their old white van "Fidèle" from the blast furnaces, through the city of bridges and the square of fiery orbs, to the harbour of lights.
+A WebGPU road story in four chapters (German), built from a couple's travel photos: Léo and Mira drive from the blast furnaces of Belval through Luxembourg City and a square of fire orbs to the harbour of Monte-Carlo, in their old white van "Fidèle" or Valère's green hypercar "Smaragd".
 
-## Play
+**Play:** https://raw.githack.com/gillesfischbach-business1/Aaa-game-dev/main/games/lichter-der-reise/index.html
+(after GitHub Pages is enabled: https://gillesfischbach-business1.github.io/Aaa-game-dev/games/lichter-der-reise/)
 
-WebGPU needs a secure context, so serve the folder instead of opening the file directly:
+Runs in current Chrome/Edge (desktop and Android) and Safari 26+ (macOS, iOS, iPadOS).
 
-```bash
-cd games/lichter-der-reise && python3 -m http.server 8000
-# open http://localhost:8000
-```
+## Controls
+← → / A D steer · ↑ ↓ / W S throttle and brake · Space Lichtstoß · P pause · M sound · touch buttons on phones · gamepad.
 
-Works in current Chrome/Edge (desktop and Android) and Safari 26+.
-
-Controls: ← → or A/D steer, Space = Lichtstoß (boost), P pause, M sound. On phones: touch buttons at the bottom.
-
-## Tech
-
-- Single file, no dependencies: raw WebGPU, instanced forward renderer into an HDR target with 4× MSAA.
-- Procedural materials in WGSL: lit windows, lava orbs, water, wet asphalt with stretched light reflections.
-- Bloom (13-tap downsample / tent upsample chain), ACES tonemapping, vignette, grain.
-- Procedural world per chapter, generative WebAudio score and sound effects.
-- Adaptive render resolution keeps the frame rate up on slower devices.
-
-The optional ending photo album loads from `memories/` (not committed; the game hides the album when the photos are missing).
+## Structure
+- `src/` sources, bundled by `python3 build.py` into a single `index.html`.
+  - `renderer.js` WebGPU: 2048² sun shadow map (PCF), HDR forward pass with 4× MSAA, transparent glass pass, bloom chain, ACES tonemapping, adaptive resolution.
+  - `shaders.js` WGSL: GGX lighting with clearcoat, procedural facades (brick, plaster, sandstone, glass curtain walls, lit interiors), pavers, wet asphalt with puddles, water, metallic car paint, rust, foliage.
+  - `meshes.js` procedural geometry (lofts, lathes, rounded boxes); `cars.js` the two cars and characters; `world.js` the four places; `story.js` dialogue; `game.js` driving, spawning, camera, flow.
+- `assets/` photos used for story cards, dialogue portraits and car selection.
