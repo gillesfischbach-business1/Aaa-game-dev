@@ -100,7 +100,7 @@ function renderFrame(cam,env,time,post,shadowCenter,snapCb){
   const d=R.device; const c=R.canvas;
   if(R.needResize||Math.abs(c.width-Math.min(d.limits.maxTextureDimension2D,Math.max(1,Math.floor(c.clientWidth*R.scale))))>1) resizeTargets();
   const aspect=R.W/R.H; const fovy=(aspect<1?Math.min(cam.fov*1.35,95):cam.fov)*Math.PI/180;
-  const basis=lookAt(V16,cam.pos,cam.tgt,[0,1,0]); perspective(P16,fovy,aspect,0.15,1400); mul(VP,P16,V16);
+  const basis=lookAt(V16,cam.pos,cam.tgt,[0,1,0]); perspective(P16,fovy,aspect,0.3,2200); mul(VP,P16,V16);
   // sun shadow camera, snapped to texels
   const sl=Math.hypot(...env.sunDir); const sd=env.sunDir.map(v=>v/sl); const ext=58;
   const sc=shadowCenter; lookAt(LV,[sc[0]+sd[0]*200,sc[1]+sd[1]*200,sc[2]+sd[2]*200],sc,Math.abs(sd[1])>.95?[0,0,1]:[0,1,0]);

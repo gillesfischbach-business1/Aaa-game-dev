@@ -1,24 +1,23 @@
 <canvas id="gfx" aria-label="Spielgrafik"></canvas>
 
 <div id="hud" hidden>
-  <div id="hudLeft" class="hud-box">
-    <div id="chapLabel">Kapitel</div>
-    <div id="prog"><div id="progFill"></div></div>
-    <div id="speed"><b id="speedN">0</b> km/h</div>
+  <div id="obj" class="hud-box">
+    <div class="eyebrow" style="font-size:10px">Ziel</div>
+    <div id="objTitle">Ziel</div>
+    <div id="objText"></div>
+    <div class="row" style="gap:8px"><span id="objArrow">▲</span><span id="objDist"></span></div>
   </div>
   <div id="hudRight">
+    <canvas id="mini" width="170" height="170" aria-label="Minikarte"></canvas>
     <div class="row" style="gap:8px;justify-content:flex-end">
       <div class="hud-box" id="light"><i></i><span id="lightN">0</span></div>
-      <div id="topBtns"><button class="icon-btn" id="btnMute" aria-label="Ton an oder aus">♪</button><button class="icon-btn" id="btnPause" aria-label="Pause">❚❚</button></div>
-    </div>
-    <div class="hud-box" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-      <div id="hearts"></div>
-      <div id="boostBar"><div id="boostFill"></div></div>
-      <div id="boostHint">Lichtstoß</div>
+      <div id="topBtns"><button class="icon-btn" id="btnMap" aria-label="Karte">⌖</button><button class="icon-btn" id="btnSwap" aria-label="Auto wechseln">⇄</button><button class="icon-btn" id="btnMute" aria-label="Ton an oder aus">♪</button><button class="icon-btn" id="btnPause" aria-label="Pause">❚❚</button></div>
     </div>
   </div>
+  <div id="dash" class="hud-box"><b id="speedN">0</b><small>km/h</small><span id="carName">Fidèle</span><span id="clock">18:30</span><span id="boostHint">Lichtstoß</span></div>
 </div>
-
+<div id="toast"></div>
+<div class="overlay" id="mapO" hidden><div class="card" style="width:min(1140px,100%)"><div class="row" style="justify-content:space-between"><h2 style="font-size:40px">Karte</h2><button class="btn ghost" id="mapClose">Schließen</button></div><canvas id="mapC" width="1000" height="360" style="width:100%;border-radius:14px"></canvas><div class="keys">Gelb: euer Ziel · Rosa: ihr · Grün: der Smaragd</div></div></div>
 <div id="bark"><div id="barkAv"></div><div id="barkText"></div></div>
 <div id="chapCard"><div class="eyebrow" id="chapEyebrow">Kapitel I</div><h2 id="chapTitle">Die Hochöfen</h2></div>
 <figure id="photo" aria-hidden="true"><div class="frame"><img id="photoImg" alt=""></div><figcaption id="photoCap"></figcaption></figure>
@@ -42,27 +41,11 @@
 
 <div class="overlay" id="title">
   <div class="card">
-    <div class="eyebrow">Eine Geschichte in vier Kapiteln</div>
+    <div class="eyebrow">Open World · Luxemburg und Eindhoven</div>
     <h1>Lichter der <em>Reise</em></h1>
-    <p class="lede">Von den Hochöfen in Belval über die Brücken von Luxemburg bis zum Hafen von Monte-Carlo. Léo und Mira, ihr alter Lieferwagen Fidèle, ein smaragdgrüner Supersportwagen und eine Wette um das letzte Leuchtfeuer am Meer.</p>
+    <p class="lede">Zwei Städte, eine Autobahn und eine Nacht voller Glut. Fahrt frei durch ein fiktives Luxemburg mit Hochöfen, Tal und Brücken und durch ein fiktives Eindhoven mit Kanal, Fabrikhallen und dem Glutplatz. Mit Fidèle, dem alten weißen Lieferwagen, oder dem smaragdgrünen Supersportwagen.</p>
     <div class="row"><button class="btn" id="btnStart">Reise beginnen</button><span class="best" id="bestLbl"></span></div>
-    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> lenken · <kbd>↑</kbd> <kbd>↓</kbd> Gas und Bremse · <kbd>Leertaste</kbd> Lichtstoß · <kbd>P</kbd> Pause · <kbd>M</kbd> Ton<br>Am Handy: Tasten unten. Gamepad wird unterstützt.</div>
-  </div>
-</div>
-
-<div class="overlay" id="carSel" hidden>
-  <div class="card" style="width:min(820px,100%)">
-    <div class="eyebrow" id="selEyebrow">Kapitel I</div>
-    <h2>Womit fahrt ihr?</h2>
-    <div class="cars">
-      <button class="carCard" id="pick-fidele"><img src="assets/car_fidele.jpg" alt="Der weiße Lieferwagen Fidèle"><h3>Fidèle</h3><p>Der alte weiße Lieferwagen. EJ 391 YJ.</p>
-        <div class="bars"><span>Tempo</span><span class="bar"><i style="width:45%"></i></span><span>Lenkung</span><span class="bar"><i style="width:55%"></i></span><span>Robustheit</span><span class="bar"><i style="width:100%"></i></span></div>
-        <div class="perk">4 Herzen · großer Funkenmagnet (Mira hält das Glas aus dem Fenster)</div></button>
-      <button class="carCard" id="pick-smaragd"><img src="assets/car_smaragd.jpg" alt="Der grüne Supersportwagen Smaragd"><h3>Smaragd</h3><p>Valères Hypercar. VH 3107.</p>
-        <div class="bars"><span>Tempo</span><span class="bar"><i style="width:100%"></i></span><span>Lenkung</span><span class="bar"><i style="width:95%"></i></span><span>Robustheit</span><span class="bar"><i style="width:60%"></i></span></div>
-        <div class="perk">3 Herzen · Lichtstoß kostet nur 10 Funken</div></button>
-    </div>
-    <div class="keys">Valère fährt jeweils das andere Auto. Ihr könnt vor jedem Kapitel neu wählen.</div>
+    <div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> oder Pfeiltasten fahren · <kbd>Leertaste</kbd> Lichtstoß · <kbd>C</kbd> Auto wechseln · <kbd>K</kbd> Karte · <kbd>P</kbd> Pause · <kbd>M</kbd> Ton<br>Am Handy: Tasten am Rand. Gamepad wird unterstützt.</div>
   </div>
 </div>
 
@@ -70,16 +53,7 @@
   <div class="card" style="align-items:flex-start">
     <div class="eyebrow">Pause</div>
     <h2>Kurz durchatmen.</h2>
-    <div class="row"><button class="btn" id="btnResume">Weiterfahren</button><button class="btn ghost" id="btnRestartCh">Kapitel neu starten</button><button class="btn ghost" id="btnSwitchCar">Auto wechseln</button></div>
-  </div>
-</div>
-
-<div class="overlay" id="crashO" hidden>
-  <div class="card" style="align-items:flex-start">
-    <div class="eyebrow">Motor aus</div>
-    <h2>Noch einmal, mit Gefühl.</h2>
-    <p class="lede">„Komm schon“, flüstert Léo und dreht den Schlüssel. Der Motor springt an. Das Kapitel beginnt von vorn, mit dem Licht, das ihr hineingetragen habt.</p>
-    <div class="row"><button class="btn" id="btnRetry">Nochmal versuchen</button></div>
+    <div class="row"><button class="btn" id="btnResume">Weiterfahren</button><button class="btn ghost" id="btnReset">Zurück auf die Straße</button><button class="btn ghost" id="btnRestart">Neues Spiel</button></div>
   </div>
 </div>
 
@@ -93,7 +67,7 @@
       <div class="eyebrow" style="margin-bottom:10px;color:var(--gold)">Das Album der Reise</div>
       <div class="album" id="album"></div>
     </div>
-    <div class="row"><button class="btn" id="btnAgain">Nochmal reisen</button><button class="btn ghost" id="btnRethink" hidden>Entscheidung überdenken</button></div>
+    <div class="row"><button class="btn" id="btnFree">Weiterfahren (freie Fahrt)</button><button class="btn ghost" id="btnAgain">Neues Spiel</button><button class="btn ghost" id="btnRethink" hidden>Entscheidung überdenken</button></div>
   </div>
 </div>
 

@@ -148,30 +148,47 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
 .album{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:560px){ #carSel .cars{grid-template-columns:1fr} .carCard img{aspect-ratio:16/8} .album{grid-template-columns:repeat(2,minmax(0,1fr))} #photo .frame{max-height:calc(100vh - 360px)} }
 
+/* open world HUD */
+#hud{align-items:flex-start}
+#obj{max-width:min(340px,48vw);display:flex;flex-direction:column;gap:4px}
+#objTitle{font-family:var(--display);font-style:italic;font-size:22px;line-height:1.05}
+#objText{font-size:13px;color:var(--muted);line-height:1.4}
+#objArrow{display:inline-block;color:var(--gold);font-size:16px;transition:transform .1s linear}
+#objDist{font-variant-numeric:tabular-nums;font-weight:800;font-size:14px}
+#mini{width:170px;height:170px;border-radius:50%;border:2px solid var(--line);background:#1b2418;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#dash{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;gap:14px;align-items:baseline;font-variant-numeric:tabular-nums}
+#dash b{font-size:26px} #dash small{color:var(--muted);margin-left:-10px} #dash span{font-size:12px;color:var(--muted);letter-spacing:.06em}
+#carName{color:var(--gold)!important}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 16px);transform:translateX(-50%);background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-weight:600;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.show{opacity:1}
+@media (max-width:560px){ #mini{width:118px;height:118px} #obj{max-width:52vw} #objTitle{font-size:17px} #objText{display:none} #dash{bottom:calc(env(safe-area-inset-bottom,0px) + 120px)} }
+#mapO{background:rgba(7,6,12,.92)}
+@media (max-width:560px){ #dash{top:calc(env(safe-area-inset-top,0px) + 122px);bottom:auto;left:max(16px,env(safe-area-inset-left,0px));transform:none;gap:10px;padding:6px 10px} #dash b{font-size:20px} #boostHint{display:none}
+  #toast{top:40%} #bark{bottom:calc(env(safe-area-inset-bottom,0px) + 112px)} }
+
 </style>
 </head>
 <body>
 <canvas id="gfx" aria-label="Spielgrafik"></canvas>
 
 <div id="hud" hidden>
-  <div id="hudLeft" class="hud-box">
-    <div id="chapLabel">Kapitel</div>
-    <div id="prog"><div id="progFill"></div></div>
-    <div id="speed"><b id="speedN">0</b> km/h</div>
+  <div id="obj" class="hud-box">
+    <div class="eyebrow" style="font-size:10px">Ziel</div>
+    <div id="objTitle">Ziel</div>
+    <div id="objText"></div>
+    <div class="row" style="gap:8px"><span id="objArrow">▲</span><span id="objDist"></span></div>
   </div>
   <div id="hudRight">
+    <canvas id="mini" width="170" height="170" aria-label="Minikarte"></canvas>
     <div class="row" style="gap:8px;justify-content:flex-end">
       <div class="hud-box" id="light"><i></i><span id="lightN">0</span></div>
-      <div id="topBtns"><button class="icon-btn" id="btnMute" aria-label="Ton an oder aus">♪</button><button class="icon-btn" id="btnPause" aria-label="Pause">❚❚</button></div>
-    </div>
-    <div class="hud-box" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-      <div id="hearts"></div>
-      <div id="boostBar"><div id="boostFill"></div></div>
-      <div id="boostHint">Lichtstoß</div>
+      <div id="topBtns"><button class="icon-btn" id="btnMap" aria-label="Karte">⌖</button><button class="icon-btn" id="btnSwap" aria-label="Auto wechseln">⇄</button><button class="icon-btn" id="btnMute" aria-label="Ton an oder aus">♪</button><button class="icon-btn" id="btnPause" aria-label="Pause">❚❚</button></div>
     </div>
   </div>
+  <div id="dash" class="hud-box"><b id="speedN">0</b><small>km/h</small><span id="carName">Fidèle</span><span id="clock">18:30</span><span id="boostHint">Lichtstoß</span></div>
 </div>
-
+<div id="toast"></div>
+<div class="overlay" id="mapO" hidden><div class="card" style="width:min(1140px,100%)"><div class="row" style="justify-content:space-between"><h2 style="font-size:40px">Karte</h2><button class="btn ghost" id="mapClose">Schließen</button></div><canvas id="mapC" width="1000" height="360" style="width:100%;border-radius:14px"></canvas><div class="keys">Gelb: euer Ziel · Rosa: ihr · Grün: der Smaragd</div></div></div>
 <div id="bark"><div id="barkAv"></div><div id="barkText"></div></div>
 <div id="chapCard"><div class="eyebrow" id="chapEyebrow">Kapitel I</div><h2 id="chapTitle">Die Hochöfen</h2></div>
 <figure id="photo" aria-hidden="true"><div class="frame"><img id="photoImg" alt=""></div><figcaption id="photoCap"></figcaption></figure>
@@ -195,27 +212,11 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
 
 <div class="overlay" id="title">
   <div class="card">
-    <div class="eyebrow">Eine Geschichte in vier Kapiteln</div>
+    <div class="eyebrow">Open World · Luxemburg und Eindhoven</div>
     <h1>Lichter der <em>Reise</em></h1>
-    <p class="lede">Von den Hochöfen in Belval über die Brücken von Luxemburg bis zum Hafen von Monte-Carlo. Léo und Mira, ihr alter Lieferwagen Fidèle, ein smaragdgrüner Supersportwagen und eine Wette um das letzte Leuchtfeuer am Meer.</p>
+    <p class="lede">Zwei Städte, eine Autobahn und eine Nacht voller Glut. Fahrt frei durch ein fiktives Luxemburg mit Hochöfen, Tal und Brücken und durch ein fiktives Eindhoven mit Kanal, Fabrikhallen und dem Glutplatz. Mit Fidèle, dem alten weißen Lieferwagen, oder dem smaragdgrünen Supersportwagen.</p>
     <div class="row"><button class="btn" id="btnStart">Reise beginnen</button><span class="best" id="bestLbl"></span></div>
-    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> lenken · <kbd>↑</kbd> <kbd>↓</kbd> Gas und Bremse · <kbd>Leertaste</kbd> Lichtstoß · <kbd>P</kbd> Pause · <kbd>M</kbd> Ton<br>Am Handy: Tasten unten. Gamepad wird unterstützt.</div>
-  </div>
-</div>
-
-<div class="overlay" id="carSel" hidden>
-  <div class="card" style="width:min(820px,100%)">
-    <div class="eyebrow" id="selEyebrow">Kapitel I</div>
-    <h2>Womit fahrt ihr?</h2>
-    <div class="cars">
-      <button class="carCard" id="pick-fidele"><img src="assets/car_fidele.jpg" alt="Der weiße Lieferwagen Fidèle"><h3>Fidèle</h3><p>Der alte weiße Lieferwagen. EJ 391 YJ.</p>
-        <div class="bars"><span>Tempo</span><span class="bar"><i style="width:45%"></i></span><span>Lenkung</span><span class="bar"><i style="width:55%"></i></span><span>Robustheit</span><span class="bar"><i style="width:100%"></i></span></div>
-        <div class="perk">4 Herzen · großer Funkenmagnet (Mira hält das Glas aus dem Fenster)</div></button>
-      <button class="carCard" id="pick-smaragd"><img src="assets/car_smaragd.jpg" alt="Der grüne Supersportwagen Smaragd"><h3>Smaragd</h3><p>Valères Hypercar. VH 3107.</p>
-        <div class="bars"><span>Tempo</span><span class="bar"><i style="width:100%"></i></span><span>Lenkung</span><span class="bar"><i style="width:95%"></i></span><span>Robustheit</span><span class="bar"><i style="width:60%"></i></span></div>
-        <div class="perk">3 Herzen · Lichtstoß kostet nur 10 Funken</div></button>
-    </div>
-    <div class="keys">Valère fährt jeweils das andere Auto. Ihr könnt vor jedem Kapitel neu wählen.</div>
+    <div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> oder Pfeiltasten fahren · <kbd>Leertaste</kbd> Lichtstoß · <kbd>C</kbd> Auto wechseln · <kbd>K</kbd> Karte · <kbd>P</kbd> Pause · <kbd>M</kbd> Ton<br>Am Handy: Tasten am Rand. Gamepad wird unterstützt.</div>
   </div>
 </div>
 
@@ -223,16 +224,7 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
   <div class="card" style="align-items:flex-start">
     <div class="eyebrow">Pause</div>
     <h2>Kurz durchatmen.</h2>
-    <div class="row"><button class="btn" id="btnResume">Weiterfahren</button><button class="btn ghost" id="btnRestartCh">Kapitel neu starten</button><button class="btn ghost" id="btnSwitchCar">Auto wechseln</button></div>
-  </div>
-</div>
-
-<div class="overlay" id="crashO" hidden>
-  <div class="card" style="align-items:flex-start">
-    <div class="eyebrow">Motor aus</div>
-    <h2>Noch einmal, mit Gefühl.</h2>
-    <p class="lede">„Komm schon“, flüstert Léo und dreht den Schlüssel. Der Motor springt an. Das Kapitel beginnt von vorn, mit dem Licht, das ihr hineingetragen habt.</p>
-    <div class="row"><button class="btn" id="btnRetry">Nochmal versuchen</button></div>
+    <div class="row"><button class="btn" id="btnResume">Weiterfahren</button><button class="btn ghost" id="btnReset">Zurück auf die Straße</button><button class="btn ghost" id="btnRestart">Neues Spiel</button></div>
   </div>
 </div>
 
@@ -246,7 +238,7 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
       <div class="eyebrow" style="margin-bottom:10px;color:var(--gold)">Das Album der Reise</div>
       <div class="album" id="album"></div>
     </div>
-    <div class="row"><button class="btn" id="btnAgain">Nochmal reisen</button><button class="btn ghost" id="btnRethink" hidden>Entscheidung überdenken</button></div>
+    <div class="row"><button class="btn" id="btnFree">Weiterfahren (freie Fahrt)</button><button class="btn ghost" id="btnAgain">Neues Spiel</button><button class="btn ghost" id="btnRethink" hidden>Entscheidung überdenken</button></div>
   </div>
 </div>
 
@@ -571,7 +563,7 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     let ag=noise2(i.wp.xz*9.0)*fade; let pch=fbm2(i.wp.xz*0.08);
     let crack=(1.0-smoothstep(0.0,0.025,abs(fbm2(i.wp.xz*0.35)-0.5)))*smoothstep(0.5,0.7,pch);
     s.alb=i.col.rgb*(0.75+0.5*ag)*(0.85+0.3*pch)*(1.0-crack*0.6);
-    let track=exp(-pow((fract((i.wp.x+0.8)/3.2)-0.5)*3.2/0.5,2.0));
+    let track=0.0;
     let puddle=smoothstep(0.58,0.66,fbm2(i.wp.xz*0.11+vec2f(3.0,1.0))+wetG*0.12);
     s.wet=max(wetG,0.35); s.rough=mix(mix(0.75,0.35,wetG),0.03,puddle*max(wetG,0.3))*(1.0-track*0.15);
     s.alb*=mix(1.0,0.5,wetG);
@@ -608,10 +600,15 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     s.n=bump(N,dx*1.5,dy*1.5);
   }
   else if(mat<14.5){ s.wrap=0.45; s.rough=0.55; } // skin
-  else { // rusted metal (blast furnace)
+  else if(mat<15.5){ // rusted metal (blast furnace)
     let f=fbm3(i.wp*vec3f(0.8,1.6,0.8)); let rust=smoothstep(0.42,0.7,f);
     s.alb=mix(i.col.rgb,vec3f(0.32,0.12,0.05),rust); s.metal=mix(0.7,0.1,rust); s.rough=mix(0.45,0.9,rust);
     let band=step(0.92,fract(i.wp.y*0.8)); s.alb*=1.0-band*0.4; s.ao=1.0-band*0.4;
+  }
+  else { // grass / fields
+    let q=i.wp.xz; let f=fbm2(q*0.05); let f2=noise2(q*0.7); let fade=clamp(1.0-fwW*3.0,0.0,1.0);
+    s.alb=i.col.rgb*(0.7+0.5*f)*(0.85+0.3*f2*fade); s.rough=0.95; s.wrap=0.2;
+    if(i.col.a>0.5){ let row=fract(q.x*0.5); s.alb*=mix(1.0,0.72,step(0.5,row)*fade); }
   }
   if(direct){ let sh=shadowAt(i.wp,N); col=shade(i.wp,V,s,sh); }
   // atmosphere: distance + height fog tinted by sky in view direction
@@ -708,7 +705,7 @@ fn aces(x:vec3f)->vec3f{
 }`;
 
 /* ===== Texture atlas drawn with Canvas2D: number plates and signs (4 x 8 slots of 512 x 128) ===== */
-const ATLAS_W=2048, ATLAS_H=1024, SLOT={VAN_PLATE:0,SUP_PLATE:1,BELVAL:2,MONTE:3,CAFE:4,HOTEL:5,PHARMA:6,BOUL:7,PORT:8,RUE:9,BAR:10};
+const ATLAS_W=2048, ATLAS_H=1024, SLOT={VAN_PLATE:0,SUP_PLATE:1,BELVAL:2,MONTE:3,CAFE:4,HOTEL:5,PHARMA:6,BOUL:7,PORT:8,RUE:9,BAR:10,SIGN_EHV:11,SIGN_LUX:12,BORDER:13,GLOW:14,LICHT:15,PONT:16,STRAAT:17,FRITES:18,TAXI:19};
 function buildAtlas(){
   const cv=(typeof OffscreenCanvas!=='undefined')?new OffscreenCanvas(ATLAS_W,ATLAS_H):Object.assign(document.createElement('canvas'),{width:ATLAS_W,height:ATLAS_H});
   const g=cv.getContext('2d'); if(!g) return null;
@@ -734,13 +731,22 @@ function buildAtlas(){
   sign(SLOT.PORT,'#0e2a44','#ffffff','',[['PORT DES LUMIÈRES','bold 56px Arial, sans-serif',64]]);
   sign(SLOT.RUE,'#1c3f8f','#ffffff','',[['Rue des Bâtisseurs','bold 58px Arial, sans-serif',64]]);
   sign(SLOT.BAR,null,'#c78bff','',[['Le Pont Violet','italic 78px Georgia, serif',64]],true);
+  sign(SLOT.SIGN_EHV,'#1b4fa0','#ffffff','',[['Eindhoven','bold 70px Arial, sans-serif',52],['A-Route der Lichter  ·  →','500 30px Arial, sans-serif',102]]);
+  sign(SLOT.SIGN_LUX,'#1b4fa0','#ffffff','',[['Lëtzebuerg','bold 70px Arial, sans-serif',52],['←  Belval · Altstadt','500 30px Arial, sans-serif',102]]);
+  sign(SLOT.BORDER,'#1b4fa0','#ffffff','',[['Nederland','bold 72px Arial, sans-serif',66]]); { const [x,y]=cell(SLOT.BORDER); g.strokeStyle='#ffd400'; g.lineWidth=3; for(let k=0;k<12;k++){ const a=k/12*Math.PI*2; g.beginPath(); g.arc(x+60+Math.cos(a)*30,y+64+Math.sin(a)*30,4,0,7); g.fillStyle='#ffd400'; g.fill(); } }
+  sign(SLOT.GLOW,null,'#ff9a3c','',[['GLOW · Glutplatz','bold 76px Arial, sans-serif',64]],true);
+  sign(SLOT.LICHT,null,'#d8ecff','',[['LICHTTURM','300 84px Arial, sans-serif',64]],true);
+  sign(SLOT.PONT,'#1c3f8f','#ffffff','',[['Pont des Lumières','bold 56px Arial, sans-serif',64]]);
+  sign(SLOT.STRAAT,'#0b2f6b','#ffffff','',[['Gloeistraat','bold 64px Arial, sans-serif',64]]);
+  sign(SLOT.FRITES,null,'#ffe066','',[['FRITES · Snackbar','bold 66px Arial, sans-serif',64]],true);
+  sign(SLOT.TAXI,'#f7cf1c','#111111','',[['TAXI','bold 90px Arial, sans-serif',66]]);
   return g.getImageData(0,0,ATLAS_W,ATLAS_H).data;
 }
 
 /* ===== Vehicles and characters, modelled after the photos =====
    Part: [meshKey, x,y,z, sx,sy,sz, mat, color, param, rx, ry, rz, slot]
    Forward is -Z, origin on the ground in the middle of the car. */
-const MAT={STD:0,EMI:1,LAVA:2,WATER:3,FACADE:4,PAVER:5,GLASS:6,ROAD:7,PAINT:8,DECAL:9,TYRE:10,FOLIAGE:11,GLASSO:12,STONE:13,SKIN:14,RUST:15};
+const MAT={STD:0,EMI:1,LAVA:2,WATER:3,FACADE:4,PAVER:5,GLASS:6,ROAD:7,PAINT:8,DECAL:9,TYRE:10,FOLIAGE:11,GLASSO:12,STONE:13,SKIN:14,RUST:15,GRASS:16};
 const COL={black:[.025,.025,.028],plastic:[.05,.05,.055],chrome:[.75,.75,.78],steel:[.45,.46,.48],gold:[.72,.5,.2],skin:[.78,.53,.4],skin2:[.85,.6,.47]};
 
 function carMeshes(){
@@ -987,7 +993,7 @@ function renderFrame(cam,env,time,post,shadowCenter,snapCb){
   const d=R.device; const c=R.canvas;
   if(R.needResize||Math.abs(c.width-Math.min(d.limits.maxTextureDimension2D,Math.max(1,Math.floor(c.clientWidth*R.scale))))>1) resizeTargets();
   const aspect=R.W/R.H; const fovy=(aspect<1?Math.min(cam.fov*1.35,95):cam.fov)*Math.PI/180;
-  const basis=lookAt(V16,cam.pos,cam.tgt,[0,1,0]); perspective(P16,fovy,aspect,0.15,1400); mul(VP,P16,V16);
+  const basis=lookAt(V16,cam.pos,cam.tgt,[0,1,0]); perspective(P16,fovy,aspect,0.3,2200); mul(VP,P16,V16);
   // sun shadow camera, snapped to texels
   const sl=Math.hypot(...env.sunDir); const sd=env.sunDir.map(v=>v/sl); const ext=58;
   const sc=shadowCenter; lookAt(LV,[sc[0]+sd[0]*200,sc[1]+sd[1]*200,sc[2]+sd[2]*200],sc,Math.abs(sd[1])>.95?[0,0,1]:[0,1,0]);
@@ -1176,62 +1182,354 @@ function genHafen(z0,z1){
 }
 function fillSide(k,z1,fn){ while(side[k]>z1){ const d=fn(side[k]); side[k]-=d; } }
 
-/* ===== Story: Léo, Mira, their van Fidèle and Valère's green hypercar =====
-   A line: {w: speaker, t: text, img?: photo shown as a story card, cap?: caption} */
+/* ===== Open world: fictional Luxembourg and Eindhoven, joined by the "A-Route der Lichter" =====
+   X = east, Z = south. Heading 0 faces -Z (north). */
+const OW={B:72,W:12,P:84};
+const CITY={ lux:{cx:0,cz:0,n:5,name:'Luxemburg'}, ehv:{cx:1900,cz:0,n:4,name:'Eindhoven'} };
+const VALLEY={x0:-246,x1:-174,z0:-414,z1:246,floor:-32};
+const CANAL={x0:1558,x1:2242,z0:90,z1:162,water:-2.2};
+const MOTORWAY={x0:420,x1:1564,hw:10};
+const WORLD={x0:-1400,x1:3300,z0:-1400,z1:1400};
+const LUX_BRIDGES=[-4,-2,1], EHV_BRIDGES=[-3,0,2];
+let colliders=new Map(), cells=new Map(), globalStatics=[], roadsList=[], graph={nodes:new Map(),edges:[]}, mapItems=[], sparksAll=[];
+const CC=32, CELL=64;
+function addCol(x0,z0,x1,z1,tag){ const c={x0:Math.min(x0,x1),z0:Math.min(z0,z1),x1:Math.max(x0,x1),z1:Math.max(z0,z1),tag};
+  for(let gx=Math.floor(c.x0/CC);gx<=Math.floor(c.x1/CC);gx++) for(let gz=Math.floor(c.z0/CC);gz<=Math.floor(c.z1/CC);gz++){ const k=gx+','+gz; let a=colliders.get(k); if(!a){ a=[]; colliders.set(k,a); } a.push(c); } return c; }
+function colsNear(x,z,out){ out.length=0; const gx=Math.floor(x/CC), gz=Math.floor(z/CC); for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ const a=colliders.get((gx+i)+','+(gz+j)); if(a) for(const c of a) if(!out.includes(c)) out.push(c); } return out; }
+function boxCol(x,z,w,d,ry=0){ const sw=Math.abs(Math.cos(ry))*w+Math.abs(Math.sin(ry))*d, sd=Math.abs(Math.sin(ry))*w+Math.abs(Math.cos(ry))*d; return addCol(x-sw/2,z-sd/2,x+sw/2,z+sd/2); }
+function mapRect(kind,x0,z0,x1,z1){ mapItems.push({kind,x0:Math.min(x0,x1),z0:Math.min(z0,z1),x1:Math.max(x0,x1),z1:Math.max(z0,z1)}); }
+function node(x,z){ const k=Math.round(x)+','+Math.round(z); let n=graph.nodes.get(k); if(!n){ n={x,z,edges:[]}; graph.nodes.set(k,n); } return n; }
+function edge(a,b,lanes=1){ const e={a,b,lanes}; a.edges.push(e); b.edges.push(e); graph.edges.push(e); }
+
+// ---------- road pieces ----------
+function roadRect(x0,z0,x1,z1,marks=true){ const cx=(x0+x1)/2, cz=(z0+z1)/2, w=Math.abs(x1-x0), d=Math.abs(z1-z0);
+  S('box',cx,-.04,cz,w,.1,d,MAT.ROAD+.6,[.075,.075,.08]); roadsList.push({x0:Math.min(x0,x1),z0:Math.min(z0,z1),x1:Math.max(x0,x1),z1:Math.max(z0,z1)}); mapRect('road',x0,z0,x1,z1);
+  if(!marks) return; const along=w>d;
+  const L=along?w:d; for(let t=-L/2+3;t<L/2-3;t+=8){ if(along) S('box',cx+t,.012,cz,3,.01,.14,MAT.STD+.6,[.72,.72,.68]); else S('box',cx,.012,cz+t,.14,.01,3,MAT.STD+.6,[.72,.72,.68]); } }
+function lampAt(x,z,ry,col,style){ const c=Math.cos(ry), s=Math.sin(ry); // arm points along local -X rotated by ry
+  if(style==='lantern'){ S('cylY',x,1.9,z,.12,3.8,.12,MAT.STD+.5,[.05,.05,.06],.8); const ax=x-c*.6, az=z+s*.6; S('box',(x+ax)/2,3.9,(z+az)/2,.62,.05,.05,MAT.STD+.5,[.05,.05,.06],.8,ry);
+    S('box',ax,3.62,az,.3,.42,.3,MAT.GLASSO,[.03,.03,.03],0,ry); const o=S('box',ax,3.6,az,.24,.34,.24,MAT.EMI,col,7,ry); lightAt(o,ax,3.4,az,col,30,16); }
+  else { S('cylY',x,3.1,z,.14,6.2,.14,MAT.STD+.45,[.32,.33,.35],.9); const ax=x-c*1.7, az=z+s*1.7; S('box',x-c*.9,6.15,z+s*.9,1.8,.08,.1,MAT.STD+.45,[.32,.33,.35],.9,ry);
+    S('box',ax,6.08,az,.6,.12,.28,MAT.STD+.4,[.2,.2,.22],.8,ry); const o=S('box',ax,6.0,az,.5,.03,.22,MAT.EMI,col,14,ry); lightAt(o,ax,5.7,az,col,55,20); }
+  addCol(x-.25,z-.25,x+.25,z+.25); }
+
+// ---------- districts ----------
+const STYLE={
+ altstadt:{fac:2,cols:[[.72,.66,.56],[.66,.6,.5],[.75,.7,.62],[.7,.62,.5]],h:[11,17],d:[11,14],w:[7,11],gable:true,roof:[.14,.14,.16],lamp:'lantern',shops:.35,trees:.2},
+ west:{fac:1,cols:[[.82,.78,.7],[.78,.72,.64],[.86,.82,.74],[.7,.72,.74]],h:[9,15],d:[12,15],w:[9,14],gable:true,roof:[.2,.2,.22],lamp:'lantern',shops:.15,trees:.5},
+ center:{fac:1,cols:[[.85,.8,.72],[.8,.74,.66],[.62,.55,.48],[.88,.85,.8],[.7,.6,.52]],h:[14,22],d:[13,16],w:[10,16],gable:false,roof:[.2,.2,.22],lamp:'modern',shops:.45,trees:.35},
+ kirchberg:{fac:3,cols:[[.35,.42,.5],[.55,.12,.1],[.2,.25,.3],[.6,.62,.64]],h:[26,70],d:[18,26],w:[18,30],gable:false,roof:[.15,.15,.16],lamp:'modern',shops:.1,trees:.4},
+ belval:{fac:0,cols:[[.42,.18,.12],[.5,.22,.15]],h:[14,24],d:[16,22],w:[18,30],gable:false,roof:[.2,.18,.17],lamp:'modern',shops:.1,trees:.3},
+ brick:{fac:5,cols:[[.36,.16,.11],[.3,.13,.09],[.42,.2,.14],[.28,.14,.11]],h:[8,12],d:[10,12],w:[5.5,8],gable:true,roof:[.1,.08,.08],lamp:'modern',shops:.3,trees:.45},
+ strijp:{fac:0,cols:[[.4,.2,.14],[.34,.18,.13]],h:[16,28],d:[20,28],w:[24,40],gable:false,roof:[.12,.12,.13],lamp:'modern',shops:.15,trees:.2}
+};
+function luxDistrict(i,j){ if(i===-3&&j<3) return 'valley'; if(j>=3) return 'belval'; if(i>=-2&&i<=0&&j<=-1) return 'altstadt'; if(i>=2&&j<=-1) return 'kirchberg'; if(i===1&&j===1) return 'park'; if(i<=-4) return 'west'; return 'center'; }
+function ehvDistrict(i,j){ if(j===1) return 'canal'; if(i===0&&j===-2) return 'glow'; if(i===-1&&j===-1) return 'lichtturm'; if(i===2&&j===2) return 'ufo'; if(i===1&&j===2) return 'station'; if(i===2&&j===-3) return 'park'; if(i<=-3) return 'strijp'; return 'brick'; }
+
+function fillBlock(x0,z0,x1,z1,st,env){
+  S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.42,.4,.38]); mapRect('block',x0,z0,x1,z1);
+  const s=3, D=rr(st.d[0],st.d[1]);
+  const rows=[ // [axis along x?, fixed coordinate of facade, inward direction, start, end]
+    {ax:true,fz:z0+s,dir:1,a:x0+s,b:x1-s,ry:0},{ax:true,fz:z1-s,dir:-1,a:x0+s,b:x1-s,ry:Math.PI},
+    {ax:false,fz:x0+s,dir:1,a:z0+s+D,b:z1-s-D,ry:-Math.PI/2},{ax:false,fz:x1-s,dir:-1,a:z0+s+D,b:z1-s-D,ry:Math.PI/2}];
+  for(const r of rows){ let t=r.a; while(t<r.b-3){ let w=Math.min(rr(st.w[0],st.w[1]),r.b-t); if(r.b-t-w<st.w[0]*.6) w=r.b-t; const h=rr(st.h[0],st.h[1]); const col=pick(st.cols); const mid=t+w/2; const cIn=r.fz+r.dir*D/2;
+      const x=r.ax?mid:cIn, z=r.ax?cIn:mid, sx=r.ax?w-.15:D, sz=r.ax?D:w-.15;
+      S('box',x,h/2+.1,z,sx,h,sz,MAT.FACADE+.6,col,st.fac); addCol(x-sx/2,z-sz/2,x+sx/2,z+sz/2);
+      if(st.gable) S('gable',x,h+.1,z,r.ax?D*1.02:w*.98,Math.min(w,D)*.42,r.ax?w*.98:D*1.02,MAT.STONE,st.roof,0,r.ax?Math.PI/2:0);
+      else if(st===STYLE.strijp){ const n=Math.max(2,Math.round((r.ax?sx:sz)/7)); for(let q=0;q<n;q++){ const o=-((r.ax?sx:sz)/2)+((r.ax?sx:sz)/n)*(q+.5); S('gable',r.ax?x+o:x,h+.1,r.ax?z:z+o,r.ax?(sx/n)*.98:sx*.98,3.2,r.ax?sz*.98:(sz/n)*.98,MAT.GLASSO,[.12,.14,.16],0,r.ax?0:Math.PI/2); } }
+      else S('box',x,h+.4,z,sx*.96,.6,sz*.96,MAT.STONE,st.roof);
+      if(rnd()<st.shops){ const slot=pick([SLOT.BOUL,SLOT.PHARMA,SLOT.CAFE,SLOT.HOTEL,SLOT.FRITES]); const off=.07; // sign on facade facing the street
+        const fx=r.ax?mid:r.fz-r.dir*off, fz2=r.ax?r.fz-r.dir*off:mid; S('quad',fx,4.2,fz2,Math.min(w*.8,5),Math.min(w*.8,5)/4,1,MAT.DECAL,[1,1,1],2.2,r.ax?(r.dir>0?Math.PI:0):(r.dir>0?-Math.PI/2:Math.PI/2),0,0,slot); }
+      t+=w; } }
+  // courtyard
+  const ix0=x0+s+D, ix1=x1-s-D, iz0=z0+s+D, iz1=z1-s-D;
+  if(st===STYLE.strijp&&rnd()<.6){ const cx=(x0+x1)/2+rr(-6,6), cz=(z0+z1)/2+rr(-6,6), H=rr(38,50); S('cylY',cx,H/2,cz,3.2,H,3.2,MAT.FACADE+.6,[.4,.18,.12],5); S('cylY',cx,H+.4,cz,3.6,.8,3.6,MAT.STONE,[.25,.2,.18]); addCol(cx-1.6,cz-1.6,cx+1.6,cz+1.6); }
+  if(ix1-ix0>6&&iz1-iz0>6){ S('box',(ix0+ix1)/2,.14,(iz0+iz1)/2,ix1-ix0,.04,iz1-iz0,MAT.GRASS,[.12,.2,.08]); if(rnd()<.8) tree((ix0+ix1)/2+rr(-4,4),(iz0+iz1)/2+rr(-4,4)); }
+  // lamps and street trees along the four sidewalks
+  for(const [ax,c,a,b,ry] of [[true,z0+1.4,x0+6,x1-6,-Math.PI/2],[true,z1-1.4,x0+6,x1-6,Math.PI/2],[false,x0+1.4,z0+6,z1-6,0],[false,x1-1.4,z0+6,z1-6,Math.PI]]){
+    for(let t=a+rr(0,6);t<b;t+=26){ if(ax) lampAt(t,c,ry,env.lamp,st.lamp); else lampAt(c,t,ry,env.lamp,st.lamp); }
+    if(rnd()<st.trees) for(let t=a+13;t<b;t+=26){ const tx=ax?t:c, tz=ax?c:t; tree(tx,tz,rr(5,7)); addCol(tx-.3,tz-.3,tx+.3,tz+.3); } }
+}
+function parkBlock(x0,z0,x1,z1){ S('box',(x0+x1)/2,.05,(z0+z1)/2,x1-x0,.1,z1-z0,MAT.GRASS,[.1,.19,.07]); mapRect('park',x0,z0,x1,z1);
+  for(let k=0;k<14;k++){ const tx=rr(x0+4,x1-4), tz=rr(z0+4,z1-4); tree(tx,tz,rr(6,9)); addCol(tx-.4,tz-.4,tx+.4,tz+.4); }
+  S('cylY',(x0+x1)/2,.4,(z0+z1)/2,10,.8,10,MAT.STONE,[.6,.58,.55]); S('cylY',(x0+x1)/2,.75,(z0+z1)/2,8.6,.2,8.6,MAT.WATER,[.03,.1,.12]); addCol((x0+x1)/2-5,(z0+z1)/2-5,(x0+x1)/2+5,(z0+z1)/2+5); }
+
+// ---------- landmarks ----------
+const LM={};
+function cathedral(x,z){ const w=20,d=36; S('box',x,9,z,w,18,d,MAT.FACADE+.6,[.7,.64,.54],2); S('gable',x,18,z,w*1.02,9,d*1.02,MAT.STONE,[.15,.3,.26]); addCol(x-w/2,z-d/2,x+w/2,z+d/2);
+  for(const dx of [-6,6]){ S('box',x+dx,20,z+d/2-4,7,40,7,MAT.FACADE+.6,[.72,.66,.56],2); S('cone',x+dx,46,z+d/2-4,7.4,12,7.4,MAT.STONE,[.15,.3,.26]); const o=S('sph',x+dx,53,z+d/2-4,.6,.6,.6,MAT.EMI,[1,.8,.5],8); lightAt(o,x+dx,30,z+d/2,[1,.75,.45],500,40); } }
+function bar(x,z){ // "Le Pont Violet", the purple and blue lit house from the comic
+  S('box',x,7,z,14,14,12,MAT.FACADE+.6,[.6,.55,.6],1); S('gable',x,14,z,14.3,5,12.3,MAT.STONE,[.12,.12,.14],0,Math.PI/2); addCol(x-7,z-6,x+7,z+6);
+  S('quad',x,4.2,z+6.08,6,1.5,1,MAT.DECAL,[1,1,1],3,0,0,0,SLOT.BAR);
+  for(const [dx,c] of [[-4,[.7,.15,1]],[4,[.25,.35,1]]]){ const o=S('box',x+dx,.3,z+7.5,.3,.3,.3,MAT.EMI,c,3); lightAt(o,x+dx,1,z+8,c,320,20); }
+  for(const dx of [-3,0,3]){ S('cylY',x+dx,.5,z+9,.5,1,.5,MAT.STD+.4,[.1,.1,.1],.8); } }
+function belvalPlaza(x0,z0,x1,z1){ const x=(x0+x1)/2, z=(z0+z1)/2;
+  S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.45,.42,.38]); mapRect('block',x0,z0,x1,z1);
+  S('box',x,10,z+8,60,20,40,MAT.FACADE+.5,[.42,.18,.12],0); addCol(x-30,z-12,x+30,z+28); S('box',x,20.3,z+8,60.4,.6,40.4,MAT.STONE,[.3,.25,.22]);
+  S('quad',x,16,z-12.08,18,4.5,1,MAT.DECAL,[1,1,1],1.2,Math.PI,0,0,SLOT.BELVAL);
+  for(let k=0;k<4;k++) sedan(x-24+k*3,z-26,Math.PI/2); }
+function redBuilding(x,z){ S('box',x,13,z,50,26,44,MAT.FACADE+.4,[.62,.08,.07],3); addCol(x-25,z-22,x+25,z+22); }
+function furnaceBlock(x,z){ blastFurnace(x,z); addCol(x-30,z-30,x+30,z+30); }
+function lichtturm(x,z){ // white tower with a glass light crown (fictional "Lichtturm")
+  S('box',x,1,z,30,2,30,MAT.STONE,[.62,.6,.58]); S('box',x,26,z,16,52,16,MAT.FACADE+.4,[.9,.9,.88],1); addCol(x-8,z-8,x+8,z+8);
+  S('box',x,57,z,18,10,18,MAT.GLASSO,[.08,.1,.12],0); const top=S('box',x,57,z,16.5,9,16.5,MAT.EMI,[.7,.85,1],.25); LM.lichtTop=top; S('box',x,62.6,z,18.6,1.2,18.6,MAT.STD+.4,[.85,.85,.85],.6);
+  S('quad',x,8,z-8.08,10,2.5,1,MAT.DECAL,[1,1,1],2,Math.PI,0,0,SLOT.LICHT); LM.licht={x,z}; }
+function glowPlaza(x0,z0,x1,z1){ const x=(x0+x1)/2, z=(z0+z1)/2; LM.glow={x,z,x0,z0,x1,z1};
+  S('box',x,.04,z,x1-x0,.08,z1-z0,MAT.PAVER+.4,[.36,.2,.15]); mapRect('plaza',x0,z0,x1,z1);
+  for(let k=0;k<8;k++){ const mx=x0+6+rnd()*(x1-x0-12), mz=z0+6+rnd()*(z1-z0-12); S('box',mx,2.6,mz,1.2,5.2,1.2,MAT.GLASSO,[.3,.28,.28],0); S('box',mx,.1,mz,1.5,.2,1.5,MAT.STONE,[.2,.2,.2]); addCol(mx-.75,mz-.75,mx+.75,mz+.75); }
+  for(let k=0;k<12;k++){ const ox=x0+6+rnd()*(x1-x0-12), oz=z0+6+rnd()*(z1-z0-12), y=rr(7,14), r=rr(1.3,2.8);
+    const o=S('sph',ox,y,oz,r*2,r*2,r*2,MAT.LAVA,[1,1,1],.55); o.bob=rnd()*6; lightAt(o,ox,y-1,oz,[1,.4,.1],140,24);
+    for(let q=0;q<3;q++) S('sph',ox+rr(-.3,.3),y-r-1-q*1.1,oz+rr(-.3,.3),.14,1.4,.14,MAT.EMI,[1,.45,.12],4); }
+  S('quad',x,6,z0-.2,14,3.5,1,MAT.DECAL,[1,1,1],3,Math.PI,0,0,SLOT.GLOW);
+  for(const [hx,hz] of [[x0-1,z0-1],[x1+1,z0-1],[x0-1,z1+1],[x1+1,z1+1]]) S('box',hx,.6,hz,1.2,1.2,1.2,MAT.STONE,[.4,.4,.4]); }
+function ufo(x,z){ S('box',(x),.06,z,72,.12,72,MAT.PAVER+.5,[.5,.5,.52]); for(let k=0;k<6;k++){ const a=k/6*Math.PI*2; S('cylY',x+Math.cos(a)*14,4,z+Math.sin(a)*14,1.4,8,1.4,MAT.STONE,[.8,.8,.8]); addCol(x+Math.cos(a)*14-.8,z+Math.sin(a)*14-.8,x+Math.cos(a)*14+.8,z+Math.sin(a)*14+.8); }
+  S('sph',x,11,z,52,10,52,MAT.PAINT+.25,[.85,.86,.88],.3); S('cylY',x,11,z,52.5,.6,52.5,MAT.EMI,[.6,.85,1],2.5); S('sph',x,15,z,22,6,22,MAT.GLASSO,[.08,.1,.12],0); LM.ufo={x,z}; }
+function station(x0,z0,x1,z1){ const x=(x0+x1)/2, z=(z0+z1)/2; S('box',x,.06,z,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.45,.44,.42]); mapRect('block',x0,z0,x1,z1);
+  S('box',x,9,z+14,64,18,24,MAT.FACADE+.4,[.3,.32,.35],3); addCol(x-32,z+2,x+32,z+26); S('box',x,19,z+14,66,2,26,MAT.STONE,[.2,.2,.22]);
+  S('cylY',x+26,14,z-20,1.4,28,1.4,MAT.STONE,[.7,.7,.7]); const c=S('box',x+26,27,z-20,4,2,.4,MAT.EMI,[1,.95,.85],2); lightAt(c,x+26,26,z-18,[1,.9,.8],60,20); addCol(x+25,z-21,x+27,z-19);
+  for(let k=0;k<5;k++) partsAt(compileParts([['rbox',0,.7,0,1.8,.7,4.3,MAT.PAINT+.3,[.95,.8,.1],.6],['rbox',0,1.15,.25,1.56,.5,2.2,MAT.GLASSO,[.03,.035,.04],0],['quad',0,1.5,.25,.9,.22,1,MAT.DECAL,[1,1,1],1.5,0,Math.PI/2,0,SLOT.TAXI],...wheelParts(-.78,.32,-1.35,.32,.2,'steel'),...wheelParts(.78,.32,-1.35,.32,.2,'steel'),...wheelParts(-.78,.32,1.35,.32,.2,'steel'),...wheelParts(.78,.32,1.35,.32,.2,'steel')],MESHIDX),x-24+k*6,0,z-8,Math.PI/2); }
+
+// ---------- valley (Luxembourg) and canal (Eindhoven) ----------
+function genValley(env){ const V=VALLEY, cx=(V.x0+V.x1)/2, cz=(V.z0+V.z1)/2, L=V.z1-V.z0;
+  S('box',cx,V.floor-.5,cz,V.x1-V.x0,1,L,MAT.GRASS,[.08,.15,.06]); S('box',cx,V.floor+.05,cz,14,.1,L,MAT.WATER,[.03,.08,.09]); mapRect('valley',V.x0,V.z0,V.x1,V.z1);
+  for(const [x,dir] of [[V.x0,1],[V.x1,-1]]){ S('box',x-dir*2,V.floor/2,cz,4,-V.floor,L+8,MAT.STONE,[.42,.38,.33]); for(let z=V.z0+20;z<V.z1;z+=40) S('box',x+dir*rr(.5,2),V.floor/2+rr(-4,4),z,rr(2,4),rr(8,16),rr(10,20),MAT.STONE,[.38,.35,.31]); }
+  for(const z of [V.z0,V.z1]) S('box',cx,V.floor/2,z+(z===V.z0?-2:2),V.x1-V.x0+8,-V.floor,4,MAT.STONE,[.42,.38,.33]);
+  // parapets on the plateau edges, with gaps at the bridges
+  const bz=LUX_BRIDGES.map(j=>j*OW.P);
+  for(const x of [V.x0-.6,V.x1+.6]){ let z=V.z0; const stops=bz.map(b=>[b-6.5,b+6.5]).sort((a,b)=>a[0]-b[0]); for(const [g0,g1] of stops.concat([[V.z1,V.z1]])){ if(g0>z){ S('box',x,.55,(z+g0)/2,.7,1.1,g0-z,MAT.STONE,[.6,.56,.5]); addCol(x-.35,z,x+.35,g0); } z=g1; } }
+  addCol(V.x0,V.z1-1,V.x1,V.z1); addCol(V.x0,V.z0,V.x1,V.z0+1); for(const z of [V.z0+.4,V.z1-.4]) S('box',(V.x0+V.x1)/2,.55,z,V.x1-V.x0,1.1,.7,MAT.STONE,[.6,.56,.5]);
+  // Grund: houses and trees on the valley floor
+  for(let z=V.z0+20;z<V.z1-20;z+=rr(14,24)){ for(const side of [-1,1]){ if(rnd()<.6){ const w=rr(7,10),h=rr(8,13); const x=cx+side*rr(15,26); S('box',x,V.floor+h/2,z,w,h,rr(8,11),MAT.FACADE+.6,pick(STYLE.altstadt.cols),2); S('gable',x,V.floor+h,z,w*1.04,w*.45,11,MAT.STONE,[.14,.14,.16]); } else tree(cx+side*rr(10,28),z,rr(6,9),[.07,.13,.05]); } }
+  // bridges
+  for(const j of LUX_BRIDGES){ const z=j*OW.P; const big=j===1;
+    S('box',cx,-.6,z,V.x1-V.x0+2,1.2,12,MAT.STONE,[.55,.5,.43]);
+    for(const dz of [-6.6,6.6]){ S('box',cx,.6,z+dz,V.x1-V.x0,1.2,.6,MAT.STONE,[.58,.53,.46]); addCol(V.x0,z+dz-.3,V.x1,z+dz+.3); }
+    if(big){ const span=V.x1-V.x0, r=span/2-4, yc=V.floor+6; for(let s2=0;s2<18;s2++){ const a=(s2+.5)/18*Math.PI; S('box',cx+Math.cos(a)*r,yc+Math.sin(a)*r,z,Math.PI*r/18+.3,2.2,10,MAT.STONE,[.56,.52,.45],0,0,0,a-Math.PI/2); }
+      for(const sx of [-1,1]) S('box',cx+sx*(r+2),(V.floor+yc)/2,z,6,yc-V.floor,10,MAT.STONE,[.5,.46,.4]);
+      for(let k=-3;k<=3;k++){ const ax=cx+k*8; const top=-1.2, bot=yc+Math.sqrt(Math.max(0,r*r-(k*8)*(k*8))); if(top>bot) S('box',ax,(top+bot)/2,z,1.5,top-bot,9,MAT.STONE,[.5,.46,.4]); }
+      S('quad',V.x1+2,3,z+7.5,6,1.5,1,MAT.DECAL,[1,1,1],0,0,0,0,SLOT.PONT); LM.bridge={x:cx,z}; }
+    else for(const px of [cx-18,cx,cx+18]) S('box',px,(V.floor-1.2)/2,z,5,-V.floor-1.2,9,MAT.STONE,[.5,.46,.4]);
+    for(const dz of [-6.6,6.6]) for(let px=V.x0+8;px<V.x1;px+=24){ const o=S('cylY',px,2.1,z+dz,.1,3,.1,MAT.STD,[.05,.05,.05]); const l=S('box',px,3.7,z+dz,.25,.35,.25,MAT.EMI,env.lamp,7); lightAt(l,px,3.4,z+dz*.6,env.lamp,30,16); } }
+}
+function genCanal(){ const C=CANAL, cx=(C.x0+C.x1)/2, cz=(C.z0+C.z1)/2, L=C.x1-C.x0;
+  S('box',cx,C.water-1.5,cz,L,1,C.z1-C.z0,MAT.STONE,[.2,.2,.2]); S('box',cx,C.water,cz,L,.1,C.z1-C.z0,MAT.WATER,[.03,.07,.07]); mapRect('water',C.x0,C.z0,C.x1,C.z1);
+  for(const z of [C.z0,C.z1]){ S('box',cx,C.water/2-.5,z+(z===C.z0?-.6:.6),L,-C.water+1,1.2,MAT.STONE,[.45,.32,.26]); }
+  for(const x of [C.x0,C.x1]) S('box',x,C.water/2-.5,cz,1.2,-C.water+1,C.z1-C.z0,MAT.STONE,[.45,.32,.26]);
+  const bx=EHV_BRIDGES.map(i=>CITY.ehv.cx+i*OW.P);
+  for(const z of [C.z0-.5,C.z1+.5]){ let x=C.x0; for(const b of bx.concat([C.x1+7])){ const g0=b-7, g1=b+7; if(g0>x){ S('box',(x+Math.min(g0,C.x1))/2,.55,z,Math.min(g0,C.x1)-x,1.1,.25,MAT.STD+.4,[.1,.1,.12],.7); addCol(x,z-.3,Math.min(g0,C.x1),z+.3); } x=g1; } }
+  for(const b of bx){ S('box',b,-.4,cz,12,.8,C.z1-C.z0+2,MAT.STONE,[.5,.4,.32]); for(const dx of [-6.4,6.4]){ S('box',b+dx,.55,cz,.3,1.1,C.z1-C.z0,MAT.STD+.4,[.1,.1,.12],.7); addCol(b+dx-.2,C.z0,b+dx+.2,C.z1); } }
+  for(let x=C.x0+30;x<C.x1-30;x+=rr(40,70)){ if(bx.some(b=>Math.abs(b-x)<16)) continue; partsAt(compileParts([['yHull',0,0,0,.22,.22,.22,MAT.PAINT+.3,pick([[.12,.25,.18],[.5,.12,.1],[.1,.12,.2]]),.2],['box',0,1.1,1,1.6,.9,2.6,MAT.STD+.6,[.85,.82,.76],0]],MESHIDX),x,C.water+.2,C.z0+4,Math.PI/2); }
+}
+// ---------- motorway and countryside ----------
+function genMotorway(env){ const M=MOTORWAY, cx=(M.x0+M.x1)/2, L=M.x1-M.x0;
+  roadRect(M.x0,-M.hw,M.x1,M.hw,false);
+  for(let x=M.x0+4;x<M.x1;x+=12) for(const z of [-5,5]) S('box',x,.012,z,4,.01,.16,MAT.STD+.6,[.75,.75,.72]);
+  for(const z of [-.2,.2]) S('box',cx,.012,z,L,.01,.14,MAT.STD+.6,[.85,.75,.3]);
+  for(const z of [-M.hw-1,M.hw+1]){ for(let x=M.x0;x<M.x1;x+=100){ const w=Math.min(100,M.x1-x); S('box',x+w/2,.6,z,w,.35,.12,MAT.STD+.3,[.6,.62,.64],.9); addCol(x,z-.3,x+w,z+.3); }
+    for(let x=M.x0;x<M.x1;x+=4) S('box',x,.3,z,.12,.6,.12,MAT.STD,[.35,.35,.36],.6); }
+  for(let x=M.x0+30;x<M.x1;x+=70) for(const z of [-M.hw-3,M.hw+3]) lampAt(x,z,z<0?Math.PI/2:-Math.PI/2,env.lamp,'modern');
+  for(const [x,slot,face] of [[560,SLOT.SIGN_EHV,0],[990,SLOT.BORDER,0],[1440,SLOT.SIGN_LUX,Math.PI]]){ for(const z of [-M.hw-2,M.hw+2]) S('box',x,4,z,.5,8,.5,MAT.STD+.4,[.4,.4,.42],.8); S('box',x,7.2,0,.4,.4,2*M.hw+4,MAT.STD+.4,[.4,.4,.42],.8); S('quad',x+(face?.25:-.25),6,0,14,3.5,1,MAT.DECAL,[1,1,1],.4,face?Math.PI/2:-Math.PI/2,0,0,slot); }
+  for(let x=M.x0+40;x<M.x1;x+=rr(90,140)) for(const sd of [-1,1]){ // fields, farms, trees, wind turbines
+    const z=sd*rr(60,180); S('box',x,.02,z,rr(70,110),.04,rr(60,110),MAT.GRASS,pick([[.35,.3,.12],[.15,.25,.08],[.28,.3,.1],[.4,.33,.18]]),1);
+    if(rnd()<.35){ const fz=sd*rr(40,60); S('box',x+20,4,fz,14,8,10,MAT.FACADE+.6,[.45,.2,.14],5); S('gable',x+20,8,fz,14.2,6,10.2,MAT.STONE,[.12,.1,.1],0,Math.PI/2); addCol(x+13,fz-5,x+27,fz+5); }
+    for(let k=0;k<4;k++) tree(x+rr(-40,40),sd*rr(22,40),rr(6,10));
+    if(rnd()<.5){ const tx=x+rr(-30,30), tz=sd*rr(200,320); S('cylY',tx,30,tz,2.4,60,2.4,MAT.STD+.4,[.9,.9,.92],.3); S('box',tx,60,tz+1.5,2.4,2.4,5,MAT.STD+.4,[.9,.9,.92],.3); const t=S('box',tx,60,tz-1.2,1.2,1.2,1.2,MAT.STD,[.9,.9,.92]); t.turbine={x:tx,y:60,z:tz-1.4,ph:rnd()*6};
+      const red=S('sph',tx,61.5,tz+2,.4,.4,.4,MAT.EMI,[1,.05,.03],6); red.blink=true; } }
+  node(M.x0,0); node(M.x1,0); edge(node(M.x0,0),node(M.x1,0),2);
+}
+
+// ---------- city grid ----------
+function genCity(key,env){ const C=CITY[key], n=C.n, P=OW.P, h=OW.W/2;
+  const X=i=>C.cx+i*P, Z=j=>C.cz+j*P;
+  const hasH=(i,j)=>{ // horizontal road on line j between columns i and i+1
+    if(key==='lux'&&i===-3&&j<3&&j>-5) return LUX_BRIDGES.includes(j); return true; };
+  const hasV=(i,j)=>{ if(key==='ehv'&&j===1) return EHV_BRIDGES.includes(i); return true; };
+  for(let i=-n;i<=n;i++) for(let j=-n;j<=n;j++){ const x=X(i), z=Z(j); S('box',x,-.04,z,OW.W,.1,OW.W,MAT.ROAD+.6,[.075,.075,.08]); mapRect('road',x-h,z-h,x+h,z+h); }
+  for(let j=-n;j<=n;j++) for(let i=-n;i<n;i++){ if(!hasH(i,j)) continue; const x0=X(i)+h, x1=X(i+1)-h, z=Z(j);
+    const bridge=key==='lux'&&i===-3&&j<3; if(!bridge) roadRect(x0,z-h,x1,z+h); else { roadsList.push({x0,z0:z-h,x1,z1:z+h}); mapRect('road',x0,z-h,x1,z+h); S('box',(x0+x1)/2,-.04,z,x1-x0,.1,OW.W,MAT.ROAD+.6,[.075,.075,.08]); }
+    edge(node(X(i),z),node(X(i+1),z)); }
+  for(let i=-n;i<=n;i++) for(let j=-n;j<n;j++){ if(!hasV(i,j)) continue; const z0=Z(j)+h, z1=Z(j+1)-h, x=X(i);
+    if(key==='ehv'&&j===1){ roadsList.push({x0:x-h,z0,x1:x+h,z1}); mapRect('road',x-h,z0,x+h,z1); S('box',x,-.04,(z0+z1)/2,OW.W,.1,z1-z0,MAT.ROAD+.6,[.075,.075,.08]); } else roadRect(x-h,z0,x+h,z1);
+    edge(node(x,Z(j)),node(x,Z(j+1))); }
+  // dead ends at the valley / canal
+  if(key==='lux') for(let j=-n+1;j<3;j++) if(!LUX_BRIDGES.includes(j)) for(const [x,d] of [[X(-3)+h,1],[X(-2)-h,-1]]){ S('box',x+d*.4,.5,Z(j),.5,1,OW.W,MAT.STD+.5,[.95,.95,.95]); addCol(x+d*.15,Z(j)-h,x+d*.65,Z(j)+h); }
+  // outer ring wall so cars stay on the map (except the motorway exit)
+  const R0=X(-n)-h-1, R1=X(n)+h+1, Q0=Z(-n)-h-1, Q1=Z(n)+h+1;
+  addCol(R0-1,Q0,R0,Q1); addCol(R0,Q0-1,R1,Q0); addCol(R0,Q1,R1,Q1+1);
+  if(key==='lux'){ addCol(R1,Q0,R1+1,-MOTORWAY.hw-1); addCol(R1,MOTORWAY.hw+1,R1+1,Q1); } else { addCol(R1,Q0,R1+1,Q1); }
+  if(key==='ehv'){ addCol(R0-1,Q0,R0,-MOTORWAY.hw-1); addCol(R0-1,MOTORWAY.hw+1,R0,Q1); }
+  else addCol(R0-1,Q0,R0,Q1);
+  // blocks
+  for(let i=-n;i<n;i++) for(let j=-n;j<n;j++){ const x0=X(i)+h, x1=X(i+1)-h, z0=Z(j)+h, z1=Z(j+1)-h;
+    const d=key==='lux'?luxDistrict(i,j):ehvDistrict(i,j);
+    if(d==='valley'||d==='canal') continue;
+    if(key==='lux'&&i===-1&&j===3){ belvalPlaza(x0,z0,x1,z1); LM.belval={x:(x0+x1)/2,z:z0-6}; continue; }
+    if(key==='lux'&&i===0&&j===3){ S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.42,.4,.38]); mapRect('block',x0,z0,x1,z1); redBuilding((x0+x1)/2,(z0+z1)/2); continue; }
+    if(key==='lux'&&j>=3&&i<=-3){ S('box',(x0+x1)/2,.02,(z0+z1)/2,x1-x0,.04,z1-z0,MAT.PAVER+.6,[.3,.28,.26]); mapRect('industry',x0,z0,x1,z1); furnaceBlock((x0+x1)/2,(z0+z1)/2); continue; }
+    if(key==='lux'&&i===-1&&j===-3){ S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.5,.47,.42]); mapRect('block',x0,z0,x1,z1); cathedral((x0+x1)/2,(z0+z1)/2); continue; }
+    if(key==='lux'&&i===-2&&j===0){ fillBlock(x0,z0,x1,z1,STYLE.altstadt,env); continue; }
+    if(d==='park'){ parkBlock(x0,z0,x1,z1); continue; }
+    if(d==='glow'){ glowPlaza(x0,z0,x1,z1); continue; }
+    if(d==='lichtturm'){ S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.5,.5,.5]); mapRect('block',x0,z0,x1,z1); lichtturm((x0+x1)/2,(z0+z1)/2); continue; }
+    if(d==='ufo'){ mapRect('block',x0,z0,x1,z1); ufo((x0+x1)/2,(z0+z1)/2); continue; }
+    if(d==='station'){ station(x0,z0,x1,z1); continue; }
+    fillBlock(x0,z0,x1,z1,STYLE[d],env); }
+  if(key==='lux'){ bar(X(-2)+h+14,Z(1)-h-8); LM.bar={x:X(-2)+h+14,z:Z(1)}; LM.view={x:X(-2),z:Z(-2)+40}; }
+}
+// ---------- ground (with holes for the valley and the canal) ----------
+function genGround(){ const W=WORLD, V=VALLEY, C=CANAL, g=[.13,.2,.08];
+  const rect=(x0,z0,x1,z1)=>{ if(x1-x0>1&&z1-z0>1) globalStatics.push({m:MESHIDX.box,x:(x0+x1)/2,y:-.3,z:(z0+z1)/2,sx:x1-x0,sy:.3,sz:z1-z0,mat:MAT.GRASS,r:g[0],g:g[1],b:g[2],p:0,ry:0,rx:0,rz:0,slot:0}); };
+  rect(W.x0,W.z0,V.x0,W.z1); rect(V.x0,W.z0,V.x1,V.z0); rect(V.x0,V.z1,V.x1,W.z1); rect(V.x1,W.z0,C.x0,W.z1); rect(C.x0,W.z0,C.x1,C.z0); rect(C.x0,C.z1,C.x1,W.z1); rect(C.x1,W.z0,W.x1,W.z1);
+  for(const [x,z,w,h,d] of [[-1000,-1000,1300,160,700],[300,-1250,1800,120,500],[1500,-1150,1400,140,600],[2900,-500,900,170,1200],[2700,900,1200,120,600],[900,1200,2000,100,500],[-1100,700,1000,130,900]]) globalStatics.push({m:MESHIDX.sph,x,y:-20,z,sx:w,sy:h*2,sz:d,mat:MAT.GRASS,r:.1,g:.15,b:.07,p:0,ry:.3,rx:0,rz:0,slot:0});
+}
+// ---------- sparks scattered over the roads ----------
+function genSparks(){ sparksAll=[]; for(const r of roadsList){ const len=Math.max(r.x1-r.x0,r.z1-r.z0); const n=Math.floor(len/38); for(let k=0;k<n;k++){ if(rnd()<.55) continue; const t=(k+.5)/n;
+    const along=(r.x1-r.x0)>(r.z1-r.z0); const x=along?r.x0+t*(r.x1-r.x0):(r.x0+r.x1)/2+rr(-3,3), z=along?(r.z0+r.z1)/2+rr(-3,3):r.z0+t*(r.z1-r.z0);
+    sparksAll.push({x,y:1.1,z,ph:rnd()*6,alive:true}); } } }
+
+function buildWorld(env){ seed=4242; statics=[]; globalStatics=[]; colliders=new Map(); cells=new Map(); roadsList=[]; mapItems=[]; graph={nodes:new Map(),edges:[]};
+  genGround(); genCity('lux',env); genValley(env); genMotorway(env); genCity('ehv',env); genCanal(); genSparks();
+  for(const o of statics){ o.small=Math.max(o.sx,o.sy,o.sz)<3.2&&!o.L; if(o.ext>CELL*.9){ globalStatics.push(o); continue; } const k=Math.floor(o.x/CELL)+','+Math.floor(o.z/CELL); let a=cells.get(k); if(!a){ a=[]; cells.set(k,a); } a.push(o); }
+  statics=[];
+  for(const s of sparksAll){ const k=Math.floor(s.x/CELL)+','+Math.floor(s.z/CELL); let c=cells.get(k); if(!c){ c=[]; cells.set(k,c); } (c.sparks||(c.sparks=[])).push(s); }
+}
+function onRoad(x,z){ for(const r of roadsList) if(x>=r.x0&&x<=r.x1&&z>=r.z0&&z<=r.z1) return true; return false; }
+
+/* ===== Free driving: arcade vehicle physics, collisions, traffic ===== */
+const VEH={
+ fidele:{max:33,rev:9,accel:7.5,brake:16,grip:5.5,steer:.62,wb:2.55,half:[.86,2.1],cam:[4.0,11.5],eng:[34,1.4],mass:1.4},
+ smaragd:{max:64,rev:12,accel:17,brake:26,grip:9,steer:.55,wb:2.85,half:[1.0,2.35],cam:[3.2,10.5],eng:[50,1.25],mass:1}
+};
+function newCar(car,x,z,h){ return {car,x,z,h,v:0,lat:0,steer:0,yawRate:0,roll:0,pitch:0,spin:0,brake:false,bump:0}; }
+const _cols=[];
+function stepCar(c,thr,brk,steerIn,dt,boost){ const V=VEH[c.car];
+  // longitudinal
+  const max=V.max*(boost?1.3:1);
+  if(thr>0){ const a=V.accel*(boost?1.8:1)*thr*(1-Math.max(0,c.v)/max); c.v+=a*dt; }
+  if(brk>0){ if(c.v>0.6) c.v-=V.brake*brk*dt; else c.v=Math.max(-V.rev,c.v-V.accel*.6*brk*dt); }
+  if(thr<=0&&brk<=0) c.v-=Math.sign(c.v)*Math.min(Math.abs(c.v),(1.2+Math.abs(c.v)*.03)*dt);
+  c.v-=c.v*Math.abs(c.v)*0.0009*dt;
+  // steering: bicycle model with speed-dependent lock
+  const lock=V.steer*lerp(1,.28,clamp(Math.abs(c.v)/V.max,0,1));
+  c.steer+=(steerIn*lock-c.steer)*Math.min(1,dt*7);
+  const yawRate=c.v/V.wb*Math.tan(c.steer); c.yawRate=yawRate;
+  c.h-=yawRate*dt;
+  // lateral slip (a little drift at speed)
+  const targetLat=-yawRate*c.v*0.035; c.lat+=(targetLat-c.lat)*Math.min(1,dt*V.grip);
+  const fx=-Math.sin(c.h), fz=-Math.cos(c.h), rx=Math.cos(c.h), rz=-Math.sin(c.h);
+  const ps=c.v;
+  c.x+=(fx*c.v+rx*c.lat)*dt; c.z+=(fz*c.v+rz*c.lat)*dt;
+  c.roll=lerp(c.roll,clamp(yawRate*c.v*(c.car==='fidele'?.012:.005),-.08,.08),Math.min(1,dt*5));
+  c.pitch=lerp(c.pitch,clamp(-(c.v-ps)/Math.max(dt,1e-3)*.002,-.05,.05),Math.min(1,dt*5));
+  c.spin+=c.v*dt/.33; c.brake=brk>0&&c.v>0.5;
+  // collisions: two circles along the car body against AABBs
+  const r=V.half[0]+.05, off=V.half[1]-V.half[0];
+  let hit=0;
+  for(const s of [-1,1]){ const px=c.x+fx*off*s, pz=c.z+fz*off*s;
+    colsNear(px,pz,_cols);
+    for(const b of _cols){ const qx=clamp(px,b.x0,b.x1), qz=clamp(pz,b.z0,b.z1); let dx=px-qx, dz=pz-qz; let d=Math.hypot(dx,dz);
+      if(d<r){ if(d<1e-4){ const l=px-b.x0, rr2=b.x1-px, t=pz-b.z0, bt=b.z1-pz; const m=Math.min(l,rr2,t,bt); dx=m===l?-1:m===rr2?1:0; dz=m===t?-1:m===bt?1:0; d=0; }
+        else { dx/=d; dz/=d; }
+        const pen=r-d; c.x+=dx*pen; c.z+=dz*pen;
+        const vx=fx*c.v+rx*c.lat, vz=fz*c.v+rz*c.lat; const vn=vx*dx+vz*dz;
+        if(vn<0){ const nvx=vx-dx*vn*1.35, nvz=vz-dz*vn*1.35; c.v=(nvx*fx+nvz*fz)*.82; c.lat=(nvx*rx+nvz*rz)*.6; hit=Math.max(hit,-vn); } } } }
+  c.bump=hit; return hit; }
+
+// ---------- traffic ----------
+const TRAFFIC=[]; let TRAFFIC_PARTS=null;
+const TCOL=[[.55,.05,.06],[.1,.12,.2],[.75,.75,.76],[.15,.3,.5],[.06,.06,.065],[.5,.45,.4],[.85,.82,.75],[.2,.35,.25]];
+function trafficParts(){ if(!TRAFFIC_PARTS) TRAFFIC_PARTS=TCOL.map(c=>sedanParts(c)); return TRAFFIC_PARTS; }
+function laneOffset(e){ return e.lanes>1?5:3; }
+function spawnTraffic(px,pz){ const E=graph.edges; if(!E.length) return;
+  for(let tries=0;tries<12&&TRAFFIC.length<16;tries++){ const e=E[(Math.random()*E.length)|0]; const t=Math.random(); const x=lerp(e.a.x,e.b.x,t), z=lerp(e.a.z,e.b.z,t); const d=Math.hypot(x-px,z-pz);
+    if(d<90||d>320) continue; const fwd=Math.random()<.5; TRAFFIC.push({e,from:fwd?e.a:e.b,to:fwd?e.b:e.a,t:fwd?t:1-t,v:rr(9,13)*(e.lanes>1?2:1),vmax:rr(9,13)*(e.lanes>1?2.2:1),parts:pick(trafficParts()),x,z,h:0,spin:0,wait:0}); } }
+function updateTraffic(dt,P,others){
+  for(let i=TRAFFIC.length-1;i>=0;i--){ const c=TRAFFIC[i];
+    const dx=c.to.x-c.from.x, dz=c.to.z-c.from.z, L=Math.hypot(dx,dz)||1, ux=dx/L, uz=dz/L;
+    // slow down for the player or other cars ahead in the same lane
+    let want=c.vmax; const ax=c.x+ux*7, az=c.z+uz*7;
+    if(Math.hypot(P.x-ax,P.z-az)<7){ want=0; c.blocked=(c.blocked||0)+dt; } else c.blocked=0;
+    for(const o of TRAFFIC){ if(o!==c&&Math.hypot(o.x-ax,o.z-az)<5.5) { want=Math.min(want,o.v*.8); c.blocked=(c.blocked||0)+dt*.5; } }
+    if(c.blocked>5){ TRAFFIC.splice(i,1); continue; }
+    if(c.wait>0){ c.wait-=dt; want=0; }
+    c.v+=(want-c.v)*Math.min(1,dt*(want<c.v?3:1)); c.t+=c.v*dt/L; c.spin+=c.v*dt/.32;
+    if(c.t>=1){ const n=c.to; const opts=n.edges.filter(e=>e!==c.e); const e=opts.length?pick(opts):c.e; c.from=n; c.to=e.a===n?e.b:e.a; c.e=e; c.t=0; continue; }
+    const off=laneOffset(c.e); c.x=lerp(c.from.x,c.to.x,c.t)-uz*off; c.z=lerp(c.from.z,c.to.z,c.t)+ux*off;
+    const th=Math.atan2(-ux,-uz); let dh=th-c.h; while(dh>Math.PI) dh-=2*Math.PI; while(dh<-Math.PI) dh+=2*Math.PI; c.h+=dh*Math.min(1,dt*6);
+    if(Math.hypot(c.x-P.x,c.z-P.z)>380) TRAFFIC.splice(i,1); }
+  // player vs traffic
+  for(const c of TRAFFIC){ const dx=P.x-c.x, dz=P.z-c.z, d=Math.hypot(dx,dz); const V=VEH[P.car]; const rr2=V.half[1]+1.6;
+    if(d<rr2&&d>1e-3){ const nx=dx/d, nz=dz/d; P.x+=nx*(rr2-d)*.7; P.z+=nz*(rr2-d)*.7; const fx=-Math.sin(P.h), fz=-Math.cos(P.h); const vn=(fx*P.v)*nx+(fz*P.v)*nz;
+      if(vn<0){ P.v*=.55; P.bump=Math.max(P.bump,-vn); c.wait=2.5; } } }
+}
+
+// ---------- GPS: shortest path over the road graph ----------
+function nearestNode(x,z){ let best=null,bd=1e9; for(const n of graph.nodes.values()){ const d=Math.hypot(n.x-x,n.z-z); if(d<bd){ bd=d; best=n; } } return best; }
+function findRoute(x,z,tx,tz){ const a=nearestNode(x,z), b=nearestNode(tx,tz); if(!a||!b) return [];
+  const dist=new Map([[a,0]]), prev=new Map(), open=[a], done=new Set();
+  while(open.length){ let bi=0; for(let i=1;i<open.length;i++) if(dist.get(open[i])<dist.get(open[bi])) bi=i; const n=open.splice(bi,1)[0]; if(n===b) break; if(done.has(n)) continue; done.add(n);
+    for(const e of n.edges){ const m=e.a===n?e.b:e.a; const nd=dist.get(n)+Math.hypot(m.x-n.x,m.z-n.z); if(nd<(dist.has(m)?dist.get(m):1e18)){ dist.set(m,nd); prev.set(m,n); open.push(m); } } }
+  const path=[]; let c=b; while(c){ path.unshift(c); if(c===a) break; c=prev.get(c); } if(path[0]!==a) return [];
+  const offLine=(A,B)=>{ const ux=B.x-A.x, uz=B.z-A.z, L=Math.hypot(ux,uz)||1; return Math.abs((x-A.x)*uz-(z-A.z)*ux)/L; };
+  while(path.length>1&&offLine(path[0],path[1])<5&&Math.hypot(x-path[1].x,z-path[1].z)<Math.hypot(path[0].x-path[1].x,path[0].z-path[1].z)) path.shift();
+  return path; }
+
+/* ===== Story missions in the open world =====
+   A line: {w: speaker, t: text, img?: photo card, cap?: caption} */
 const NAMES={leo:'Léo',mira:'Mira',val:'Valère',narr:''};
 const IMG={belval:'assets/panel_belval.jpg',bruecke:'assets/panel_bruecke.jpg',bar:'assets/panel_bar.jpg',abend:'assets/panel_abend.jpg',glut:'assets/glutplatz.jpg',monaco:'assets/monaco.jpg'};
 const STORY={
  prologue:[
-  {w:'narr',img:IMG.belval,cap:'Belval, ein Abend im November',t:'Seit dem Großen Erlöschen fällt Glut vom Himmel. Straße für Straße gehen die Lichter aus.'},
+  {w:'narr',img:IMG.belval,cap:'Belval, ein Abend im November',t:'Seit dem Großen Erlöschen fällt Glut vom Himmel. In Luxemburg und weit darüber hinaus gehen die Lichter aus, Straße für Straße.'},
   {w:'narr',img:IMG.belval,cap:'Belval, ein Abend im November',t:'Léo und Mira stehen mit Fidèle, ihrem alten weißen Lieferwagen, vor der Belval Plaza. Mira macht ein Foto. Wie immer.'},
-  {w:'narr',t:'Da hält neben ihnen ein Wagen, den es eigentlich nicht geben dürfte. Smaragdgrün, goldene Felgen, ein Kennzeichen: VH 3107.'},
-  {w:'val',t:'Ihr seid die beiden mit dem Lieferwagen? Ich habe gehört, ihr wollt ans Meer. Nach Monte-Carlo, zum alten Leuchtfeuer.'},
-  {w:'mira',t:'Wir sammeln Funken. Wenn genug zusammenkommen, brennt das Leuchtfeuer wieder. So sagt man jedenfalls.'},
-  {w:'val',t:'Dann machen wir eine Wette. Ihr fahrt, womit ihr wollt: euren Fidèle oder meinen Smaragd. Ich nehme den anderen. Wer am Hafen die meisten Funken hat, entscheidet, was mit ihnen passiert.'},
-  {w:'leo',t:'Du willst freiwillig mit Fidèle fahren?'},
-  {w:'val',t:'Ich wollte schon immer wissen, wie es sich anfühlt, wenn ein Motor hustet.'},
-  {w:'mira',t:'Pass bloß gut auf sie auf. Sie hat Gefühle.'}],
- tut:[{w:'narr',t:'Lenken: ← → oder A / D. Gas und Bremse: ↑ ↓ oder W / S. Am Handy: Tasten unten. Sammelt goldene Funken. Rote Ringe auf der Straße zeigen, wo Glut einschlägt.'},
-      {w:'narr',t:'Lichtstoß (Leertaste): kurz unverwundbar und schneller. Er kostet Funken, die euch am Ende fehlen. Vor jedem Kapitel wählt ihr euer Auto neu.'}],
- ch1end:[
-  {w:'narr',img:IMG.bruecke,cap:'Auf dem Weg nach Luxemburg',t:'Hinter den Hochöfen wird es Nacht. Vor ihnen taucht die Altstadt auf, hoch über dem Tal, und sie leuchtet noch.'},
-  {w:'mira',img:IMG.bruecke,cap:'Auf dem Weg nach Luxemburg',t:'Schau! Da oben brennen noch Lichter. Fahr über die Brücke, Léo!'},
-  {w:'leo',t:'Weil hier jemand nicht aufgegeben hat. Genau wie wir.'}],
- ch2end:[
-  {w:'narr',img:IMG.bar,cap:'Die Bar mit dem lila Licht',t:'Vor der kleinen Bar mit dem lila und blauen Licht halten sie an. Zwei Flaschen, ein kurzes Anstoßen.'},
-  {w:'mira',img:IMG.bar,cap:'Die Bar mit dem lila Licht',t:'Auf Fidèle. Und auf alle, die noch Licht im Fenster haben.'},
-  {w:'narr',img:IMG.abend,cap:'Über dem Grund',t:'Später stehen sie an der Mauer über dem Tal. Der Himmel glüht, die Stadt liegt unter ihnen.'},
-  {w:'leo',img:IMG.abend,cap:'Über dem Grund',t:'Hinter dem nächsten Hügel liegt der Glutplatz. Dort fällt das Feuer am dichtesten.'},
-  {w:'mira',t:'Dann fahren wir mitten hindurch. Zusammen.'}],
- ch3end:[
-  {w:'narr',t:'Mitten auf dem Glutplatz hält Léo an und steigt aus. Um ihn herum schweben brennende Kugeln, still wie Laternen.'},
+  {w:'narr',t:'Neben ihnen hält ein Wagen, den es eigentlich nicht geben dürfte. Smaragdgrün, goldene Felgen, Kennzeichen VH 3107.'},
+  {w:'val',t:'Ihr seid die beiden, die Funken sammeln? Man sagt, in Eindhoven steht ein Lichtturm. Wer genug Funken hinbringt, kann ihn wieder entzünden.'},
+  {w:'mira',t:'Und dann?'},
+  {w:'val',t:'Dann leuchten beide Städte wieder. Ich mache euch ein Angebot: Nehmt meinen Smaragd, wann immer ihr wollt. Ich fahre so lange eure Kiste. Wechselt einfach, wenn ihr steht.'},
+  {w:'leo',t:'Pass bloß gut auf Fidèle auf. Sie hat Gefühle.'}],
+ tut:[{w:'narr',t:'Fahren: W A S D oder Pfeiltasten. Leertaste: Lichtstoß (kostet 5 Funken). C: Auto wechseln, wenn ihr steht. K: Karte. Am Handy: Tasten am Rand.'},
+      {w:'narr',t:'Goldene Funken liegen überall auf den Straßen. Der goldene Lichtstrahl zeigt euer nächstes Ziel.'}],
+ bruecke:[{w:'narr',img:IMG.bruecke,cap:'Pont des Lumières',t:'Unter der Brücke liegt das Tal, und auf der anderen Seite die Altstadt. Ihre Fenster leuchten noch.'},
+  {w:'mira',img:IMG.bruecke,cap:'Pont des Lumières',t:'Schau! Da oben brennen noch Lichter. Weil hier jemand nicht aufgegeben hat.'},
+  {w:'leo',t:'Genau wie wir. Komm, ich lade dich auf was ein. Die Bar mit dem lila Licht ist gleich hinter der Brücke.'}],
+ bar:[{w:'narr',img:IMG.bar,cap:'Le Pont Violet',t:'Vor der kleinen Bar mit dem lila und blauen Licht halten sie an. Zwei Flaschen, ein kurzes Anstoßen.'},
+  {w:'mira',img:IMG.bar,cap:'Le Pont Violet',t:'Auf Fidèle. Und auf alle, die noch Licht im Fenster haben.'},
+  {w:'leo',t:'Lass uns noch zur Mauer über dem Grund fahren. Von dort sieht man die ganze Stadt.'}],
+ abend:[{w:'narr',img:IMG.abend,cap:'Über dem Grund',t:'Sie stehen an der Mauer über dem Tal. Unten glänzt der Fluss, oben die Altstadt.'},
+  {w:'leo',img:IMG.abend,cap:'Über dem Grund',t:'Eindhoven ist nicht weit. Einmal die A-Route der Lichter runter, dann sind wir da.'},
+  {w:'mira',t:'Dann los. Der Lichtturm wartet.'}],
+ ehv:[{w:'narr',t:'Willkommen in Eindhoven. Backsteinhäuser, ein Kanal, alte Fabrikhallen. Und mitten in der Stadt glüht der Himmel orange.'},
+  {w:'val',t:'Das ist der Glutplatz. Dort fallen die meisten Funken, aber auch die meiste Glut. Passt auf euch auf.'}],
+ glowStart:[{w:'mira',t:'Da oben! Die Kugeln fallen. Sammel so viele Funken wie du kannst, und weich den roten Ringen aus!'}],
+ glowEnd:[{w:'narr',t:'Mitten auf dem Glutplatz hält Léo an und steigt aus. Um ihn herum schweben brennende Kugeln, still wie Laternen.'},
   {w:'leo',t:'Von Nahem sehen sie gar nicht bedrohlich aus. Eher wie Erinnerungen, die niemand mehr abholt.'},
-  {w:'narr',img:IMG.glut,cap:'Der Glutplatz',t:'Mira macht ein Foto von ihm. Es wird später ihr Lieblingsbild von dieser Reise.'},
-  {w:'mira',img:IMG.glut,cap:'Der Glutplatz',t:'Manchmal muss man stehen bleiben, um zu sehen, wie weit man schon gekommen ist. Komm. Das Meer wartet.'}],
- finale:[
-  {w:'narr',t:'Monte-Carlo. Die Sonne sinkt ins Meer, die Yachten im Hafen glänzen. Am Ende der Promenade steht das alte Leuchtfeuer, dunkel und kalt.'},
-  {w:'val',t:'Respekt. Ihr habt es geschafft. Und ich gebe zu: Mehr Funken als ich habt ihr auch.'},
-  {w:'val',t:'Also, Wettschulden. Ihr könnt die Funken mir geben, dann gehört der Smaragd euch. Für immer. Oder ihr steckt sie ins Leuchtfeuer, dann bekommt der Hafen sein Licht zurück und der Wagen bleibt bei mir.'},
+  {w:'narr',img:IMG.glut,cap:'Der Glutplatz, Eindhoven',t:'Mira macht ein Foto von ihm. Es wird später ihr Lieblingsbild von dieser Reise.'},
+  {w:'mira',img:IMG.glut,cap:'Der Glutplatz, Eindhoven',t:'Manchmal muss man stehen bleiben, um zu sehen, wie weit man schon gekommen ist. Komm, gleich geht die Sonne auf. Zum Lichtturm.'}],
+ finale:[{w:'narr',t:'Der Morgen dämmert über Eindhoven. Vor dem Lichtturm hält Valère neben euch.'},
+  {w:'val',t:'Respekt. Ihr habt mehr Funken gesammelt als irgendwer vor euch.'},
+  {w:'val',t:'Also, letztes Angebot. Gebt mir die Funken, dann gehört der Smaragd euch, für immer. Oder ihr bringt sie in den Lichtturm, dann leuchten beide Städte wieder, und der Wagen bleibt bei mir.'},
   {w:'mira',t:'Léo?'},
-  {w:'leo',t:'…',choices:[{label:'Ins Leuchtfeuer damit',fn:()=>ending(true)},{label:'Den Smaragd nehmen',fn:()=>ending(false)}]}],
+  {w:'leo',t:'…',choices:[{label:'In den Lichtturm damit',fn:()=>ending(true)},{label:'Den Smaragd nehmen',fn:()=>ending(false)}]}],
  goodEnd:n=>[
   {w:'leo',t:'Danke, Valère. Aber Fidèle hat uns hierher gebracht. Sie bringt uns auch wieder nach Hause.'},
   {w:'val',t:'Ihr seid völlig verrückt. Wisst ihr das?'},
-  {w:'mira',t:'Schon möglich. Aber schau.'},
-  {w:'narr',t:'Mira öffnet das Glas. '+n+' Funken steigen auf, tanzen über das Wasser und fließen in das alte Leuchtfeuer. Am Hang gehen die Fenster an, eines nach dem anderen.'},
-  {w:'narr',img:IMG.monaco,cap:'Monte-Carlo, genau in diesem Moment',t:'Bevor sie weiterfahren, stellen sich Léo und Mira noch einmal vor den grünen Wagen. Ein letztes Foto. Dieses hier.'}],
- badEnd:[
-  {w:'narr',t:'Die Funken wechseln den Besitzer. Der Smaragd schnurrt wie eine Katze. Hinter euch bleibt das Leuchtfeuer dunkel.'},
+  {w:'narr',t:'Mira öffnet das Glas. '+n+' Funken steigen auf und fließen in den Lichtturm. Er strahlt so hell, dass man ihn bis nach Luxemburg sieht. Überall gehen die Fenster wieder an.'},
+  {w:'val',t:'Eins noch. Ich habe ein Haus in Monte-Carlo, direkt am Hafen. Kommt im Sommer vorbei. Und bringt die Kiste mit.'},
+  {w:'narr',img:IMG.monaco,cap:'Monte-Carlo, ein paar Monate später',t:'Und das haben sie gemacht. Dieses Foto ist der Beweis.'}],
+ badEnd:[{w:'narr',t:'Die Funken wechseln den Besitzer. Der Smaragd schnurrt wie eine Katze. Hinter euch bleibt der Lichtturm dunkel.'},
   {w:'mira',t:'Er fährt sich toll. Er fühlt sich nur nach nichts an.'},
   {w:'leo',t:'Fidèle steht da hinten ganz allein. Das war falsch, oder?'}]
 };
-const BARKS=[
- [[0.12,'mira','Die Hochöfen. Früher haben sie Stahl gemacht, heute halten sie nur noch die Kälte fern.'],[0.4,'leo','Achtung, da vorne fällt was vom Himmel!'],[0.7,'val','Euer Fidèle zieht nach links. Ist das Absicht?']],
- [[0.15,'mira','Die Brücke! Von hier oben sieht die Stadt aus wie ein Schmuckkästchen.'],[0.42,'leo','Vorsicht, liegengebliebene Autos. Nicht jeder hatte so viel Glück wie wir.'],[0.72,'mira','Lila und blau. Da vorne ist unsere Bar!']],
- [[0.12,'leo','Bleib dicht bei mir, okay? Ich meine, du sitzt eh neben mir, aber trotzdem.'],[0.4,'mira','Der Regen zischt auf der Glut. Einfach weiterfahren!'],[0.72,'val','Ich hätte nie gedacht, dass ich mal einen Lieferwagen vermisse.']],
- [[0.1,'mira','Das Meer! Léo, wir sind fast da.'],[0.38,'val','Letzte Gerade. Mal sehen, wer zuerst am Leuchtfeuer ist.'],[0.7,'leo','Schau dir die Yachten an. Und trotzdem gehen hier die Lichter aus.']]
+const BARKS_FREE=[['mira','Da vorne liegen Funken!'],['leo','Fidèle schnurrt heute richtig.'],['mira','Weißt du noch, wie wir hier das erste Mal lang gefahren sind?'],['val','Funk an Fidèle: Wie fährt sich mein Smaragd?']];
+/* missions: target is resolved lazily from landmarks */
+const MISSIONS=[
+ {title:'Der Pont des Lumières',text:'Fahrt zur großen Bogenbrücke über das Tal.',target:()=>LM.bridge,r:16,lines:'bruecke',time:19.2},
+ {title:'Le Pont Violet',text:'Die kleine Bar mit dem lila Licht, gleich hinter der Brücke.',target:()=>({x:LM.bar.x,z:LM.bar.z}),r:12,lines:'bar',time:21.6},
+ {title:'Über dem Grund',text:'Fahrt zur Aussichtsmauer am Rand der Altstadt.',target:()=>LM.view,r:13,lines:'abend',time:22.4},
+ {title:'Die A-Route der Lichter',text:'Nehmt die Autobahn Richtung Osten nach Eindhoven.',target:()=>({x:MOTORWAY.x1,z:0}),r:22,lines:'ehv',time:23.6},
+ {title:'GLOW: Der Glutplatz',text:'Fahrt zum Glutplatz im Zentrum von Eindhoven.',target:()=>LM.glow,r:34,lines:'glowStart',time:0.6,event:'glow'},
+ {title:'Der Lichtturm',text:'Bringt die Funken zum Lichtturm.',target:()=>LM.licht,r:22,lines:'finale',time:5.9,finale:true}
 ];
-const CH_NAMES=[{sub:'Kapitel I',name:'Die Hochöfen von Belval'},{sub:'Kapitel II',name:'Die Stadt der Brücken'},{sub:'Kapitel III',name:'Der Glutplatz'},{sub:'Kapitel IV',name:'Monte-Carlo'}];
 
 /* ===== Generative score and sound effects (WebAudio) ===== */
 const Audio_={ctx:null,master:null,muted:false,engine:null,engGain:null,engFilter:null,rain:null,music:null,nextNote:0,step:0,chord:0,mood:0,
@@ -1290,90 +1588,64 @@ const Audio_={ctx:null,master:null,muted:false,engine:null,engGain:null,engFilte
 };
 
 
-/* ===== Game: state, driving physics, spawning, camera, story flow ===== */
+/* ===== Open-world game: time of day, player, missions, events, camera, HUD ===== */
 const $=id=>document.getElementById(id);
-// ---------- environments (natural light, linear HDR) ----------
-const ENVS=[
- {sunDir:[.5,.13,-1],sunCol:[3.4,1.65,.8],shadow:.92,skyTop:[.07,.13,.32],skyHor:[1.0,.5,.28],skyGround:[.06,.05,.05],ambTop:[.2,.22,.32],ambBot:[.09,.065,.05],
-  fog:.0022,stars:.15,clouds:.55,sunSize:.004,windows:.75,wet:.1,exposure:.95,sat:1.05,tint:[1.02,.99,.96],lamp:[1,.62,.3],rain:0},
- {sunDir:[-.5,.45,-1],sunCol:[.17,.21,.34],shadow:.65,skyTop:[.006,.009,.03],skyHor:[.05,.045,.1],skyGround:[.01,.01,.015],ambTop:[.028,.032,.06],ambBot:[.012,.01,.016],
-  fog:.0024,stars:1,clouds:.3,sunSize:.0008,windows:1.0,wet:.55,exposure:1.55,sat:1.08,tint:[.97,.98,1.04],lamp:[1,.72,.42],rain:0},
- {sunDir:[0,.2,-1],sunCol:[.55,.16,.05],shadow:.35,skyTop:[.02,.005,.004],skyHor:[.3,.065,.02],skyGround:[.03,.008,.004],ambTop:[.065,.028,.02],ambBot:[.06,.022,.012],
-  fog:.0065,stars:0,clouds:.95,sunSize:0,windows:.55,wet:1.0,exposure:1.15,sat:1.1,tint:[1.04,.97,.93],lamp:[1,.45,.18],rain:1},
- {sunDir:[-.78,.085,-1],sunCol:[3.4,1.6,.75],shadow:.92,skyTop:[.1,.18,.44],skyHor:[1.0,.5,.33],skyGround:[.06,.06,.08],ambTop:[.26,.26,.38],ambBot:[.13,.09,.08],
-  fog:.0014,stars:.05,clouds:.55,sunSize:.005,windows:.6,wet:.05,exposure:.82,sat:1.06,tint:[1.02,1,.97],lamp:[1,.75,.45],rain:0},
- {sunDir:[-.78,.012,-1],sunCol:[1.3,.5,.32],shadow:0,skyTop:[.03,.05,.15],skyHor:[.55,.26,.3],skyGround:[.03,.03,.05],ambTop:[.07,.08,.14],ambBot:[.03,.025,.035],
-  fog:.0018,stars:.75,clouds:.4,sunSize:0,windows:1.25,wet:.1,exposure:1.3,sat:1.1,tint:[1,.98,1.02],lamp:[1,.75,.45],rain:0}
-];
-const envCur=JSON.parse(JSON.stringify(ENVS[0])); let envFrom=null, envTo=ENVS[0], envT=1;
-function setEnv(i,instant){ envFrom=JSON.parse(JSON.stringify(envCur)); envTo=ENVS[i]; envT=instant?1:0; if(instant) blendEnv(1); }
-function blendEnv(t){ for(const k in envTo){ const a=envFrom?envFrom[k]:envTo[k], b=envTo[k]; if(Array.isArray(b)) envCur[k]=b.map((v,j)=>lerp(a[j],v,t)); else envCur[k]=lerp(a,b,t); } }
-
-// ---------- cars ----------
-const CARS={
- fidele:{name:'Fidèle',sub:'Citroën-Lieferwagen, Baujahr irgendwann',min:14,max:27,accel:8,steer:12,hearts:4,magnet:2.3,boost:15,half:[.86,2.1],cam:[4.1,10.8],eng:[34,1.5]},
- smaragd:{name:'Smaragd',sub:'Hypercar, smaragdgrün, VH 3107',min:20,max:41,accel:17,steer:17,hearts:3,magnet:1.4,boost:10,half:[1.0,2.35],cam:[3.2,9.6],eng:[55,2.4]}
+// ---------- time of day (natural light keyframes, linear HDR) ----------
+const ENV_K={
+ night:{sunCol:[.16,.2,.32],shadow:.55,skyTop:[.006,.009,.03],skyHor:[.045,.042,.09],skyGround:[.01,.01,.015],ambTop:[.028,.032,.06],ambBot:[.012,.01,.016],fog:.0016,stars:1,clouds:.35,sunSize:.0008,windows:1.0,wet:.45,exposure:1.55,sat:1.08,tint:[.97,.98,1.04],lamps:1},
+ blue:{sunCol:[.5,.3,.35],shadow:.3,skyTop:[.02,.04,.12],skyHor:[.3,.18,.25],skyGround:[.03,.03,.05],ambTop:[.06,.07,.13],ambBot:[.03,.025,.035],fog:.0017,stars:.6,clouds:.4,sunSize:0,windows:1.0,wet:.3,exposure:1.35,sat:1.1,tint:[1,.98,1.02],lamps:1},
+ dawn:{sunCol:[2.6,1.3,.7],shadow:.8,skyTop:[.08,.14,.32],skyHor:[.95,.55,.42],skyGround:[.06,.05,.05],ambTop:[.15,.17,.26],ambBot:[.08,.06,.06],fog:.0018,stars:.15,clouds:.5,sunSize:.004,windows:.6,wet:.3,exposure:1.0,sat:1.06,tint:[1.02,.99,.97],lamps:.7},
+ morning:{sunCol:[4.6,4.0,3.3],shadow:.9,skyTop:[.12,.28,.62],skyHor:[.55,.66,.8],skyGround:[.1,.1,.1],ambTop:[.32,.4,.55],ambBot:[.18,.16,.13],fog:.0011,stars:0,clouds:.5,sunSize:.003,windows:.05,wet:.05,exposure:.6,sat:1.04,tint:[1,1,1],lamps:0},
+ noon:{sunCol:[5.2,4.8,4.3],shadow:.9,skyTop:[.1,.26,.62],skyHor:[.55,.68,.85],skyGround:[.1,.1,.1],ambTop:[.36,.44,.6],ambBot:[.2,.18,.15],fog:.001,stars:0,clouds:.55,sunSize:.003,windows:.03,wet:.03,exposure:.55,sat:1.04,tint:[1,1,1],lamps:0},
+ afternoon:{sunCol:[4.6,3.6,2.6],shadow:.9,skyTop:[.1,.22,.5],skyHor:[.72,.66,.64],skyGround:[.1,.09,.09],ambTop:[.3,.34,.46],ambBot:[.18,.14,.11],fog:.0012,stars:0,clouds:.55,sunSize:.0035,windows:.1,wet:.05,exposure:.62,sat:1.05,tint:[1.02,1,.97],lamps:0},
+ dusk:{sunCol:[3.4,1.65,.8],shadow:.9,skyTop:[.07,.13,.32],skyHor:[1.0,.5,.28],skyGround:[.06,.05,.05],ambTop:[.2,.22,.32],ambBot:[.09,.065,.05],fog:.0018,stars:.15,clouds:.55,sunSize:.004,windows:.75,wet:.1,exposure:.95,sat:1.05,tint:[1.02,.99,.96],lamps:.8}
 };
-let VAN_P, SUP_P, PEOPLE_SUP, VAL_SUP, VAL_VAN, LEO_STAND, MIRA_STAND;
+const KEYS=[[0,'night'],[5.0,'night'],[6.1,'dawn'],[8,'morning'],[12.5,'noon'],[16.5,'afternoon'],[18.7,'dusk'],[19.9,'blue'],[21,'night'],[24,'night']];
+const envCur=JSON.parse(JSON.stringify(ENV_K.dusk)); envCur.sunDir=[-1,.1,.3]; envCur.rain=0;
+function envAt(hour,out){ hour=((hour%24)+24)%24; let a=KEYS[0],b=KEYS[1]; for(let i=0;i<KEYS.length-1;i++) if(hour>=KEYS[i][0]&&hour<=KEYS[i+1][0]){ a=KEYS[i]; b=KEYS[i+1]; break; }
+  const t=smooth((hour-a[0])/Math.max(1e-3,b[0]-a[0])); const A=ENV_K[a[1]], B=ENV_K[b[1]];
+  for(const k in A){ if(Array.isArray(A[k])) out[k]=A[k].map((v,j)=>lerp(v,B[k][j],t)); else out[k]=lerp(A[k],B[k],t); }
+  const th=(hour-6)/12*Math.PI; let sd=[Math.cos(th),Math.sin(th)*.82,.35];
+  if(sd[1]<.03){ const m=(hour+6)/12*Math.PI; sd=[Math.cos(m)*.6,Math.max(.25,Math.abs(Math.sin(m))*.6),.45]; }
+  const l=Math.hypot(...sd); out.sunDir=sd.map(v=>v/l); return out; }
+
+// ---------- models ----------
+let VAN_P, SUP_P, PEOPLE_SUP, VAL_SUP, LEO_STAND, MIRA_STAND;
 function standing(who){ const p=[]; const dark=[.03,.03,.04];
-  if(who==='leo'){ // from the photo: grey joggers, dark denim jacket, scarf, beanie, beard
-    for(const s of [-1,1]){ p.push(['rbox',s*.11,.06,.03,.13,.12,.3,MAT.STD+.6,[.85,.85,.82],0]); p.push(['rbox',s*.11,.1,.05,.135,.05,.31,MAT.STD+.6,[.05,.05,.05],0]);
+  if(who==='leo'){ for(const s of [-1,1]){ p.push(['rbox',s*.11,.06,.03,.13,.12,.3,MAT.STD+.6,[.85,.85,.82],0]); p.push(['rbox',s*.11,.1,.05,.135,.05,.31,MAT.STD+.6,[.05,.05,.05],0]);
       p.push(['rbox',s*.11,.5,0,.16,.75,.17,MAT.STD+.95,[.5,.5,.52],0]); p.push(['rbox',s*.24,1.2,-.02,.13,.55,.15,MAT.STD+.8,[.08,.09,.12],0]); }
     p.push(['rbox',0,.95,0,.36,.25,.22,MAT.STD+.95,[.48,.48,.5],0]); p.push(['rbox',0,1.27,0,.46,.62,.27,MAT.STD+.8,[.08,.09,.12],0]);
     p.push(['cylY',0,1.6,0,.3,.14,.27,MAT.STD+.98,[.42,.36,.28],0]); p.push(['head',0,1.8,0,.2,.25,.22,MAT.SKIN,COL.skin,0]);
     p.push(['head',0,1.71,-.04,.19,.13,.17,MAT.STD+.95,dark,0]); p.push(['head',0,1.93,.01,.22,.17,.23,MAT.STD+.95,[.06,.06,.07],0]);
-  } else {
-    for(const s of [-1,1]){ p.push(['rbox',s*.1,.05,.03,.11,.1,.26,MAT.STD+.6,[.9,.9,.88],0]); p.push(['rbox',s*.1,.48,0,.14,.74,.15,MAT.STD+.85,[.12,.16,.26],0]); p.push(['rbox',s*.23,1.15,-.02,.12,.5,.14,MAT.STD+.98,[.28,.18,.11],0]); }
+  } else { for(const s of [-1,1]){ p.push(['rbox',s*.1,.05,.03,.11,.1,.26,MAT.STD+.6,[.9,.9,.88],0]); p.push(['rbox',s*.1,.48,0,.14,.74,.15,MAT.STD+.85,[.12,.16,.26],0]); p.push(['rbox',s*.23,1.15,-.02,.12,.5,.14,MAT.STD+.98,[.28,.18,.11],0]); }
     p.push(['rbox',0,1.2,0,.42,.62,.25,MAT.STD+.98,[.28,.18,.11],0]); p.push(['head',0,1.7,0,.19,.24,.21,MAT.SKIN,COL.skin2,0]);
-    p.push(['head',0,1.78,.03,.215,.18,.23,MAT.STD+.9,[.22,.12,.06],0]); p.push(['head',0,1.92,.08,.13,.12,.13,MAT.STD+.9,[.22,.12,.06],0]); p.push(['box',0,1.71,-.1,.19,.07,.02,MAT.STD+.3,[.85,.5,.6],0]);
-  }
+    p.push(['head',0,1.78,.03,.215,.18,.23,MAT.STD+.9,[.22,.12,.06],0]); p.push(['head',0,1.92,.08,.13,.12,.13,MAT.STD+.9,[.22,.12,.06],0]); p.push(['box',0,1.71,-.1,.19,.07,.02,MAT.STD+.3,[.85,.5,.6],0]); }
   return compileParts(p,MESHIDX); }
 function valPerson(x,y,z){ return [['rbox',x,y-.25,z,.5,.45,.32,MAT.STD+.8,[.85,.84,.8],0],['head',x,y+.08,z,.2,.25,.22,MAT.SKIN,[.72,.5,.38],0],['head',x,y+.17,z+.02,.22,.14,.24,MAT.STD+.6,[.75,.75,.74],0],['box',x,y+.1,z-.1,.19,.06,.02,MAT.STD+.2,[.02,.02,.02],0]]; }
 function initModels(){ VAN_P=compileParts(vanParts(),MESHIDX); SUP_P=compileParts(supParts(),MESHIDX);
-  PEOPLE_SUP=compileParts([...personParts('leo',-.32,.76,.3),...personParts('mira',.32,.76,.3)],MESHIDX);
-  VAL_SUP=compileParts(valPerson(-.32,.76,.3),MESHIDX); LEO_STAND=standing('leo'); MIRA_STAND=standing('mira'); }
+  PEOPLE_SUP=compileParts([...personParts('leo',-.32,.76,.3),...personParts('mira',.32,.76,.3)],MESHIDX); VAL_SUP=compileParts(valPerson(-.32,.76,.3),MESHIDX);
+  LEO_STAND=standing('leo'); MIRA_STAND=standing('mira'); }
 function drawParts(parts,X,Y,Z,yaw,o={}){ const c=Math.cos(yaw), s=Math.sin(yaw), pitch=o.pitch||0, roll=o.roll||0, spin=o.spin||0, steer=o.steer||0;
   for(const q of parts){ let [m,x,y,z,sx,sy,sz,mat,r,g,b,p,rx,ry,rz,slot,tag]=q;
     if(tag==='spin'){ rx+=spin; if(z<0) ry+=steer; }
-    else { y+=-z*pitch+x*roll; rx+=pitch*0; rz+=-roll; if(tag==='tail') p*=o.brake?2.6:1; if(tag==='head') p*=o.headOn===false?0.05:1; }
-    P(m,X+x*c+z*s,Y+y,Z-x*s+z*c,yaw+ry,sx,sy,sz,mat,r,g,b,p,rx+(tag==='spin'?0:-pitch),rz,slot); } }
+    else { y+=-z*pitch+x*roll; rz+=-roll; rx-=pitch; if(tag==='tail') p*=o.brake?2.6:1; if(tag==='head') p*=o.headOn===false?0.05:1; }
+    P(m,X+x*c+z*s,Y+y,Z-x*s+z*c,yaw+ry,sx,sy,sz,mat,r,g,b,p,rx,rz,slot); } }
+function carParts(car){ return car==='fidele'?VAN_P:SUP_P; }
+function drawCar(c,people,lightsOn){ drawParts(carParts(c.car),c.x,0,c.z,c.h,{pitch:c.pitch,roll:c.roll,spin:-c.spin,steer:c.steer,brake:c.brake,headOn:lightsOn});
+  if(c.car==='smaragd'&&people) drawParts(people,c.x,0,c.z,c.h,{pitch:c.pitch,roll:c.roll});
+  const fx=-Math.sin(c.h), fz=-Math.cos(c.h); const L=c.car==='fidele'?2.1:2.3; const k=envCur.lamps;
+  if(lightsOn) Lt(c.x+fx*(L+5),.9,c.z+fz*(L+5),26*k+2,22*k+2,16*k+1.5,22);
+  Lt(c.x-fx*L,.6,c.z-fz*L,c.brake?6:1.2,.05,.02,5); }
 
 // ---------- state ----------
-const CH_LEN=[1500,1600,1450,1550];
-const G={ chapter:0, dist:0, len:1500, speed:20, x:0, vx:0, yaw:0, roll:0, pitch:0, hearts:3, maxHearts:3, light:0, lightAtStart:0, total:0, hits:0, boosts:0, boostT:0, inv:0, combo:0, comboT:0,
-  state:'title', time:0, shake:0, flash:0, dyn:[], parts:[], rival:null, car:'fidele', camMode:'orbit', endT:0, barks:{}, nextOrb:0, throttle:0, brake:false, nextScene:null };
-function resetWorld(ch){ statics=[]; G.dyn=[]; G.parts=[]; genZ=20; seed=1000+ch*77; side={L:20,R:20}; }
-function genChunk(z0){ const z1=z0-CHUNK, ch=G.chapter, E=ENVS[ch];
-  roadChunk(z0,z1,ch);
-  if(ch!==2){ const every=ch===1?16:22; for(let z=Math.floor(z0/every)*every; z>z1; z-=every){ if(z>z0) continue; lamp(ROAD_HALF+1.6,z,E.lamp,ch===1?'lantern':'modern'); lamp(-(ROAD_HALF+1.6),z-every/2,E.lamp,ch===1?'lantern':'modern'); } }
-  if(ch===0) genBelval(z0,z1); else if(ch===1) genBruecken(z0,z1); else if(ch===2) genGlut(z0,z1); else genHafen(z0,z1);
-  if(ch===3&&z0>-CH_LEN[3]-60&&z0<=-CH_LEN[3]+30) lighthouse(-(ROAD_HALF+7.5),-CH_LEN[3]-26);
-  genGameplay(z0,z1); }
-function lighthouse(x,z){ if(landmarksDone.lh) return; landmarksDone.lh=true; G.lh={x,z};
-  S('cylY',x,8,z,3.4,16,3.4,MAT.STONE,[.9,.88,.84]); for(let k=0;k<3;k++) S('cylY',x,2.5+k*5,z,3.5,1.3,3.5,MAT.PAINT+.4,[.65,.06,.05],.2);
-  S('cylY',x,16.3,z,4.2,.4,4.2,MAT.STD+.5,[.1,.1,.1],.8); G.lhLamp=S('cylY',x,17.4,z,2.4,1.9,2.4,MAT.EMI,[1,.86,.6],.3); S('cone',x,19,z,3,1.6,3,MAT.STD+.4,[.12,.12,.12],.8); }
-function genGameplay(z0,z1){
-  if(G.state!=='play'||z0>-70) return; const ch=G.chapter, end=-CH_LEN[ch]+60; if(z0<end) return;
-  if(rnd()<0.8){ const pat=rnd(); const n=6+(rnd()*6|0); let lane=(rnd()*3)|0;
-    for(let i=0;i<n;i++){ const z=z0-4-i*3.4; if(z<z1-8) break; let x=LANES[lane];
-      if(pat>0.55) x=Math.sin(i*0.5+lane)*3.6; else if(pat>0.35&&i===Math.floor(n/2)) lane=clamp(lane+(rnd()<.5?-1:1),0,2);
-      G.dyn.push({type:'spark',x,y:1.1,z,ph:rnd()*6,alive:true}); } }
-  const density=[0.55,0.7,0.5,0.45][ch];
-  if(rnd()<density){ const z=z0-rr(6,24); const free=(rnd()*3)|0; const nb=rnd()<(0.25+ch*0.08)?2:1; let placed=0;
-    for(let l=0;l<3&&placed<nb;l++){ const lane=(free+1+l)%3; if(lane===free) continue; placed++;
-      const r=rnd();
-      if(ch===1&&r<0.5) G.dyn.push({type:'car',x:LANES[lane],z,vz:-rr(5,10),parts:pick(SEDANS||(sedan(0,99999),SEDANS)),alive:true});
-      else if(ch===2&&r<0.5) G.dyn.push({type:'rock',x:LANES[lane]+rr(-.5,.5),z,r:rr(.9,1.3),alive:true,y:.9});
-      else if(r<0.25) G.dyn.push({type:'cones',x:LANES[lane],z,alive:true});
-      else G.dyn.push({type:'barrier',x:LANES[lane],z,alive:true}); } }
-}
-// ---------- particles ----------
-function burst(x,y,z,n,col,speed,life,size,grav=-6,em=6){ for(let i=0;i<n;i++){ if(G.parts.length>800) G.parts.shift(); const a=rnd()*Math.PI*2, b=rr(-.2,1);
+const G={ state:'title', time:0, hour:18.6, timeScale:1/90, light:0, total:0, boosts:0, hits:0, boostT:0, flash:0, shake:0, mission:-1, event:null, eventT:0, eventGot:0, dyn:[], parts:[],
+  camMode:'orbit', endT:0, player:null, parked:null, camYaw:0, choiceGood:null, regionMood:-1, barkT:30, standAt:null, finalePos:null };
+function burst(x,y,z,n,col,speed,life,size,grav=-6,em=6){ for(let i=0;i<n;i++){ if(G.parts.length>700) G.parts.shift(); const a=Math.random()*Math.PI*2, b=rr(-.2,1);
   G.parts.push({x,y,z,vx:Math.cos(a)*speed*rr(.3,1),vy:b*speed*rr(.4,1.1),vz:Math.sin(a)*speed*rr(.3,1),life:life*rr(.6,1),max:life,s:size*rr(.6,1.2),col,em,g:grav}); } }
 
 // ---------- dialog ----------
 const UI={};
-function bindUI(){ for(const id of ['hud','chapLabel','progFill','lightN','boostFill','boostHint','bark','barkText','barkAv','chapCard','chapEyebrow','chapTitle','dialog','dlgAv','dlgName','dlgText','choices','dlgHint','touch','fade','photo','photoImg','photoCap','carSel','hearts','speedN']) UI[id]=$(id); }
+function bindUI(){ for(const id of ['hud','lightN','boostHint','bark','barkText','barkAv','dialog','dlgAv','dlgName','dlgText','choices','dlgHint','touch','fade','photo','photoImg','photoCap','speedN','clock','objTitle','objText','objDist','objArrow','obj','mini','mapO','mapC','toast','carName']) UI[id]=$(id); }
 const AV={ leo:'<img src="assets/leo.jpg" alt="">', mira:'<img src="assets/mira.jpg" alt="">',
  val:`<svg viewBox="0 0 64 64"><rect width="64" height="64" fill="#0f2a22"/><path d="M12 64c2-12 10-17 20-17s18 5 20 17z" fill="#e9e4da"/><path d="M28 47l4 8 4-8z" fill="#0d5c44"/><ellipse cx="32" cy="30" rx="12.5" ry="15" fill="#c99574"/><path d="M19 27c0-12 6-17 13-17s14 5 13 17c-3-6-7-8-13-8s-10 2-13 8z" fill="#c8c4bd"/><rect x="21" y="27" width="9" height="5" rx="2" fill="#101418"/><rect x="34" y="27" width="9" height="5" rx="2" fill="#101418"/><path d="M30 29h4" stroke="#101418" stroke-width="1.5"/><path d="M27 41q5 2 10-1" stroke="#7a4a3a" stroke-width="1.6" fill="none"/></svg>`,
  narr:`<svg viewBox="0 0 64 64"><rect width="64" height="64" fill="#1a1420"/><circle cx="32" cy="32" r="10" fill="#ffd27a"/><circle cx="32" cy="32" r="18" fill="none" stroke="#ff8a3d" stroke-width="1.5" opacity=".6"/><circle cx="32" cy="32" r="25" fill="none" stroke="#ff8a3d" stroke-width="1" opacity=".3"/></svg>` };
@@ -1392,186 +1664,194 @@ function tickDialog(dt){ if(!dlg.cur||!dlg.typing) return; dlg.shown=Math.min(dl
       dlg.cur.choices.forEach((c,i)=>{ const b=document.createElement('button'); b.className=i===0?'btn':'btn ghost'; b.textContent=c.label; b.id='choice'+i;
         b.onclick=e=>{ e&&e.stopPropagation&&e.stopPropagation(); UI.dialog.hidden=true; UI.photo.classList.remove('show'); dlg.cur=null; dlg.queue=[]; c.fn(); }; UI.choices.appendChild(b); });
       setTimeout(()=>{ const f=$('choice0'); f&&f.focus&&f.focus(); },30); } } }
-let barkT=0;
-function bark(w,t){ UI.barkAv.innerHTML=AV[w]||AV.narr; UI.barkText.innerHTML=''; const b=document.createElement('b'); b.textContent=NAMES[w]; UI.barkText.appendChild(b); UI.barkText.appendChild(document.createTextNode(t)); UI.bark.classList.add('show'); barkT=4.5; }
+let barkTimer=0;
+function bark(w,t){ UI.barkAv.innerHTML=AV[w]||AV.narr; UI.barkText.innerHTML=''; const b=document.createElement('b'); b.textContent=NAMES[w]; UI.barkText.appendChild(b); UI.barkText.appendChild(document.createTextNode(t)); UI.bark.classList.add('show'); barkTimer=4.5; }
+let toastT=0; function toast(t){ UI.toast.textContent=t; UI.toast.classList.add('show'); toastT=2.6; }
 
 // ---------- flow ----------
 function fadeTo(v,ms=600){ UI.fade.style.transitionDuration=ms+'ms'; UI.fade.style.opacity=v; return new Promise(r=>setTimeout(r,ms)); }
-function stageScene(ch,mode,dist=0){ G.chapter=ch; resetWorld(ch); landmarksDone={}; setEnv(ch,true); G.dist=dist; G.speed=0; G.x=0; G.vx=0; G.yaw=0; G.camMode=mode; G.rival=null; G.lh=null; G.lhLamp=null; }
-function showCarSelect(next){ G.nextScene=next; UI.carSel.hidden=false; UI.hud.hidden=true; UI.touch.classList.remove('on'); G.state='select'; G.camMode='showroom';
-  const n=CH_NAMES[next]; $('selEyebrow').textContent=n.sub+' · '+n.name; setTimeout(()=>{ const b=$('pick-'+G.car); b&&b.focus&&b.focus(); },50); }
-function pickCar(car){ G.car=car; UI.carSel.hidden=true; Audio_.init(); Audio_.resume(); fadeTo(1,350).then(()=>startChapter(G.nextScene,false)); }
-function startChapter(i,retry){ stageScene(i,'chase',0); const C=CARS[G.car]; G.len=CH_LEN[i]; G.speed=C.min; G.maxHearts=C.hearts; G.hearts=C.hearts; G.inv=1.5; G.boostT=0; G.combo=0;
-  if(retry) G.light=G.lightAtStart; else G.lightAtStart=G.light;
-  G.barks={}; G.nextOrb=0; G.rival={car:G.car==='fidele'?'smaragd':'fidele',x:LANES[0],z:8,vx:0,dist:-8};
-  G.state='play'; UI.hud.hidden=false; UI.touch.classList.toggle('on',isTouch); UI.chapLabel.textContent=CH_NAMES[i].sub+' · '+CH_NAMES[i].name; renderHearts(); showChapCard(i);
-  Audio_.setMood(i); Audio_.setRain(ENVS[i].rain); fadeTo(0,700); }
-function showChapCard(i){ UI.chapEyebrow.textContent=CH_NAMES[i].sub; UI.chapTitle.textContent=CH_NAMES[i].name; UI.chapCard.classList.add('show'); setTimeout(()=>UI.chapCard.classList.remove('show'),2800); }
-function renderHearts(){ UI.hearts.innerHTML=''; for(let i=0;i<G.maxHearts;i++){ const s=document.createElement('span'); if(i>=G.hearts) s.className='off'; UI.hearts.appendChild(s); } }
-async function endChapter(){ G.state='cutscene'; UI.touch.classList.remove('on'); Audio_.chime(); await fadeTo(1,900); const i=G.chapter; UI.hud.hidden=true;
-  if(i<3){ if(i===2) stageScene(2,'standing',300); else stageScene(i+1,'orbit',0);
-    fadeTo(0,900); Audio_.setMood(Math.min(i+1,3)); Audio_.setRain(i===2?1:0);
-    say([STORY.ch1end,STORY.ch2end,STORY.ch3end][i],async()=>{ await fadeTo(1,450); stageScene(i+1,'showroom',0); fadeTo(0,450); showCarSelect(i+1); });
-  } else finale(); }
-function finale(){ G.choiceGood=null; G.dyn=[]; UI.hud.hidden=true; UI.touch.classList.remove('on'); G.speed=0; G.state='cutscene'; G.camMode='finale'; G.endT=0; G.x=1.7; G.yaw=0; G.boostT=0; G.inv=0;
-  G.rival={car:G.car==='fidele'?'smaragd':'fidele',x:-1.9,z:-G.dist-.5,vx:0,parked:true}; setEnv(3,true); fadeTo(0,900); Audio_.setMood(4); say(STORY.finale); }
-function ending(good){ G.state='ending'; G.choiceGood=good; Audio_.setEngine(0,false,CARS[G.car]);
-  if(good){ G.camMode='ignite'; G.endT=0; setEnv(4,false); Audio_.chime(); saveBest(G.light); say(STORY.goodEnd(G.light),()=>setTimeout(()=>showEnd(true),400)); }
+function placeAtStart(){ const b=LM.belval; G.player=newCar('fidele',b.x-8,b.z,Math.PI/2); G.parked=newCar('smaragd',b.x+4,b.z-.5,Math.PI/2); G.camYaw=G.player.h; }
+function startGame(){ G.light=0; G.total=0; G.boosts=0; G.hits=0; for(const s of sparksAll) s.alive=true; LM.lit=false; G.dyn=[]; TRAFFIC.length=0;
+  placeAtStart(); G.hour=18.6; G.mission=-1; G.event=null; G.state='talk'; G.camMode='orbit'; UI.hud.hidden=true;
+  say(STORY.prologue.concat(STORY.tut),()=>{ nextMission(); }); }
+function nextMission(){ G.mission++; G.state='drive'; G.camMode='chase'; UI.hud.hidden=false; UI.touch.classList.toggle('on',isTouch);
+  const M=MISSIONS[G.mission];
+  if(M){ UI.objTitle.textContent=M.title; UI.objText.textContent=M.text; toast('Neues Ziel: '+M.title); }
+  else { UI.objTitle.textContent='Freie Fahrt'; UI.objText.textContent='Erkundet beide Städte und sammelt alle Funken.'; } }
+function reachMission(){ const M=MISSIONS[G.mission]; G.state='talk'; G.camMode='orbit'; Audio_.chime();
+  if(M.time!==undefined) G.hour=M.time;
+  if(M.event==='glow'){ say(STORY.glowStart,()=>startGlow()); return; }
+  if(M.finale){ finale(); return; }
+  say(STORY[M.lines],()=>nextMission()); }
+function startGlow(){ G.state='drive'; G.camMode='chase'; G.event='glow'; G.eventT=70; G.eventGot=0; envCur.rain=1;
+  const g=LM.glow; for(let k=0;k<45;k++) G.dyn.push({type:'spark',x:rr(g.x0+4,g.x1-4),y:1.1,z:rr(g.z0+4,g.z1-4),ph:Math.random()*6,alive:true});
+  UI.objTitle.textContent='GLOW: Der Glutplatz'; }
+function endGlow(){ G.event=null; G.dyn=[]; envCur.rain=0; G.state='talk'; G.camMode='standing'; G.standAt={x:LM.glow.x,z:LM.glow.z};
+  say(STORY.glowEnd,()=>{ G.hour=5.6; nextMission(); }); }
+function finale(){ G.camMode='finale'; G.state='talk'; UI.hud.hidden=true; UI.touch.classList.remove('on'); const L=LM.licht;
+  G.finalePos={x:L.x,z:L.z+20}; const pl=G.player; pl.x=L.x+5; pl.z=L.z+22; pl.h=Math.PI/2; pl.v=0; G.parked=newCar(pl.car==='fidele'?'smaragd':'fidele',L.x-4,L.z+21,Math.PI/2+.1);
+  say(STORY.finale); }
+function ending(good){ G.choiceGood=good; G.state='ending';
+  if(good){ G.camMode='ignite'; G.endT=0; LM.lit=true; Audio_.chime(); saveBest(G.light); say(STORY.goodEnd(G.light),()=>setTimeout(()=>showEnd(true),300)); }
   else { G.camMode='dark'; say(STORY.badEnd,()=>showEnd(false)); } }
-function showEnd(good){ $('endO').hidden=false; $('btnRethink').hidden=good; $('albumWrap').hidden=!good;
-  const stars=G.light>=380?3:G.light>=220?2:1;
-  if(good){ $('endEyebrow').textContent='Epilog'; $('endTitle').textContent='Der Hafen leuchtet.';
-    $('endText').textContent='Es ist nicht der Wagen, der dich ans Ziel bringt. Es ist der Mensch, der neben dir sitzt. Léo und Mira fahren noch am selben Abend weiter, mit Fidèle. Irgendwo da draußen gibt es noch dunkle Städte.';
-    $('endStats').innerHTML=`<div><b>${G.light}</b><small>Funken entzündet</small></div><div><b>${G.total}</b><small>gesammelt</small></div><div><b>${G.boosts}</b><small>Lichtstöße</small></div><div><b>${G.hits}</b><small>Treffer</small></div><div><span class="stars">${'★'.repeat(stars)}<span class="dim">${'★'.repeat(3-stars)}</span></span><small>Leuchtkraft</small></div>`;
+function showEnd(good){ $('endO').hidden=false; $('btnRethink').hidden=good; $('albumWrap').hidden=!good; $('btnFree').hidden=!good;
+  const stars=G.light>=250?3:G.light>=140?2:1;
+  if(good){ $('endEyebrow').textContent='Epilog'; $('endTitle').textContent='Beide Städte leuchten.';
+    $('endText').textContent='Es ist nicht der Wagen, der dich ans Ziel bringt. Es ist der Mensch, der neben dir sitzt. Die Welt bleibt offen: Fahrt weiter, sammelt die restlichen Funken und entdeckt Luxemburg und Eindhoven bei Tag.';
+    $('endStats').innerHTML=`<div><b>${G.light}</b><small>Funken entzündet</small></div><div><b>${G.total}</b><small>gesammelt</small></div><div><b>${G.boosts}</b><small>Lichtstöße</small></div><div><span class="stars">${'★'.repeat(stars)}<span class="dim">${'★'.repeat(3-stars)}</span></span><small>Leuchtkraft</small></div>`;
   } else { $('endEyebrow').textContent='Ein anderes Ende'; $('endTitle').textContent='Manche Dinge kann man nicht kaufen.';
-    $('endText').textContent='Der Hafen bleibt dunkel, und der schnellste Wagen der Küste bringt euch nirgendwohin, wo ihr hinwollt. Vielleicht verdient diese Geschichte ein anderes Ende.'; $('endStats').innerHTML=''; }
-  setTimeout(()=>{ const b=$(good?'btnAgain':'btnRethink'); b&&b.focus&&b.focus(); },50); }
-function loadBest(){ try{ return +localStorage.getItem('ldr_best2')||0 }catch(e){ return 0 } }
-function saveBest(v){ try{ if(v>loadBest()) localStorage.setItem('ldr_best2',String(v)) }catch(e){} }
-
-function tryBoost(){ const C=CARS[G.car]; if(G.boostT>0||G.light<C.boost) return; G.light-=C.boost; G.boosts++; G.boostT=2.6; G.inv=Math.max(G.inv,2.6); Audio_.boost(); burst(G.x,1,-G.dist+2,40,[1,.85,.4],10,.8,.16,0,8); }
-function hitPlayer(){ if(G.inv>0) return; G.hearts--; G.hits++; G.inv=1.6; G.flash=1; G.shake=1; G.combo=0; G.speed*=0.75; Audio_.hit(); burst(G.x,1.2,-G.dist-1.5,30,[1,.6,.2],7,.7,.12); renderHearts();
-  if(G.hearts===1) bark(pick(['mira','leo']),pick(['Noch ein Treffer und wir stehen. Vorsicht!','Das Auto hält nicht mehr viel aus.']));
-  if(G.hearts<=0){ G.state='crashed'; Audio_.setEngine(0,false,CARS[G.car]); setTimeout(()=>{ $('crashO').hidden=false; const b=$('btnRetry'); b&&b.focus&&b.focus(); },900); } }
+    $('endText').textContent='Der Lichtturm bleibt dunkel, und der schnellste Wagen der Welt bringt euch nirgendwohin, wo ihr hinwollt. Vielleicht verdient diese Geschichte ein anderes Ende.'; $('endStats').innerHTML=''; }
+  setTimeout(()=>{ const b=$(good?'btnFree':'btnRethink'); b&&b.focus&&b.focus(); },50); }
+function freeRoam(){ $('endO').hidden=true; G.mission=MISSIONS.length-1; G.hour=9; G.camMode='chase'; nextMission(); }
+function loadBest(){ try{ return +localStorage.getItem('ldr_best3')||0 }catch(e){ return 0 } }
+function saveBest(v){ try{ if(v>loadBest()) localStorage.setItem('ldr_best3',String(v)) }catch(e){} }
+function swapCar(){ const pl=G.player; if(G.state!=='drive') return; if(Math.abs(pl.v)>3){ toast('Zum Wechseln erst anhalten'); return; }
+  const other=G.parked&&Math.hypot(G.parked.x-pl.x,G.parked.z-pl.z)<40?G.parked:null; const name=pl.car==='fidele'?'smaragd':'fidele';
+  const left=newCar(pl.car,pl.x,pl.z,pl.h); const rx=Math.cos(pl.h), rz=-Math.sin(pl.h);
+  G.player=newCar(name,other?other.x:pl.x+rx*3.4,other?other.z:pl.z+rz*3.4,other?other.h:pl.h); G.parked=left; G.camYaw=G.player.h;
+  toast(name==='smaragd'?'Ihr fahrt jetzt den Smaragd':'Ihr fahrt jetzt Fidèle'); Audio_.chime(); }
+function tryBoost(){ if(G.boostT>0||G.light<5||G.state!=='drive') return; G.light-=5; G.boosts++; G.boostT=2.5; Audio_.boost(); burst(G.player.x,1,G.player.z,30,[1,.85,.4],9,.8,.14,0,8); }
 
 // ---------- input ----------
 const keys={}; let touchL=false,touchR=false,touchUp=false,touchDn=false,gpA=false;
 const isTouch=(typeof matchMedia!=='undefined'&&matchMedia('(pointer:coarse)').matches)||(typeof window!=='undefined'&&'ontouchstart' in window);
-function steerInput(){ let s=0; if(keys['arrowleft']||keys['a']||touchL) s-=1; if(keys['arrowright']||keys['d']||touchR) s+=1;
-  let th=0; if(keys['arrowup']||keys['w']||touchUp) th=1; if(keys['arrowdown']||keys['s']||touchDn) th=-1;
-  const gps=navigator.getGamepads?navigator.getGamepads():[]; for(const gp of gps){ if(gp&&gp.connected){ if(Math.abs(gp.axes[0])>0.2) s=gp.axes[0]; const rt=gp.buttons[7]?gp.buttons[7].value:0, lt=gp.buttons[6]?gp.buttons[6].value:0; if(rt>.1) th=rt; if(lt>.1) th=-lt;
-    const a=gp.buttons[0]&&gp.buttons[0].pressed; if(a&&!gpA&&G.state==='play') tryBoost(); gpA=a; } }
-  return [s,th]; }
+function readInput(){ let s=0,th=0,br=0; if(keys['arrowleft']||keys['a']||touchL) s-=1; if(keys['arrowright']||keys['d']||touchR) s+=1;
+  if(keys['arrowup']||keys['w']||touchUp) th=1; if(keys['arrowdown']||keys['s']||touchDn) br=1;
+  const gps=navigator.getGamepads?navigator.getGamepads():[]; for(const gp of gps){ if(gp&&gp.connected){ if(Math.abs(gp.axes[0])>.15) s=gp.axes[0]; const rt=gp.buttons[7]?gp.buttons[7].value:0, lt=gp.buttons[6]?gp.buttons[6].value:0; if(rt>.05) th=rt; if(lt>.05) br=lt;
+    const a=gp.buttons[0]&&gp.buttons[0].pressed; if(a&&!gpA) tryBoost(); gpA=a; } }
+  return [s,th,br]; }
 
 // ---------- update ----------
 function update(dt){
-  G.time+=dt; if(envT<1){ envT=Math.min(1,envT+dt/3); blendEnv(smooth(envT)); }
-  if(barkT>0){ barkT-=dt; if(barkT<=0) UI.bark.classList.remove('show'); }
+  G.time+=dt; if(G.state==='drive'&&!G.event) G.hour+=dt*G.timeScale; if(G.hour>=24) G.hour-=24;
+  const rain=envCur.rain||0; envAt(G.hour,envCur); envCur.rain=rain; if(G.event==='glow'){ envCur.wet=1; envCur.fog=Math.max(envCur.fog,.004); }
+  if(LM.lit) envCur.windows*=1.3;
+  if(barkTimer>0){ barkTimer-=dt; if(barkTimer<=0) UI.bark.classList.remove('show'); }
+  if(toastT>0){ toastT-=dt; if(toastT<=0) UI.toast.classList.remove('show'); }
   tickDialog(dt);
   for(let i=G.parts.length-1;i>=0;i--){ const p=G.parts[i]; p.life-=dt; if(p.life<=0){ G.parts.splice(i,1); continue; } p.vy+=p.g*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt; if(p.y<.05){ p.y=.05; p.vy*=-.3; p.vx*=.7; p.vz*=.7; } }
   G.flash=Math.max(0,G.flash-dt*2.5); G.shake=Math.max(0,G.shake-dt*2.2);
-  const vz=-G.dist;
-  while(genZ>vz-560){ genChunk(genZ); genZ-=CHUNK; }
-  if((G.time*10|0)%25===0){ const lim=vz+45; statics=statics.filter(o=>o.z-o.ext<lim); G.dyn=G.dyn.filter(o=>o.z<lim+10&&o.alive!==false); }
-  if(G.chapter===0&&rnd()<dt*12) G.parts.push({x:rr(-50,-25),y:rr(10,45),z:vz-rr(20,140),vx:rr(-.5,.5),vy:rr(1,3),vz:0,life:4,max:4,s:rr(.06,.14),col:[1,.5,.15],em:8,g:.2});
-  if(G.chapter===2&&rnd()<dt*25) G.parts.push({x:rr(-16,16),y:rr(0,10),z:vz-rr(5,90),vx:rr(-.5,.5),vy:rr(.5,2.5),vz:0,life:3,max:3,s:rr(.05,.12),col:[1,.45,.1],em:10,g:.5});
-  if(G.camMode==='ignite'&&G.endT>3&&rnd()<dt*1.5){ const x=rr(-80,-30),z=vz-rr(0,90),y=rr(22,38); const c=pick([[1,.75,.3],[1,.4,.6],[.5,.7,1],[1,.9,.6]]); burst(x,y,z,80,c,10,1.9,.25,-3,14); Audio_.boom(.25); }
-  if(G.state==='play') updatePlay(dt);
-  else { Audio_.setEngine(0,G.state==='cutscene'||G.state==='select',CARS[G.car]); G.endT+=dt; }
-  // HUD
-  UI.lightN.textContent=G.light; UI.progFill.style.width=(clamp(G.dist/G.len,0,1)*100).toFixed(1)+'%'; UI.speedN.textContent=Math.round(G.speed*3.6);
-  const C=CARS[G.car]; UI.boostFill.style.width=(G.boostT>0?G.boostT/2.6*100:Math.min(100,G.light/C.boost*100))+'%';
-  UI.boostHint.textContent=G.boostT>0?'Lichtstoß aktiv':(G.light>=C.boost?'Lichtstoß bereit':'Lichtstoß ab '+C.boost);
+  const pl=G.player; if(!pl) return;
+  if(G.state==='drive'){
+    const [s,th,br]=readInput(); G.boostT=Math.max(0,G.boostT-dt);
+    const hit=stepCar(pl,th,br,s,dt,G.boostT>0); if(hit>3){ G.shake=Math.min(1,hit/14); Audio_.noiseHit(.25,900,clamp(hit/20,.1,.5)); }
+    if(Math.random()<dt*2) spawnTraffic(pl.x,pl.z); updateTraffic(dt,pl);
+    const cx=Math.floor(pl.x/CELL), cz=Math.floor(pl.z/CELL), mag=pl.car==='fidele'?2.6:1.8;
+    for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ const c=cells.get((cx+i)+','+(cz+j)); if(!c||!c.sparks) continue; for(const sp of c.sparks){ if(sp.alive&&Math.hypot(sp.x-pl.x,sp.z-pl.z)<mag+1){ sp.alive=false; collect(sp.x,sp.z); } } }
+    for(const o of G.dyn){ if(o.alive===false) continue;
+      if(o.type==='spark'){ if(Math.hypot(o.x-pl.x,o.z-pl.z)<mag+1){ o.alive=false; collect(o.x,o.z); if(G.event==='glow') G.eventGot++; } }
+      else if(o.type==='orb'){ if(!o.landed){ o.vy-=22*dt; o.y+=o.vy*dt; if(o.y<=o.r*.8){ o.y=o.r*.8; o.landed=true; o.life=6; burst(o.x,.5,o.z,45,[1,.45,.1],9,1,.15,-9,10); const d=Math.hypot(o.x-pl.x,o.z-pl.z); if(d<35){ Audio_.boom(clamp(1-d/35,.2,1)); G.shake=Math.max(G.shake,.4*(1-d/35)); } } }
+        else { o.life-=dt; if(o.life<=0) o.alive=false; }
+        if(o.y<2.8&&Math.hypot(o.x-pl.x,o.z-pl.z)<o.r+1.4&&!o.hitDone){ o.hitDone=true; if(G.boostT>0){ o.alive=false; burst(o.x,o.y,o.z,40,[1,.6,.2],10,.9,.15); } else { G.light=Math.max(0,G.light-5); G.hits++; G.flash=1; G.shake=1; pl.v*=.4; Audio_.hit(); toast('Glut! −5 Funken'); } } } }
+    G.dyn=G.dyn.filter(o=>o.alive!==false);
+    if(G.event==='glow'){ G.eventT-=dt; UI.objText.textContent='Sammelt Funken auf dem Platz: '+G.eventGot+' / 25 · noch '+Math.ceil(G.eventT)+' s';
+      if(Math.random()<dt*1.6){ const fx=-Math.sin(pl.h), fz=-Math.cos(pl.h); const g=LM.glow; const lead=clamp(pl.v,4,20)*1.6; const tx=clamp(pl.x+fx*lead+rr(-6,6),g.x0-10,g.x1+10), tz=clamp(pl.z+fz*lead+rr(-6,6),g.z0-10,g.z1+10);
+        G.dyn.push({type:'orb',x:tx,z:tz,y:28,vy:-6,r:rr(.9,1.4),alive:true,landed:false,ph:Math.random()*6}); }
+      if(G.eventGot>=25||G.eventT<=0) endGlow(); }
+    else { const M=MISSIONS[G.mission]; if(M){ const t=M.target(); if(t&&Math.hypot(t.x-pl.x,t.z-pl.z)<M.r) reachMission(); } }
+    G.routeT=(G.routeT||0)-dt; if(G.routeT<=0){ G.routeT=.7; const t=currentTarget(); G.route=t?findRoute(pl.x,pl.z,t.x,t.z):[]; }
+    G.barkT-=dt; if(G.barkT<=0){ G.barkT=rr(35,60); const b=pick(BARKS_FREE); bark(b[0],b[1]); }
+    const mood=pl.x>MOTORWAY.x1?2:pl.x>MOTORWAY.x0?3:pl.z>200?0:1; if(mood!==G.regionMood){ G.regionMood=mood; Audio_.setMood(mood); }
+    Audio_.setEngine(Math.abs(pl.v),true,VEH[pl.car]);
+  } else { Audio_.setEngine(0,G.state==='talk',VEH[pl.car]); G.endT+=dt; pl.v*=Math.max(0,1-dt*3); }
+  if(G.camMode==='ignite'&&G.endT>3&&Math.random()<dt*1.6){ const L=LM.licht; burst(L.x+rr(-60,60),rr(35,60),L.z+rr(-60,60),80,pick([[1,.75,.3],[1,.4,.6],[.5,.7,1],[1,.9,.6]]),10,1.9,.3,-3,14); Audio_.boom(.2); }
+  updateHUD();
 }
-function updatePlay(dt){
-  const ch=G.chapter, C=CARS[G.car]; const [steer,th]=steerInput();
-  // lateral dynamics with inertia, yaw and body roll
-  const target=steer*C.steer; const prevVx=G.vx; G.vx+=(target-G.vx)*Math.min(1,dt*(G.car==='smaragd'?9:5.5)); G.x+=G.vx*dt;
-  const lim=ROAD_HALF-C.half[0]-.15; if(Math.abs(G.x)>lim){ G.x=Math.sign(G.x)*lim; G.vx*=-.25; G.shake=Math.max(G.shake,.15); }
-  G.yaw=lerp(G.yaw,-G.vx/Math.max(G.speed,8)*0.9,Math.min(1,dt*8));
-  G.roll=lerp(G.roll,(G.vx-prevVx)/dt*(G.car==='fidele'?0.0045:0.0018),Math.min(1,dt*6));
-  // throttle
-  const prog=G.dist/G.len; const cruise=lerp(C.min,C.max,0.55)+prog*3;
-  let tgt=th>0?C.max:th<0?C.min:cruise; if(G.boostT>0) tgt=C.max*1.35;
-  const acc=clamp((tgt-G.speed)*1.2,-C.accel*2.2,C.accel*(G.boostT>0?2.2:1)); const ps=G.speed; G.speed+=acc*dt;
-  G.pitch=lerp(G.pitch,-(G.speed-ps)/dt*0.0012,Math.min(1,dt*5)); G.brake=th<0;
-  G.dist+=G.speed*dt; const vz=-G.dist;
-  G.boostT=Math.max(0,G.boostT-dt); G.inv=Math.max(0,G.inv-dt); G.comboT-=dt; if(G.comboT<=0) G.combo=0;
-  Audio_.setEngine(G.speed,true,C);
-  BARKS[ch].forEach((b,i)=>{ if(!G.barks[i]&&prog>=b[0]){ G.barks[i]=true; bark(b[1],b[2]); } });
-  // fire orbs
-  const orbRate=[0.35,0.6,1.6,0.3][ch]*(1+prog*.6);
-  G.nextOrb-=dt; if(G.nextOrb<=0&&G.dist>90&&G.dist<G.len-70){ G.nextOrb=rr(.6,1.4)/orbRate; const lead=G.speed*rr(1.7,2.3); const tx=rnd()<.35?clamp(G.x+rr(-1,1),-4.2,4.2):LANES[(rnd()*3)|0]+rr(-.6,.6);
-    G.dyn.push({type:'orb',x:tx,z:vz-lead,y:28,vy:-6,r:rr(.9,1.4),alive:true,landed:false,ph:rnd()*6}); }
-  // rival AI (drives the other car)
-  const rv=G.rival; if(rv){ const RC=CARS[rv.car]; const want=vz-6+Math.sin(G.time*.35)*10; rv.z+=(want-rv.z)*Math.min(1,dt*.9);
-    let best=rv.x,bs=-1e9; for(const cx of LANES){ let sc=(Math.abs(cx-G.x)<2.6&&Math.abs(rv.z-vz)<7)?-8:0; sc-=Math.abs(cx-rv.x)*.2;
-      for(const o of G.dyn){ if(o.alive===false||o.type==='spark') continue; const dz=rv.z-o.z; if(dz<-3||dz>40) continue; if(Math.abs(o.x-cx)<2.3) sc-=20/(1+dz*.05); } if(sc>bs){ bs=sc; best=cx; } }
-    const pvx=rv.vx; rv.vx+=((best-rv.x)*2.2-rv.vx)*Math.min(1,dt*3); rv.vx=clamp(rv.vx,-RC.steer,RC.steer); rv.x+=rv.vx*dt; rv.yaw=-rv.vx/20; rv.roll=(rv.vx-pvx)/dt*0.003; rv.dist=-rv.z;
-    if(Math.abs(rv.x-G.x)<C.half[0]+RC.half[0]&&Math.abs(rv.z-vz)<C.half[1]+RC.half[1]){ const push=Math.sign(G.x-rv.x)||1; G.vx=push*9; rv.vx=-push*6; G.shake=Math.max(G.shake,.3); Audio_.noiseHit(.2,1200,.2); } }
-  // collisions
-  const mag=G.boostT>0?4.6:C.magnet, hw=C.half[0], hl=C.half[1];
-  for(const o of G.dyn){ if(o.alive===false) continue; const dz=o.z-vz;
-    if(o.type==='spark'){ if(Math.abs(dz)<mag+hl-.4&&Math.abs(o.x-G.x)<mag){ o.alive=false; G.light++; G.total++; G.combo=Math.min(G.combo+1,5); G.comboT=.8; Audio_.pickup(G.combo); burst(o.x,1.1,o.z,8,[1,.85,.4],4,.5,.07,2,9); } }
-    else if(o.type==='orb'){ if(!o.landed){ o.vy-=22*dt; o.y+=o.vy*dt; if(o.y<=o.r*.8){ o.y=o.r*.8; o.landed=true; burst(o.x,.5,o.z,50,[1,.45,.1],9,1,.15,-9,10); const near=Math.abs(dz)<30; if(near){ Audio_.boom(clamp(1-Math.abs(dz)/30,.2,1)); G.shake=Math.max(G.shake,.35*clamp(1-Math.abs(dz)/30,0,1)); } } }
-      if(o.y<2.6&&Math.abs(dz)<hl+o.r*.6&&Math.abs(o.x-G.x)<hw+o.r*.6){ if(G.boostT>0){ o.alive=false; burst(o.x,o.y,o.z,50,[1,.6,.2],10,.9,.15); Audio_.boom(.6); } else hitPlayer(); } }
-    else if(o.type==='rock'){ if(Math.abs(dz)<hl+o.r*.5&&Math.abs(o.x-G.x)<hw+o.r*.6){ if(G.boostT>0){ o.alive=false; burst(o.x,1,o.z,40,[1,.5,.15],9,.8,.15); Audio_.boom(.5); } else hitPlayer(); } }
-    else if(o.type==='barrier'||o.type==='cones'){ if(Math.abs(dz)<hl+.3&&Math.abs(o.x-G.x)<hw+1.2){ if(G.boostT>0){ o.alive=false; burst(o.x,.6,o.z,30,[1,.55,.15],9,.7,.14); Audio_.boom(.4); } else hitPlayer(); } }
-    else if(o.type==='car'){ o.z+=o.vz*dt; if(Math.abs(o.z-vz)<hl+2.15&&Math.abs(o.x-G.x)<hw+.9){ if(G.boostT>0){ o.alive=false; burst(o.x,.8,o.z,40,[1,.8,.5],10,.8,.15); Audio_.boom(.5); } else hitPlayer(); } } }
-  if(G.dist>=G.len&&G.state==='play') endChapter();
-}
+function collect(x,z){ G.light++; G.total++; Audio_.pickup(G.light%6); burst(x,1.1,z,8,[1,.85,.4],4,.5,.07,2,9); }
+function updateHUD(){ const pl=G.player; UI.lightN.textContent=G.light; UI.speedN.textContent=Math.round(Math.abs(pl.v)*3.6); const hh=Math.floor(G.hour), mm=Math.floor((G.hour-hh)*60);
+  UI.clock.textContent=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); UI.carName.textContent=pl.car==='fidele'?'Fidèle':'Smaragd';
+  UI.boostHint.textContent=G.boostT>0?'Lichtstoß aktiv':(G.light>=5?'Lichtstoß bereit':'Lichtstoß ab 5');
+  const t=currentTarget();
+  if(t){ const dx=t.x-pl.x, dz=t.z-pl.z; UI.objDist.textContent=Math.round(Math.hypot(dx,dz))+' m'; const ang=Math.atan2(dx,-dz)+pl.h; UI.objArrow.style.transform='rotate('+ang+'rad)'; UI.objArrow.hidden=false; }
+  else { UI.objDist.textContent=G.total+' / '+sparksAll.length+' Funken'; UI.objArrow.hidden=true; }
+  drawMinimap(); }
+function currentTarget(){ if(G.event==='glow') return LM.glow; const M=MISSIONS[G.mission]; return M?M.target():null; }
 
-// ---------- frame building ----------
-const cam={pos:[0,3,8],tgt:[0,1,-10],fov:58};
-function carParts(car){ return car==='fidele'?VAN_P:SUP_P; }
-function drawCarAt(car,x,z,yaw,o,people){ drawParts(carParts(car),x,0,z,yaw,o);
-  if(car==='smaragd'&&people) drawParts(people,x,0,z,yaw,{pitch:o.pitch,roll:o.roll});
-  const c=Math.cos(yaw), s=Math.sin(yaw); const fz=car==='fidele'?-2.1:-2.3;
-  if(o.headOn!==false){ Lt(x+fz*s-s*5,.9,z+fz*c-c*5,26,22,16,22); }
-  Lt(x-fz*s,.6,z-fz*c,o.brake?6:1.5,.05,.02,5); }
+// ---------- minimap ----------
+let mapImg=null; const MAPS=.42, MAPB={x0:-480,z0:-480,x1:2300,z1:480};
+function buildMapImage(){ try{ const w=Math.ceil((MAPB.x1-MAPB.x0)*MAPS), h=Math.ceil((MAPB.z1-MAPB.z0)*MAPS); const cv=(typeof OffscreenCanvas!=='undefined')?new OffscreenCanvas(w,h):Object.assign(document.createElement('canvas'),{width:w,height:h});
+  const g=cv.getContext('2d'); if(!g) return; g.fillStyle='#1b2418'; g.fillRect(0,0,w,h);
+  const col={block:'#3a3530',park:'#24402a',industry:'#4a3326',valley:'#14301c',water:'#1d4a66',plaza:'#7a3a18',road:'#9a968e'};
+  for(const k of ['block','park','industry','valley','water','plaza','road']) for(const r of mapItems) if(r.kind===k){ g.fillStyle=col[k]; g.fillRect((r.x0-MAPB.x0)*MAPS,(r.z0-MAPB.z0)*MAPS,Math.max(1,(r.x1-r.x0)*MAPS),Math.max(1,(r.z1-r.z0)*MAPS)); }
+  g.fillStyle='rgba(255,255,255,.75)'; g.font='bold 22px Arial'; g.fillText('LUXEMBURG',(-120-MAPB.x0)*MAPS,(-440-MAPB.z0)*MAPS+18); g.fillText('EINDHOVEN',(1820-MAPB.x0)*MAPS,(-360-MAPB.z0)*MAPS); mapImg=cv; }catch(e){ mapImg=null; } }
+function drawMinimap(){ const c=UI.mini; if(!c||!c.getContext||!mapImg) return; const g=c.getContext('2d'); if(!g) return; const W=c.width, H=c.height, pl=G.player, z=1.6;
+  g.save(); g.clearRect(0,0,W,H); g.beginPath(); g.arc(W/2,H/2,W/2,0,7); g.clip(); g.fillStyle='#1b2418'; g.fillRect(0,0,W,H);
+  g.translate(W/2,H/2); g.rotate(pl.h); g.scale(z,z); g.drawImage(mapImg,-(pl.x-MAPB.x0)*MAPS,-(pl.z-MAPB.z0)*MAPS);
+  const t=currentTarget(); if(t){ if(G.route&&G.route.length){ g.strokeStyle='rgba(255,210,122,.9)'; g.lineWidth=3/z; g.beginPath(); g.moveTo(0,0); for(const n of G.route) g.lineTo((n.x-pl.x)*MAPS,(n.z-pl.z)*MAPS); g.lineTo((t.x-pl.x)*MAPS,(t.z-pl.z)*MAPS); g.stroke(); }
+    g.fillStyle='#ffd27a'; g.beginPath(); g.arc((t.x-pl.x)*MAPS,(t.z-pl.z)*MAPS,6/z,0,7); g.fill(); }
+  if(G.parked){ g.fillStyle=G.parked.car==='smaragd'?'#35c48a':'#ffffff'; g.fillRect((G.parked.x-pl.x)*MAPS-2,(G.parked.z-pl.z)*MAPS-2,4,4); }
+  g.restore(); g.fillStyle='#ffd27a'; g.beginPath(); g.moveTo(W/2,H/2-8); g.lineTo(W/2-5,H/2+6); g.lineTo(W/2+5,H/2+6); g.closePath(); g.fill(); }
+function drawBigMap(){ const c=UI.mapC; if(!c||!mapImg) return; const g=c.getContext('2d'); const W=c.width=Math.min(1100,innerWidth-32), H=c.height=Math.round(W*(MAPB.z1-MAPB.z0)/(MAPB.x1-MAPB.x0));
+  g.drawImage(mapImg,0,0,W,H); const s=W/(MAPB.x1-MAPB.x0), pl=G.player, X=x=>(x-MAPB.x0)*s, Z=z=>(z-MAPB.z0)*s;
+  const t=currentTarget(); if(t){ if(G.route&&G.route.length){ g.strokeStyle='#ffd27a'; g.lineWidth=3; g.beginPath(); g.moveTo(X(pl.x),Z(pl.z)); for(const n of G.route) g.lineTo(X(n.x),Z(n.z)); g.lineTo(X(t.x),Z(t.z)); g.stroke(); } g.fillStyle='#ffd27a'; g.beginPath(); g.arc(X(t.x),Z(t.z),7,0,7); g.fill(); }
+  g.save(); g.translate(X(pl.x),Z(pl.z)); g.rotate(-pl.h); g.fillStyle='#ff6f91'; g.beginPath(); g.moveTo(0,-9); g.lineTo(-6,7); g.lineTo(6,7); g.closePath(); g.fill(); g.restore(); }
+
+// ---------- frame ----------
+const cam={pos:[0,3,8],tgt:[0,1,-10],fov:58}; const _camCols=[];
+function drawStatic(o,t,lampK,lights){ let y=o.y; if(o.bob!==undefined) y+=Math.sin(t*.8+o.bob)*.4; let p=o.p;
+  if(o.mat===MAT.EMI&&o.L&&o.bob===undefined) p*=Math.max(.06,lampK);
+  if(o===LM.lichtTop) p=LM.lit?18:.25;
+  if(o.blink) p=(t%1.5)<.15?8:.2;
+  if(o.turbine){ const a=t*1.2+o.turbine.ph; for(let k=0;k<3;k++) P(MESHIDX.box,o.turbine.x,o.turbine.y,o.turbine.z,0,.9,22,.25,MAT.STD+.4,.92,.92,.94,.3,0,a+k*2.094); }
+  P(o.m,o.x,y,o.z,o.ry,o.sx,o.sy,o.sz,o.mat,o.r,o.g,o.b,p,o.rx,o.rz,o.slot);
+  if(lights&&o.L){ const k=(o.mat===MAT.EMI&&o.bob===undefined)?lampK:1; if(k>.05) Lt(o.L.x,o.L.y+(y-o.y),o.L.z,o.L.r*k,o.L.g*k,o.L.b*k,o.L.rad); } }
 function buildFrame(){
-  const vz=-G.dist, t=G.time, E=envCur;
-  const zNear=vz+50, zFar=vz-600;
-  for(const o of statics){ if(o.z-o.ext>zNear||o.z+o.ext<zFar) continue; let y=o.y; if(o.bob!==undefined) y+=Math.sin(t*.8+o.bob)*.4;
-    let p=o.p; if(o===G.lhLamp&&G.camMode==='ignite') p=.3+clamp(G.endT/3,0,1)*30;
-    P(o.m,o.x,y,o.z,o.ry,o.sx,o.sy,o.sz,o.mat,o.r,o.g,o.b,p,o.rx,o.rz,o.slot);
-    if(o.L&&o.z<vz+40&&o.z>vz-180) Lt(o.L.x,o.L.y+(o.bob!==undefined?Math.sin(t*.8+o.bob)*.4:0),o.L.z,o.L.r,o.L.g,o.L.b,o.L.rad); }
-  const MI=MESHIDX;
-  // player car
-  const spin=-G.dist/.33; const showPlayer=!(G.camMode==='standing'||G.camMode==='showroom');
-  const blink=G.inv>0&&G.state==='play'&&G.boostT<=0&&((t*14|0)%2===0);
-  const bob=Math.abs(Math.sin(G.dist*.9))*.012*Math.min(1,G.speed/10);
-  const fin=G.camMode==='finale'||G.camMode==='ignite'||G.camMode==='dark';
-  if(showPlayer&&!blink&&!fin) drawCarAt(G.car,G.x,vz+bob*0,G.yaw,{pitch:G.pitch,roll:G.roll,spin,steer:-G.vx*.02,brake:G.brake},PEOPLE_SUP);
-  if(G.boostT>0){ Lt(G.x,1.5,vz,30,22,10,10); for(let i=0;i<3;i++) P(MI.sphLo,G.x+rr(-1,1),rr(.4,2.2),vz+rr(1.5,4),0,.12,.12,rr(.6,1.6),MAT.EMI,1,.8,.4,10); }
-  if(fin){ drawCarAt('smaragd',-1.4,vz,.12,{headOn:G.camMode!=='dark'},G.choiceGood===false?PEOPLE_SUP:null); drawCarAt('fidele',3.4,vz-6.5,-.08,{headOn:true},null); }
-  const rv=G.rival; if(rv&&G.camMode!=='standing'&&!fin){ drawCarAt(rv.car,rv.x,rv.z,rv.yaw||0,{pitch:0,roll:rv.roll||0,spin:-(rv.dist||0)/.33,headOn:true},VAL_SUP); }
-  for(const o of G.dyn){ if(o.alive===false||o.z>zNear||o.z<zFar) continue; const dz=o.z-vz;
-    if(o.type==='spark'){ const y=o.y+Math.sin(t*3+o.ph)*.18; P(MI.sph,o.x,y,o.z,0,.36,.36,.36,MAT.EMI,1,.78,.35,14); P(MI.sphLo,o.x,y,o.z,0,.12,.12,.12,MAT.EMI,1,1,.9,30); if(dz<0&&dz>-45) Lt(o.x,y,o.z,6,4,1.4,6); }
-    else if(o.type==='orb'){ P(MI.sph,o.x,o.y,o.z,t*.3+o.ph,o.r*2,o.r*2,o.r*2,MAT.LAVA,1,1,1,1.0); Lt(o.x,o.y+.5,o.z,110,38,8,o.landed?18:24);
-      if(!o.landed){ const pulse=.5+.5*Math.sin(t*14); const sz=o.r*2.6*(1.25-o.y/32); P(MI.cylY,o.x,.02,o.z,0,sz,.02,sz,MAT.EMI,1,.12,.05,2+pulse*5); P(MI.cylY,o.x,.025,o.z,0,sz*.75,.02,sz*.75,MAT.STD,.04,0,0,0);
-        for(let k=1;k<4;k++) P(MI.sphLo,o.x,o.y+k*1.3,o.z,0,o.r*1.2/k,o.r*1.2/k,o.r*1.2/k,MAT.EMI,1,.45,.1,4/k); } }
-    else if(o.type==='rock'){ P(MI.sph,o.x,o.y,o.z,o.x,o.r*2,o.r*1.6,o.r*2,MAT.LAVA,1,1,1,.55); Lt(o.x,1.2,o.z,60,16,3,10); }
-    else if(o.type==='barrier'){ P(MI.box,o.x,.55,o.z,0,2.6,.7,.35,MAT.STD+.5,.95,.4,.06,0); P(MI.box,o.x,.55,o.z,0,2.62,.18,.37,MAT.STD+.5,.95,.95,.95,0);
-      P(MI.box,o.x-1.1,.2,o.z,0,.12,.4,.6,MAT.STD,.2,.2,.2,0); P(MI.box,o.x+1.1,.2,o.z,0,.12,.4,.6,MAT.STD,.2,.2,.2,0);
-      const bl=(t*3+o.z)%1<.5?12:.5; P(MI.sphLo,o.x,1.05,o.z,0,.18,.18,.18,MAT.EMI,1,.6,.1,bl); if(bl>1&&dz<0&&dz>-60) Lt(o.x,1.3,o.z,30,15,3,8); }
-    else if(o.type==='cones'){ for(let k=-1;k<=1;k++){ P(MI.cone,o.x+k*.9,.4,o.z+k*.3,0,.5,.8,.5,MAT.STD+.6,.95,.35,.05,0); P(MI.cylY,o.x+k*.9,.45,o.z+k*.3,0,.36,.12,.36,MAT.STD+.5,.95,.95,.95,0); P(MI.box,o.x+k*.9,.02,o.z+k*.3,0,.6,.04,.6,MAT.STD,.05,.05,.05,0); } }
-    else if(o.type==='car'){ drawParts(o.parts,o.x,0,o.z,Math.PI,{spin:-o.z/.32}); const hz=(t*2)%1<.5; if(hz){ P(MI.sphLo,o.x-.7,.8,o.z+2.1,0,.12,.12,.12,MAT.EMI,1,.5,.05,14); P(MI.sphLo,o.x+.7,.8,o.z+2.1,0,.12,.12,.12,MAT.EMI,1,.5,.05,14); } } }
-  for(const p of G.parts){ const f=p.life/p.max; P(MI.sphLo,p.x,p.y,p.z,0,p.s,p.s,p.s,MAT.EMI,p.col[0],p.col[1],p.col[2],p.em*f); }
-  if(E.rain>.05){ for(let i=0;i<260;i++){ const h=(i*7919)%1000/1000, h2=(i*104729)%1000/1000; const fall=((t*24+h*40)%22); P(MI.box,cam.pos[0]+(h-.5)*36,20-fall,cam.pos[2]-2-h2*46,.3,.02,.9,.02,MAT.EMI,.7,.62,.6,1.1*E.rain,.08,0); } }
-  // camera
-  const sh=G.shake*.35, C=CARS[G.car];
-  if(G.camMode==='chase'){ const [ch,cd]=C.cam; const cx=G.x*.55; cam.pos=[cx+rr(-sh,sh),ch+rr(-sh,sh),vz+cd]; cam.tgt=[G.x*.75,1.0,vz-16]; cam.fov=lerp(cam.fov,58+(G.boostT>0?10:0)+G.speed*.18,.08); }
-  else if(G.camMode==='orbit'||G.camMode==='showroom'){ const a=G.time*.12; const r=G.camMode==='showroom'?8:10; cam.pos=[Math.sin(a)*r,2.2+Math.sin(G.time*.3)*.4,vz+Math.cos(a)*r]; cam.tgt=[0,1.0,vz]; cam.fov=50;
-    if(G.camMode==='showroom'){ drawCarAt('fidele',-2.3,vz,-.35,{headOn:true},null); drawCarAt('smaragd',2.3,vz,.35,{headOn:true},PEOPLE_SUP); } }
-  else if(G.camMode==='standing'){ const a=Math.sin(G.time*.15)*.35; cam.pos=[Math.sin(a)*6.5,1.4,vz-Math.cos(a)*6.5]; cam.tgt=[0,3.0,vz];  cam.fov=58;
-    drawParts(LEO_STAND,0,0,vz,Math.PI,{});
+  const t=G.time, E=envCur, pl=G.player; if(!pl) return;
+  // camera first, so culling uses this frame's camera
+  const V=VEH[pl.car], sh=G.shake*.35;
+  let dy=pl.h-G.camYaw; while(dy>Math.PI) dy-=2*Math.PI; while(dy<-Math.PI) dy+=2*Math.PI; G.camYaw+=dy*Math.min(1,(1/60)*(pl.v<-1?1:4.5));
+  if(G.camMode==='chase'){ const [ch,cd]=V.cam; const back=cd+Math.abs(pl.v)*.05; const sx=Math.sin(G.camYaw), sz=Math.cos(G.camYaw);
+    // keep the camera out of buildings: march from the car towards the wanted position
+    let tHit=1; for(let k=1;k<=14;k++){ const tt=k/14; const px=pl.x+sx*back*tt, pz=pl.z+sz*back*tt; colsNear(px,pz,_camCols);
+      let inside=false; for(const b of _camCols){ if(Math.min(b.x1-b.x0,b.z1-b.z0)>3&&px>b.x0-.5&&px<b.x1+.5&&pz>b.z0-.5&&pz<b.z1+.5){ inside=true; break; } } if(inside){ tHit=Math.max(.22,tt-.1); break; } }
+    G.camK=tHit<(G.camK||1)?tHit:lerp(G.camK||1,tHit,.04);
+    const bk=back*G.camK; cam.pos=[pl.x+sx*bk+rr(-sh,sh),ch*lerp(1.25,1,G.camK)+Math.abs(pl.v)*.012+rr(-sh,sh),pl.z+sz*bk]; cam.tgt=[pl.x-sx*14,1.2,pl.z-sz*14]; cam.fov=lerp(cam.fov,56+(G.boostT>0?10:0)+Math.abs(pl.v)*.16,.08); }
+  else if(G.camMode==='orbit'){ const a=G.time*.1; cam.pos=[pl.x+Math.sin(a)*10,2.6,pl.z+Math.cos(a)*10]; cam.tgt=[pl.x,1.1,pl.z]; cam.fov=50; }
+  else if(G.camMode==='standing'){ const s=G.standAt, a=Math.sin(G.time*.15)*.35; cam.pos=[s.x+Math.sin(a)*6.5,1.4,s.z-Math.cos(a)*6.5]; cam.tgt=[s.x,3.0,s.z]; cam.fov=58; }
+  else { const f=G.finalePos||{x:pl.x,z:pl.z}; const L=LM.licht;
+    if(G.camMode==='ignite'){ const k=smooth(clamp(G.endT/6,0,1)); cam.pos=[f.x+lerp(4,10,k),lerp(1.8,9,k),f.z+lerp(11,32,k)]; cam.tgt=[lerp(f.x-1,L.x,k),lerp(1.4,40,k),lerp(f.z+2,L.z,k)]; cam.fov=lerp(48,62,k); }
+    else { const b=G.endT*.03; cam.pos=[f.x+4+Math.sin(b),1.8,f.z+11]; cam.tgt=[f.x-1,1.4,f.z+2]; cam.fov=48; } }
+  const ccx=cam.pos[0], ccz=cam.pos[2]; const RAD=560, RS=230, gx=Math.floor(ccx/CELL), gz=Math.floor(ccz/CELL), nR=Math.ceil(RAD/CELL);
+  const fx=cam.tgt[0]-ccx, fz=cam.tgt[2]-ccz, fl=Math.hypot(fx,fz)||1; const lampK=E.lamps;
+  for(const o of globalStatics) drawStatic(o,t,lampK,false);
+  for(let i=-nR;i<=nR;i++) for(let j=-nR;j<=nR;j++){ const c=cells.get((gx+i)+','+(gz+j)); if(!c) continue;
+    const ox=(gx+i+.5)*CELL-ccx, oz=(gz+j+.5)*CELL-ccz; const d=Math.hypot(ox,oz); if(d>RAD+CELL) continue;
+    if(d>110&&(ox*fx+oz*fz)/(d*fl)<-.35) continue;
+    const near=d<RS+CELL;
+    for(const o of c){ if(o.small&&!near) continue; drawStatic(o,t,lampK,d<220); }
+    if(c.sparks) for(const s of c.sparks){ if(!s.alive) continue; const y=s.y+Math.sin(t*3+s.ph)*.18; P(MESHIDX.sph,s.x,y,s.z,0,.36,.36,.36,MAT.EMI,1,.78,.35,14); if(d<120) Lt(s.x,y,s.z,5,3.4,1.2,6); } }
+  const lightsOn=E.lamps>.3;
+  drawCar(pl,PEOPLE_SUP,lightsOn);
+  if(G.parked) drawCar(G.parked,G.state==='drive'?null:VAL_SUP,false);
+  for(const c of TRAFFIC) drawParts(c.parts,c.x,0,c.z,c.h,{spin:-c.spin,headOn:lightsOn});
+  if(G.boostT>0){ Lt(pl.x,1.5,pl.z,30,22,10,10); for(let i=0;i<3;i++) P(MESHIDX.sphLo,pl.x+rr(-1,1),rr(.4,2.2),pl.z+rr(-1,1),0,.12,.12,rr(.6,1.6),MAT.EMI,1,.8,.4,10); }
+  const M=MISSIONS[G.mission]; const tg=G.state==='drive'&&!G.event&&M?M.target():null;
+  if(tg){ const pulse=.6+.4*Math.sin(t*3); P(MESHIDX.cylY,tg.x,40,tg.z,0,2.2,80,2.2,MAT.EMI,1,.78,.35,1.2*pulse); P(MESHIDX.cylY,tg.x,.15,tg.z,0,M.r*1.4,.04,M.r*1.4,MAT.EMI,1,.7,.3,.8*pulse); Lt(tg.x,3,tg.z,40,28,10,24); }
+  for(const o of G.dyn){
+    if(o.type==='spark'){ const y=o.y+Math.sin(t*3+o.ph)*.18; P(MESHIDX.sph,o.x,y,o.z,0,.36,.36,.36,MAT.EMI,1,.78,.35,14); }
+    else if(o.type==='orb'){ P(MESHIDX.sph,o.x,o.y,o.z,t*.3+o.ph,o.r*2,o.r*2,o.r*2,MAT.LAVA,1,1,1,1.0); Lt(o.x,o.y+.5,o.z,110,38,8,o.landed?18:24);
+      if(!o.landed){ const pulse=.5+.5*Math.sin(t*14); const sz=o.r*2.6*(1.25-o.y/32); P(MESHIDX.cylY,o.x,.12,o.z,0,sz,.02,sz,MAT.EMI,1,.12,.05,2+pulse*5);
+        for(let k=1;k<4;k++) P(MESHIDX.sphLo,o.x,o.y+k*1.3,o.z,0,o.r*1.2/k,o.r*1.2/k,o.r*1.2/k,MAT.EMI,1,.45,.1,4/k); } } }
+  for(const p of G.parts){ const f=p.life/p.max; P(MESHIDX.sphLo,p.x,p.y,p.z,0,p.s,p.s,p.s,MAT.EMI,p.col[0],p.col[1],p.col[2],p.em*f); }
+  if(E.rain>.05){ for(let i=0;i<240;i++){ const h=(i*7919)%1000/1000, h2=(i*104729)%1000/1000; const fall=((t*24+h*40)%22); P(MESHIDX.box,cam.pos[0]+(h-.5)*36,20-fall,cam.pos[2]+(h2-.5)*36,.3,.02,.9,.02,MAT.EMI,.7,.62,.6,1.1*E.rain,.08,0); } }
+  if(G.camMode==='standing'){ const s=G.standAt; drawParts(LEO_STAND,s.x,0,s.z,Math.PI,{});
     for(const [ox,oy,oz,r] of [[-4.5,7.5,3,1.5],[0,9.5,4,2.1],[4.2,7,2.5,1.4],[-7,5.5,1,1.1],[7.5,5.8,0,1.2],[-2.5,6,6,1],[2.6,10.5,8,1.6]]){ const y=oy+Math.sin(G.time*.8+ox)*.3;
-      P(MI.sph,ox,y,vz+oz,G.time*.2,r*2,r*2,r*2,MAT.LAVA,1,1,1,.55); Lt(ox,y-.5,vz+oz,90,30,6,18); for(let k=1;k<4;k++) P(MI.sph,ox,y-r-k*.9,vz+oz,0,.12,1.2,.12,MAT.EMI,1,.45,.12,4/k); }
-    drawCarAt(G.car,-4.5,vz+9,.4,{headOn:true},PEOPLE_SUP); }
-  else { // finale / ignite / dark: the selfie spot at the harbour
-    const vzc=vz; if(G.camMode!=='dark'){ drawParts(LEO_STAND,-1.0,0,vzc+3.4,-2.5,{}); drawParts(MIRA_STAND,-1.65,0,vzc+3.55,-2.3,{}); }
-    const a=.75+G.endT*.03; const lh=G.lh||{x:-12,z:vz-26};
-    if(G.camMode==='ignite'){ const k=smooth(clamp(G.endT/6,0,1)); cam.pos=[lerp(3.6,7,k),lerp(1.8,5.5,k),vzc+lerp(9.5,19,k)]; cam.tgt=[lerp(-1.3,lh.x*.6,k),lerp(1.4,8,k),lerp(vzc+1.5,(lh.z+vzc)/2,k)]; cam.fov=lerp(48,56,k); }
-    else { const b=G.endT*.03; cam.pos=[3.6+Math.sin(b)*.8,1.8,vzc+9.5]; cam.tgt=[-1.3,1.4,vzc+1.5]; cam.fov=48; }
-    if(G.camMode==='ignite'&&G.lh){ const ign=clamp(G.endT/3,0,1); Lt(lh.x,17.4,lh.z,500*ign,380*ign,220*ign,120); const b=G.endT*.9; P(MI.box,lh.x+Math.sin(b)*32,17.4,lh.z+Math.cos(b)*32,b,.7,.7,64,MAT.EMI,1,.85,.55,3*ign); } }
+      P(MESHIDX.sph,s.x+ox,y,s.z+oz,G.time*.2,r*2,r*2,r*2,MAT.LAVA,1,1,1,.55); Lt(s.x+ox,y-.5,s.z+oz,90,30,6,18); } }
+  if((G.camMode==='finale'||G.camMode==='ignite')&&G.finalePos){ const f=G.finalePos; drawParts(LEO_STAND,f.x-.2,0,f.z+3.6,-2.6,{}); drawParts(MIRA_STAND,f.x-.9,0,f.z+3.8,-2.4,{});
+    if(LM.lit){ const L=LM.licht, k=clamp(G.endT/3,0,1); Lt(L.x,57,L.z,700*k,800*k,1000*k,160); const b=G.endT*.8; P(MESHIDX.box,L.x+Math.sin(b)*60,57,L.z+Math.cos(b)*60,b,1,1,120,MAT.EMI,.8,.9,1,3*k); } }
 }
 
-// ---------- main loop ----------
+// ---------- loop ----------
 let last=0, acc=0, frames=0, adaptT=0;
 function frame(now){
   const dtRaw=Math.max(0,(now-last)/1000); last=now; const dt=Math.min(.05,dtRaw);
-  if(G.state!=='pause') update(dt);
-  try{ buildFrame();
-    const C=CARS[G.car]; const sc=[G.x,0,-G.dist-18];
-    const dark=G.camMode==='dark';
-    renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1),bloom:.045,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:.5},sc,window.__snapReq||null);
-    window.__snapReq=null;
-  }catch(e){ console.error(e); }
+  if(G.state!=='pause'&&G.state!=='map') update(dt);
+  try{ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
+    renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1),bloom:.045,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:.5},[pl.x-Math.sin(G.camYaw)*14,0,pl.z-Math.cos(G.camYaw)*14],window.__snapReq||null);
+    window.__snapReq=null; }catch(e){ console.error(e); }
   acc+=dtRaw; frames++; adaptT+=dtRaw;
   if(adaptT>2.5){ const avg=acc/frames; if(avg>.026&&R.scale>.5){ R.scale=Math.max(.5,R.scale*.82); R.needResize=true; } else if(avg<.012&&R.scale<R.maxScale){ R.scale=Math.min(R.maxScale,R.scale*1.12); R.needResize=true; } acc=0; frames=0; adaptT=0; }
-  requestAnimationFrame(frame);
-}
+  requestAnimationFrame(frame); }
 function onDeviceLost(info){ $('errText').textContent='Die Grafikkarte wurde zurückgesetzt ('+(info.message||info.reason)+'). Bitte lade die Seite neu.'; $('errO').hidden=false; }
 
 /* ===== Boot, UI wiring, input ===== */
@@ -1581,41 +1861,45 @@ function initUI(){
     if([' ','arrowleft','arrowright','arrowup','arrowdown'].includes(k)) e.preventDefault&&e.preventDefault();
     if(!UI.dialog.hidden&&(k===' '||k==='enter')){ advance(); return; }
     if(k==='escape'&&!UI.dialog.hidden&&dlg.cur&&!dlg.cur.choices){ skipDialog(); return; }
-    if(k===' '&&G.state==='play') tryBoost();
-    if((k==='p'||k==='escape')&&(G.state==='play'||G.state==='pause')) togglePause();
+    if(k===' '||k==='shift') tryBoost();
+    if(k==='c') swapCar();
+    if(k==='k') toggleMap();
+    if(k==='p'||(k==='escape'&&G.state!=='map')) togglePause();
+    if(k==='escape'&&G.state==='map') toggleMap();
     if(k==='m') toggleMute(); });
   addEventListener('keyup',e=>{ keys[(e.key||'').toLowerCase()]=false; });
   const hold=(el,set)=>{ if(!el) return; const on=e=>{ e.preventDefault(); set(true); el.classList.add('down'); }, off=e=>{ e.preventDefault(); set(false); el.classList.remove('down'); };
     el.addEventListener('pointerdown',on); el.addEventListener('pointerup',off); el.addEventListener('pointercancel',off); el.addEventListener('pointerleave',off); };
   hold($('tL'),v=>touchL=v); hold($('tR'),v=>touchR=v); hold($('tUp'),v=>touchUp=v); hold($('tDn'),v=>touchDn=v);
-  $('tBoost').addEventListener('pointerdown',e=>{ e.preventDefault(); if(G.state==='play') tryBoost(); });
-  addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; touchL=touchR=touchUp=touchDn=false; if(G.state==='play') togglePause(); });
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden&&G.state==='play') togglePause(); });
+  $('tBoost').addEventListener('pointerdown',e=>{ e.preventDefault(); tryBoost(); });
+  addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; touchL=touchR=touchUp=touchDn=false; if(G.state==='drive') togglePause(); });
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden&&G.state==='drive') togglePause(); });
   UI.dialog.addEventListener('click',()=>advance());
   $('dlgSkip').addEventListener('click',e=>{ e.stopPropagation(); skipDialog(); });
   $('btnMute').onclick=toggleMute; $('btnPause').onclick=()=>togglePause(); $('btnResume').onclick=()=>togglePause();
-  $('btnRestartCh').onclick=()=>{ $('pauseO').hidden=true; startChapter(G.chapter,true); };
-  $('btnSwitchCar').onclick=()=>{ $('pauseO').hidden=true; G.light=G.lightAtStart; showCarSelect(G.chapter); };
-  $('btnRetry').onclick=()=>{ $('crashO').hidden=true; startChapter(G.chapter,true); };
-  $('btnAgain').onclick=()=>{ $('endO').hidden=true; G.light=0; G.total=0; G.hits=0; G.boosts=0; stageScene(0,'showroom',0); showCarSelect(0); };
-  $('btnRethink').onclick=()=>{ $('endO').hidden=true; G.state='cutscene'; G.camMode='finale'; setEnv(3,false); say(STORY.finale.slice(-1)); };
-  $('pick-fidele').onclick=()=>pickCar('fidele'); $('pick-smaragd').onclick=()=>pickCar('smaragd');
-  $('btnStart').onclick=()=>{ Audio_.init(); Audio_.resume(); $('title').hidden=true; G.light=0; G.total=0; G.hits=0; G.boosts=0; G.state='intro'; Audio_.setMood(0);
-    say(STORY.prologue.concat(STORY.tut),()=>{ stageScene(0,'showroom',0); showCarSelect(0); }); };
-  const best=loadBest(); if(best>0) $('bestLbl').textContent='Hellstes Leuchtfeuer bisher: '+best+' Funken';
-  // ending album
-  const al=$('album'); [['assets/panel_belval.jpg','Belval','-3deg'],['assets/panel_bar.jpg','Die Bar','2deg'],['assets/glutplatz.jpg','Der Glutplatz','-1deg'],['assets/monaco.jpg','Monte-Carlo','2.5deg']].forEach(([src,cap,r])=>{
+  $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('mapClose').onclick=()=>toggleMap();
+  $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; const p=G.player; const n=nearestRoadPoint(p.x,p.z); p.x=n.x; p.z=n.z; p.v=0; p.lat=0; toast('Zurück auf die Straße'); };
+  $('btnRestart').onclick=()=>{ $('pauseO').hidden=true; startGame(); };
+  $('btnAgain').onclick=()=>{ $('endO').hidden=true; startGame(); };
+  $('btnFree').onclick=()=>freeRoam();
+  $('btnRethink').onclick=()=>{ $('endO').hidden=true; G.state='talk'; G.camMode='finale'; LM.lit=false; say(STORY.finale.slice(-1)); };
+  $('btnStart').onclick=()=>{ Audio_.init(); Audio_.resume(); $('title').hidden=true; Audio_.setMood(0); startGame(); };
+  const best=loadBest(); if(best>0) $('bestLbl').textContent='Hellster Lichtturm bisher: '+best+' Funken';
+  const al=$('album'); [['assets/panel_belval.jpg','Belval','-3deg'],['assets/panel_bar.jpg','Le Pont Violet','2deg'],['assets/glutplatz.jpg','Glutplatz, Eindhoven','-1deg'],['assets/monaco.jpg','Monte-Carlo','2.5deg']].forEach(([src,cap,r])=>{
     const f=document.createElement('figure'); f.className='polaroid'; f.style.setProperty('--r',r); const im=document.createElement('img'); im.src=src; im.alt=cap; im.loading='lazy'; f.appendChild(im); const s=document.createElement('span'); s.textContent=cap; f.appendChild(s); al.appendChild(f); });
 }
+function nearestRoadPoint(x,z){ let best=null,bd=1e9; for(const r of roadsList){ const qx=clamp(x,r.x0+2,r.x1-2), qz=clamp(z,r.z0+2,r.z1-2); const d=Math.hypot(qx-x,qz-z); if(d<bd){ bd=d; best={x:qx,z:qz}; } } return best||{x,z}; }
 function skipDialog(){ if(dlg.cur&&dlg.cur.choices){ dlg.shown=dlg.cur.t.length; return; } const ci=dlg.queue.findIndex(l=>l.choices);
   if(ci>=0){ dlg.queue=dlg.queue.slice(ci); nextLine(); dlg.shown=dlg.cur.t.length; } else { dlg.queue=[]; nextLine(); } }
 function toggleMute(){ Audio_.setMuted(!Audio_.muted); $('btnMute').textContent=Audio_.muted?'✕':'♪'; }
-function togglePause(){ if(G.state==='play'){ G.state='pause'; $('pauseO').hidden=false; UI.chapCard.classList.remove('show'); UI.bark.classList.remove('show'); barkT=0; Audio_.setEngine(0,false); }
-  else if(G.state==='pause'){ G.state='play'; $('pauseO').hidden=true; Audio_.resume(); } }
+function togglePause(){ if(G.state==='drive'){ G.state='pause'; $('pauseO').hidden=false; UI.bark.classList.remove('show'); Audio_.setEngine(0,false); }
+  else if(G.state==='pause'){ G.state='drive'; $('pauseO').hidden=true; Audio_.resume(); } }
+function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false; drawBigMap(); } else if(G.state==='map'){ G.state='drive'; UI.mapO.hidden=true; } }
 
 (async()=>{
-  try{ initUI(); await initGPU($('gfx')); initModels(); R.maxScale=Math.min(window.devicePixelRatio||1,isTouch?1.5:1.75); R.scale=R.maxScale; R.needResize=true;
-    stageScene(0,'orbit',0); G.state='title'; requestAnimationFrame(t=>{ last=t; frame(t); }); }
+  try{ initUI(); await initGPU($('gfx')); initModels(); buildWorld({lamp:[1,.72,.42]}); buildMapImage();
+    R.maxScale=Math.min(window.devicePixelRatio||1,isTouch?1.4:1.6); R.scale=R.maxScale; R.needResize=true;
+    placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; requestAnimationFrame(t=>{ last=t; frame(t); }); }
   catch(e){ console.error(e); $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
 })();
 

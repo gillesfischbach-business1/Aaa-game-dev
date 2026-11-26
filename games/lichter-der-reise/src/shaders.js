@@ -236,7 +236,7 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     let ag=noise2(i.wp.xz*9.0)*fade; let pch=fbm2(i.wp.xz*0.08);
     let crack=(1.0-smoothstep(0.0,0.025,abs(fbm2(i.wp.xz*0.35)-0.5)))*smoothstep(0.5,0.7,pch);
     s.alb=i.col.rgb*(0.75+0.5*ag)*(0.85+0.3*pch)*(1.0-crack*0.6);
-    let track=exp(-pow((fract((i.wp.x+0.8)/3.2)-0.5)*3.2/0.5,2.0));
+    let track=0.0;
     let puddle=smoothstep(0.58,0.66,fbm2(i.wp.xz*0.11+vec2f(3.0,1.0))+wetG*0.12);
     s.wet=max(wetG,0.35); s.rough=mix(mix(0.75,0.35,wetG),0.03,puddle*max(wetG,0.3))*(1.0-track*0.15);
     s.alb*=mix(1.0,0.5,wetG);
@@ -273,10 +273,15 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     s.n=bump(N,dx*1.5,dy*1.5);
   }
   else if(mat<14.5){ s.wrap=0.45; s.rough=0.55; } // skin
-  else { // rusted metal (blast furnace)
+  else if(mat<15.5){ // rusted metal (blast furnace)
     let f=fbm3(i.wp*vec3f(0.8,1.6,0.8)); let rust=smoothstep(0.42,0.7,f);
     s.alb=mix(i.col.rgb,vec3f(0.32,0.12,0.05),rust); s.metal=mix(0.7,0.1,rust); s.rough=mix(0.45,0.9,rust);
     let band=step(0.92,fract(i.wp.y*0.8)); s.alb*=1.0-band*0.4; s.ao=1.0-band*0.4;
+  }
+  else { // grass / fields
+    let q=i.wp.xz; let f=fbm2(q*0.05); let f2=noise2(q*0.7); let fade=clamp(1.0-fwW*3.0,0.0,1.0);
+    s.alb=i.col.rgb*(0.7+0.5*f)*(0.85+0.3*f2*fade); s.rough=0.95; s.wrap=0.2;
+    if(i.col.a>0.5){ let row=fract(q.x*0.5); s.alb*=mix(1.0,0.72,step(0.5,row)*fade); }
   }
   if(direct){ let sh=shadowAt(i.wp,N); col=shade(i.wp,V,s,sh); }
   // atmosphere: distance + height fog tinted by sky in view direction

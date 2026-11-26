@@ -1,7 +1,7 @@
 /* ===== Vehicles and characters, modelled after the photos =====
    Part: [meshKey, x,y,z, sx,sy,sz, mat, color, param, rx, ry, rz, slot]
    Forward is -Z, origin on the ground in the middle of the car. */
-const MAT={STD:0,EMI:1,LAVA:2,WATER:3,FACADE:4,PAVER:5,GLASS:6,ROAD:7,PAINT:8,DECAL:9,TYRE:10,FOLIAGE:11,GLASSO:12,STONE:13,SKIN:14,RUST:15};
+const MAT={STD:0,EMI:1,LAVA:2,WATER:3,FACADE:4,PAVER:5,GLASS:6,ROAD:7,PAINT:8,DECAL:9,TYRE:10,FOLIAGE:11,GLASSO:12,STONE:13,SKIN:14,RUST:15,GRASS:16};
 const COL={black:[.025,.025,.028],plastic:[.05,.05,.055],chrome:[.75,.75,.78],steel:[.45,.46,.48],gold:[.72,.5,.2],skin:[.78,.53,.4],skin2:[.85,.6,.47]};
 
 function carMeshes(){

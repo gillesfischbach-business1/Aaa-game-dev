@@ -3,7 +3,7 @@
 from pathlib import Path
 root = Path(__file__).parent
 src = root / 'src'
-order = ['meshes.js', 'shaders.js', 'atlas.js', 'cars.js', 'renderer.js', 'world.js', 'story.js', 'audio.js', 'game.js', 'main.js']
+order = ['meshes.js', 'shaders.js', 'atlas.js', 'cars.js', 'renderer.js', 'world.js', 'openworld.js', 'drive.js', 'story.js', 'audio.js', 'game.js', 'main.js']
 js = '\n'.join((src / f).read_text(encoding='utf-8') for f in order)
 html = f'''<!doctype html>
 <html lang="de">

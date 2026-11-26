@@ -135,3 +135,21 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
 .tbtn.sm{width:60px;height:52px;font-size:20px;border-radius:16px}
 .album{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:560px){ #carSel .cars{grid-template-columns:1fr} .carCard img{aspect-ratio:16/8} .album{grid-template-columns:repeat(2,minmax(0,1fr))} #photo .frame{max-height:calc(100vh - 360px)} }
+
+/* open world HUD */
+#hud{align-items:flex-start}
+#obj{max-width:min(340px,48vw);display:flex;flex-direction:column;gap:4px}
+#objTitle{font-family:var(--display);font-style:italic;font-size:22px;line-height:1.05}
+#objText{font-size:13px;color:var(--muted);line-height:1.4}
+#objArrow{display:inline-block;color:var(--gold);font-size:16px;transition:transform .1s linear}
+#objDist{font-variant-numeric:tabular-nums;font-weight:800;font-size:14px}
+#mini{width:170px;height:170px;border-radius:50%;border:2px solid var(--line);background:#1b2418;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#dash{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;gap:14px;align-items:baseline;font-variant-numeric:tabular-nums}
+#dash b{font-size:26px} #dash small{color:var(--muted);margin-left:-10px} #dash span{font-size:12px;color:var(--muted);letter-spacing:.06em}
+#carName{color:var(--gold)!important}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 16px);transform:translateX(-50%);background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-weight:600;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.show{opacity:1}
+@media (max-width:560px){ #mini{width:118px;height:118px} #obj{max-width:52vw} #objTitle{font-size:17px} #objText{display:none} #dash{bottom:calc(env(safe-area-inset-bottom,0px) + 120px)} }
+#mapO{background:rgba(7,6,12,.92)}
+@media (max-width:560px){ #dash{top:calc(env(safe-area-inset-top,0px) + 122px);bottom:auto;left:max(16px,env(safe-area-inset-left,0px));transform:none;gap:10px;padding:6px 10px} #dash b{font-size:20px} #boostHint{display:none}
+  #toast{top:40%} #bark{bottom:calc(env(safe-area-inset-bottom,0px) + 112px)} }
