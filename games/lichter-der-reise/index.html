@@ -1355,7 +1355,7 @@ function genCity(key,env){ const C=CITY[key], n=C.n, P=OW.P, h=OW.W/2;
   if(key==='lux') for(let j=-n+1;j<3;j++) if(!LUX_BRIDGES.includes(j)) for(const [x,d] of [[X(-3)+h,1],[X(-2)-h,-1]]){ S('box',x+d*.4,.5,Z(j),.5,1,OW.W,MAT.STD+.5,[.95,.95,.95]); addCol(x+d*.15,Z(j)-h,x+d*.65,Z(j)+h); }
   // outer ring wall so cars stay on the map (except the motorway exit)
   const R0=X(-n)-h-1, R1=X(n)+h+1, Q0=Z(-n)-h-1, Q1=Z(n)+h+1;
-  addCol(R0-1,Q0,R0,Q1); addCol(R0,Q0-1,R1,Q0); addCol(R0,Q1,R1,Q1+1);
+  addCol(R0,Q0-1,R1,Q0); addCol(R0,Q1,R1,Q1+1);
   if(key==='lux'){ addCol(R1,Q0,R1+1,-MOTORWAY.hw-1); addCol(R1,MOTORWAY.hw+1,R1+1,Q1); } else { addCol(R1,Q0,R1+1,Q1); }
   if(key==='ehv'){ addCol(R0-1,Q0,R0,-MOTORWAY.hw-1); addCol(R0-1,MOTORWAY.hw+1,R0,Q1); }
   else addCol(R0-1,Q0,R0,Q1);
