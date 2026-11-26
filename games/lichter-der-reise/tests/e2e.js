@@ -45,8 +45,7 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
   await test('boot', async () => { await sleep(1500); await shot(p, '01_title');
     return await p.evaluate(() => ({ title: document.title, webgpu: !!navigator.gpu, canvas: [R.W, R.H], cells: cells.size, sparks: sparksAll.length, nodes: graph.nodes.size, models: Object.keys(MODEL_GROUPS) })); });
   await test('rendering', async () => { // read back a frame and check it is not blank
-    const s = await p.evaluate(async () => { await renderNow(); const c = document.createElement('canvas'); c.width = 160; c.height = 90; const g = c.getContext('2d'); g.drawImage(document.getElementById('gfx'), 0, 0, 160, 90); const d = g.getImageData(0, 0, 160, 90).data;
-      let sum = 0, n = 0, v = []; for (let i = 0; i < d.length; i += 4) { const l = (d[i] + d[i + 1] + d[i + 2]) / 3; v.push(l); sum += l; n++; } const m = sum / n; let q = 0; for (const l of v) q += (l - m) * (l - m); return { mean: +m.toFixed(1), std: +Math.sqrt(q / n).toFixed(1) }; });
+    const s = await p.evaluate(() => new Promise(res => { renderNow(d => { let sum = 0, n = 0; const v = []; for (let i = 0; i < d.data.length; i += 4 * 97) { const l = (d.data[i] + d.data[i + 1] + d.data[i + 2]) / 3; v.push(l); sum += l; n++; } const m = sum / n; let q = 0; for (const l of v) q += (l - m) * (l - m); res({ mean: +m.toFixed(1), std: +Math.sqrt(q / n).toFixed(1) }); }); }));
     if (s.std < 8) throw new Error('frame looks blank: ' + JSON.stringify(s)); return s; });
   await test('options_menu', async () => { await p.click('#btnOptTitle'); await sleep(300);
     for (const t of ['gfx', 'snd', 'ctl', 'save']) { await p.click(`#optTabs button[data-tab="${t}"]`); await sleep(200); await shot(p, '02_options_' + t); }
