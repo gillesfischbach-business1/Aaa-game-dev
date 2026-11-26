@@ -71,14 +71,14 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
     return { moved: Math.round(moved), turned: +(s1.h - s0.h).toFixed(2), mapOpen, swap: before + '→' + after, paused }; });
   await test('save_load', async () => { const r = await p.evaluate(() => { const s = snapshot(); writeSlot('2'); const x = G.player.x; G.player.x += 50; const ok = restore(readSlot('2')); return { ok, back: Math.abs(G.player.x - x) < .01, light: G.light }; });
     if (!r.ok || !r.back) throw new Error(JSON.stringify(r)); return r; });
-  await test('story_playthrough', async () => { await p.evaluate(BOT); await p.evaluate(() => { startGame(); });
+  await test('story_playthrough', async () => { await p.evaluate(BOT); await p.evaluate(() => { const o = showEnd; window.showEnd = function (g) { window.__endStack = new Error().stack + ' | state=' + G.state + ' m' + G.mission; return o(g); }; const o2 = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'hidden'); const el = document.getElementById('endO'); Object.defineProperty(el, 'hidden', { get() { return o2.get.call(this); }, set(v) { if (!v) window.__endStack2 = new Error().stack; o2.set.call(this, v); } }); startGame(); });
     const log = []; let last = ''; let frames = 0;
     while (frames < 60 * 60 * 25) { await sim(p, 600, true); frames += 600;
       const st = await p.evaluate(() => G.state + '/m' + G.mission + '/' + (G.event || '') + '/' + G.camMode);
       if (st !== last) { log.push(st); last = st; if (/m[0-5]\/\/(orbit|standing|finale)/.test(st)) await shot(p, '07_story_' + String(log.length).padStart(2, '0')); }
-      const endV = await p.evaluate(() => ({ h: document.getElementById('endO').hidden, st: G.state })); if (process.env.DEBUG) console.log('dbg', frames, st, JSON.stringify(endV)); if (!endV.h) break; }
+      const endV = await p.evaluate(() => ({ h: document.getElementById('endO').hidden, st: G.state })); if (process.env.DEBUG) console.log('dbg', frames, st, JSON.stringify(endV)); if (!endV.h && endV.st === 'ending') break; }
     await shot(p, '08_end');
-    const end = await p.evaluate(() => ({ title: document.getElementById('endTitle').textContent, light: G.light, total: G.total, stuck: __bot.stuckTotal }));
+    const end = await p.evaluate(() => ({ title: document.getElementById('endTitle').textContent, light: G.light, total: G.total, stuck: __bot.stuckTotal, st1: (window.__endStack || '').slice(0, 400), st2: (window.__endStack2 || '').slice(0, 600) }));
     if (!/leuchten/.test(end.title)) throw new Error('story did not finish: ' + JSON.stringify({ end, log }));
     return { minutes: +(frames / 3600).toFixed(1), ...end, states: log.length }; });
   await test('free_roam_stuck_scan', async () => { // drive between random road nodes and count how often the car gets stuck
@@ -94,7 +94,7 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
       const t1 = performance.now(); let inst = 0; for (let i = 0; i < 60; i++) { buildFrame(); inst = lists.reduce((a, L) => a + L.nop + L.ngl, 0); for (const L of lists) { L.nop = 0; L.ngl = 0; } lightsTmp.length = 0; } const tb = (performance.now() - t1) / 60;
       return { updateMs: +tu.toFixed(2), buildFrameMs: +tb.toFixed(2), instances: inst, traffic: TRAFFIC.length }; }); });
   await test('locations', async () => { const L = [['belval', -40, 252, Math.PI / 2, 18.6], ['bruecke', -150, 84, Math.PI / 2, 22], ['tal', -163, -128, Math.PI / 2, 9], ['altstadt', -84, -150, 0, 21], ['kirchberg', 252, -60, 0, 12.5], ['autobahn', 800, 4, -Math.PI / 2, 19], ['kanal', 1900, 84, -Math.PI / 2, 23.5], ['glutplatz', 1942, -170, Math.PI, 0.5], ['lichtturm', 1858, -86, Math.PI, 6.3], ['strijp', 1648, -200, 0, 15.5]];
-    for (const [n, x, z, h, hr] of L) { await p.evaluate(([x, z, h, hr]) => { G.player = newCar(G.player.car, x, z, h); G.player.v = 0; G.camYaw = h; PEDS.length = 0; BIKES.length = 0; G.hour = hr; G.state = 'drive'; G.camMode = 'chase'; TRAFFIC.length = 0; G.camK = 1; }, [x, z, h, hr]); await sim(p, 90); await sleep(900); await shot(p, '10_loc_' + n); }
+    for (const [n, x, z, h, hr] of L) { await p.evaluate(([x, z, h, hr]) => { for (const k in keys) keys[k] = false; G.player = newCar(G.player.car, x, z, h); G.player.v = 0; G.camYaw = h; PEDS.length = 0; BIKES.length = 0; G.hour = hr; G.state = 'drive'; G.camMode = 'chase'; TRAFFIC.length = 0; G.camK = 1; }, [x, z, h, hr]); await sim(p, 90); await sleep(900); await shot(p, '10_loc_' + n); }
     return { count: L.length }; });
   await b.close();
   ({ b, p } = await launch({ width: 390, height: 844 }, true));

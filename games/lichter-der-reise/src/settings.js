@@ -12,7 +12,8 @@ const DEFAULTS={
 const ACTION_LABEL={up:'Gas',down:'Bremse / Rückwärts',left:'Links lenken',right:'Rechts lenken',boost:'Lichtstoß',swap:'Auto wechseln',map:'Karte',pause:'Pause',options:'Optionen'};
 let SET=JSON.parse(JSON.stringify(DEFAULTS));
 function deepMerge(a,b){ for(const k in b){ if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])){ a[k]=a[k]||{}; deepMerge(a[k],b[k]); } else a[k]=b[k]; } return a; }
-function loadSettings(){ try{ const s=localStorage.getItem('ldr_settings'); if(s) SET=deepMerge(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(s)); }catch(e){} }
+function loadSettings(){ let s=null; try{ s=localStorage.getItem('ldr_settings'); }catch(e){} if(s){ try{ SET=deepMerge(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(s)); }catch(e){} }
+  else if(typeof isTouch!=='undefined'&&isTouch){ SET.gfx.preset='mittel'; Object.assign(SET.gfx,PRESETS.mittel); } }
 function saveSettings(){ try{ localStorage.setItem('ldr_settings',JSON.stringify(SET)); }catch(e){} }
 function keyFor(action){ return SET.ctl.keys[action]; }
 function actionOfKey(k){ for(const a in SET.ctl.keys) if(SET.ctl.keys[a]===k) return a; return null; }
