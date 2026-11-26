@@ -159,8 +159,9 @@ function genMotorway(env){ const M=MOTORWAY, cx=(M.x0+M.x1)/2, L=M.x1-M.x0;
   roadRect(M.x0,-M.hw,M.x1,M.hw,false);
   for(let x=M.x0+4;x<M.x1;x+=12) for(const z of [-5,5]) S('box',x,.012,z,4,.01,.16,MAT.STD+.6,[.75,.75,.72]);
   for(const z of [-.2,.2]) S('box',cx,.012,z,L,.01,.14,MAT.STD+.6,[.85,.75,.3]);
-  for(const z of [-M.hw-1,M.hw+1]){ for(let x=M.x0;x<M.x1;x+=100){ const w=Math.min(100,M.x1-x); S('box',x+w/2,.6,z,w,.35,.12,MAT.STD+.3,[.6,.62,.64],.9); addCol(x,z-.3,x+w,z+.3); }
-    for(let x=M.x0;x<M.x1;x+=4) S('box',x,.3,z,.12,.6,.12,MAT.STD,[.35,.35,.36],.6); }
+  const GX0=M.x0+8, GX1=M.x1-8; // guard rails stop before the cities' ring roads
+  for(const z of [-M.hw-1,M.hw+1]){ for(let x=GX0;x<GX1;x+=100){ const w=Math.min(100,GX1-x); S('box',x+w/2,.6,z,w,.35,.12,MAT.STD+.3,[.6,.62,.64],.9); addCol(x,z-.3,x+w,z+.3); }
+    for(let x=GX0;x<=GX1;x+=4) S('box',x,.3,z,.12,.6,.12,MAT.STD,[.35,.35,.36],.6); }
   for(let x=M.x0+30;x<M.x1;x+=70) for(const z of [-M.hw-3,M.hw+3]) lampAt(x,z,z<0?Math.PI/2:-Math.PI/2,env.lamp,'modern');
   for(const [x,slot,face] of [[560,SLOT.SIGN_EHV,0],[990,SLOT.BORDER,0],[1440,SLOT.SIGN_LUX,Math.PI]]){ for(const z of [-M.hw-2,M.hw+2]) S('box',x,4,z,.5,8,.5,MAT.STD+.4,[.4,.4,.42],.8); S('box',x,7.2,0,.4,.4,2*M.hw+4,MAT.STD+.4,[.4,.4,.42],.8); S('quad',x+(face?.25:-.25),6,0,14,3.5,1,MAT.DECAL,[1,1,1],.4,face?Math.PI/2:-Math.PI/2,0,0,slot); }
   for(let x=M.x0+40;x<M.x1;x+=rr(90,140)) for(const sd of [-1,1]){ // fields, farms, trees, wind turbines
