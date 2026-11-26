@@ -10,12 +10,21 @@ function lookAt(out,e,c,u){let zx=e[0]-c[0],zy=e[1]-c[1],zz=e[2]-c[2];let l=Math
 function mul(out,a,b){for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];out[i*4+j]=s}return out}
 function xform(m,x,y,z){ return [m[0]*x+m[4]*y+m[8]*z+m[12], m[1]*x+m[5]*y+m[9]*z+m[13], m[2]*x+m[6]*y+m[10]*z+m[14]]; }
 
-let MESHIDX={}; const MESHES=[];
+let MESHIDX={}; const MESHES=[]; const MODEL_GROUPS={};
+/* Blender models (blender/models.py -> assets/models.bin, embedded as base64 by build.py) */
+function decodeModels(){ const out={}; if(typeof MODELS_B64==='undefined') return out;
+  const raw=atob(MODELS_B64); const bin=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++) bin[i]=raw.charCodeAt(i);
+  const dv=new DataView(bin.buffer); const hl=dv.getUint32(0,true); const meta=JSON.parse(new TextDecoder().decode(bin.subarray(4,4+hl))); const base=4+hl;
+  for(const m of meta){ const mb=new MB(); let o=base+m.vo;
+    for(let i=0;i<m.nv;i++,o+=12){ mb.v.push(m.lo[0]+dv.getUint16(o,true)*m.sc[0],m.lo[1]+dv.getUint16(o+2,true)*m.sc[1],m.lo[2]+dv.getUint16(o+4,true)*m.sc[2],dv.getInt8(o+8)/127,dv.getInt8(o+9)/127,dv.getInt8(o+10)/127,0,0); }
+    const io=base+m.io; for(let i=0;i<m.ni;i++) mb.ix.push(m.big?dv.getUint32(io+i*4,true):dv.getUint16(io+i*2,true));
+    const key=m.model+'|'+m.mat; out[key]=mb; (MODEL_GROUPS[m.model]||(MODEL_GROUPS[m.model]=[])).push({key,mat:m.mat}); }
+  return out; }
 function buildMeshes(){
   const list={ box:meshBox(), quad:meshQuad(), sph:meshSphere(24,16), sphLo:meshSphere(8,6), cylY:meshCylY(24), cylX:meshLathe([[0,-.5],[.5,-.5],[.5,-.5],[.5,.5],[.5,.5],[0,.5]],24,'x'),
     cone:meshCone(24), gable:meshGable(), rbox:meshRBox(.5,.5,.5,.14,3),
     yHull:meshLoft([{z:-15,w:.12,yb:2.2,yt:3.9,e:2.5,tw:1},{z:-13.6,w:1.1,yb:.9,yt:3.7,e:3,tw:1},{z:-10,w:2.1,yb:.1,yt:3.4,e:4,tw:1},{z:-3,w:2.5,yb:-.4,yt:3.2,e:5,tw:1},{z:8,w:2.5,yb:-.4,yt:3.2,e:6,tw:1},{z:14.2,w:2.3,yb:.2,yt:3.2,e:7,tw:1},{z:15,w:2.2,yb:.6,yt:3.15,e:8,tw:1}],28),
-    ...carMeshes() };
+    ...carMeshes(), ...decodeModels() };
   for(const k in list){ MESHIDX[k]=MESHES.length; MESHES.push({key:k,m:list[k]}); }
 }
 const R={ device:null, ctx:null, fmt:'bgra8unorm', W:1, H:1, scale:1, maxScale:1, needResize:true, ok:false };

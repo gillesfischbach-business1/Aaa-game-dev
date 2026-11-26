@@ -20,7 +20,7 @@ function envAt(hour,out){ hour=((hour%24)+24)%24; let a=KEYS[0],b=KEYS[1]; for(l
   const l=Math.hypot(...sd); out.sunDir=sd.map(v=>v/l); return out; }
 
 // ---------- models ----------
-let VAN_P, SUP_P, PEOPLE_SUP, VAL_SUP, LEO_STAND, MIRA_STAND;
+let VAN_P, SUP_P, PEOPLE_SUP, PEOPLE_VAN=null, VAL_SUP, LEO_STAND, MIRA_STAND;
 function standing(who){ const p=[]; const dark=[.03,.03,.04];
   if(who==='leo'){ for(const s of [-1,1]){ p.push(['rbox',s*.11,.06,.03,.13,.12,.3,MAT.STD+.6,[.85,.85,.82],0]); p.push(['rbox',s*.11,.1,.05,.135,.05,.31,MAT.STD+.6,[.05,.05,.05],0]);
       p.push(['rbox',s*.11,.5,0,.16,.75,.17,MAT.STD+.95,[.5,.5,.52],0]); p.push(['rbox',s*.24,1.2,-.02,.13,.55,.15,MAT.STD+.8,[.08,.09,.12],0]); }
@@ -32,7 +32,11 @@ function standing(who){ const p=[]; const dark=[.03,.03,.04];
     p.push(['head',0,1.78,.03,.215,.18,.23,MAT.STD+.9,[.22,.12,.06],0]); p.push(['head',0,1.92,.08,.13,.12,.13,MAT.STD+.9,[.22,.12,.06],0]); p.push(['box',0,1.71,-.1,.19,.07,.02,MAT.STD+.3,[.85,.5,.6],0]); }
   return compileParts(p,MESHIDX); }
 function valPerson(x,y,z){ return [['rbox',x,y-.25,z,.5,.45,.32,MAT.STD+.8,[.85,.84,.8],0],['head',x,y+.08,z,.2,.25,.22,MAT.SKIN,[.72,.5,.38],0],['head',x,y+.17,z+.02,.22,.14,.24,MAT.STD+.6,[.75,.75,.74],0],['box',x,y+.1,z-.1,.19,.06,.02,MAT.STD+.2,[.02,.02,.02],0]]; }
-function initModels(){ VAN_P=compileParts(vanParts(),MESHIDX); SUP_P=compileParts(supParts(),MESHIDX);
+function initModels(){ VAN_P=compileParts(vanPartsB(),MESHIDX); SUP_P=compileParts(supPartsB(),MESHIDX);
+  const seatL=blenderParts('leo_seat'), seatM=blenderParts('mira_seat');
+  if(seatL&&seatM){ const pp=(x,y,z)=>[...blenderParts('leo_seat',-.33,y,z,Math.PI),...blenderParts('mira_seat',.33,y,z,Math.PI)];
+    PEOPLE_SUP=compileParts(pp(0,.08,.25),MESHIDX); PEOPLE_VAN=compileParts(pp(0,.22,-.4),MESHIDX); VAL_SUP=compileParts(valPerson(-.32,.76,.3),MESHIDX);
+    const sl=blenderParts('leo_stand',0,0,0,Math.PI), sm=blenderParts('mira_stand',0,0,0,Math.PI); LEO_STAND=compileParts(sl,MESHIDX); MIRA_STAND=compileParts(sm,MESHIDX); return; }
   PEOPLE_SUP=compileParts([...personParts('leo',-.32,.76,.3),...personParts('mira',.32,.76,.3)],MESHIDX); VAL_SUP=compileParts(valPerson(-.32,.76,.3),MESHIDX);
   LEO_STAND=standing('leo'); MIRA_STAND=standing('mira'); }
 function drawParts(parts,X,Y,Z,yaw,o={}){ const c=Math.cos(yaw), s=Math.sin(yaw), pitch=o.pitch||0, roll=o.roll||0, spin=o.spin||0, steer=o.steer||0;
@@ -42,7 +46,7 @@ function drawParts(parts,X,Y,Z,yaw,o={}){ const c=Math.cos(yaw), s=Math.sin(yaw)
     P(m,X+x*c+z*s,Y+y,Z-x*s+z*c,yaw+ry,sx,sy,sz,mat,r,g,b,p,rx,rz,slot); } }
 function carParts(car){ return car==='fidele'?VAN_P:SUP_P; }
 function drawCar(c,people,lightsOn){ drawParts(carParts(c.car),c.x,0,c.z,c.h,{pitch:c.pitch,roll:c.roll,spin:-c.spin,steer:c.steer,brake:c.brake,headOn:lightsOn});
-  if(c.car==='smaragd'&&people) drawParts(people,c.x,0,c.z,c.h,{pitch:c.pitch,roll:c.roll});
+  if(people){ const pp=c.car==='smaragd'?people:(people===PEOPLE_SUP?PEOPLE_VAN:null); if(pp) drawParts(pp,c.x,0,c.z,c.h,{pitch:c.pitch,roll:c.roll}); }
   const fx=-Math.sin(c.h), fz=-Math.cos(c.h); const L=c.car==='fidele'?2.1:2.3; const k=envCur.lamps;
   if(lightsOn) Lt(c.x+fx*(L+5),.9,c.z+fz*(L+5),26*k+2,22*k+2,16*k+1.5,22);
   Lt(c.x-fx*L,.6,c.z-fz*L,c.brake?6:1.2,.05,.02,5); }

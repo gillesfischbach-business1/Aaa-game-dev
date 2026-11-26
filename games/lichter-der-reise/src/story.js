@@ -51,6 +51,6 @@ const MISSIONS=[
  {title:'Le Pont Violet',text:'Die kleine Bar mit dem lila Licht, gleich hinter der Brücke.',target:()=>({x:LM.bar.x,z:LM.bar.z}),r:12,lines:'bar',time:21.6},
  {title:'Über dem Grund',text:'Fahrt zur Aussichtsmauer am Rand der Altstadt.',target:()=>LM.view,r:13,lines:'abend',time:22.4},
  {title:'Die A-Route der Lichter',text:'Nehmt die Autobahn Richtung Osten nach Eindhoven.',target:()=>({x:MOTORWAY.x1,z:0}),r:22,lines:'ehv',time:23.6},
- {title:'GLOW: Der Glutplatz',text:'Fahrt zum Glutplatz im Zentrum von Eindhoven.',target:()=>LM.glow,r:34,lines:'glowStart',time:0.6,event:'glow'},
- {title:'Der Lichtturm',text:'Bringt die Funken zum Lichtturm.',target:()=>LM.licht,r:22,lines:'finale',time:5.9,finale:true}
+ {title:'GLOW: Der Glutplatz',text:'Fahrt zum Glutplatz im Zentrum von Eindhoven.',target:()=>({x:LM.glow.x,z:LM.glow.z0-6}),r:18,lines:'glowStart',time:0.6,event:'glow'},
+ {title:'Der Lichtturm',text:'Bringt die Funken zum Lichtturm.',target:()=>({x:LM.licht.x,z:LM.licht.z-42}),r:18,lines:'finale',time:5.9,finale:true}
 ];
