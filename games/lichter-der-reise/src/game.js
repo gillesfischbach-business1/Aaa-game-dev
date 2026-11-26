@@ -156,10 +156,10 @@ function update(dt){
       if(o.type==='spark'){ if(Math.hypot(o.x-pl.x,o.z-pl.z)<mag+1){ o.alive=false; collect(o.x,o.z); if(G.event==='glow') G.eventGot++; } }
       else if(o.type==='orb'){ if(!o.landed){ o.vy-=22*dt; o.y+=o.vy*dt; if(o.y<=o.r*.8){ o.y=o.r*.8; o.landed=true; o.life=6; burst(o.x,.5,o.z,45,[1,.45,.1],9,1,.15,-9,10); const d=Math.hypot(o.x-pl.x,o.z-pl.z); if(d<35){ Audio_.boom(clamp(1-d/35,.2,1)); G.shake=Math.max(G.shake,.4*(1-d/35)); } } }
         else { o.life-=dt; if(o.life<=0) o.alive=false; }
-        if(o.y<2.8&&Math.hypot(o.x-pl.x,o.z-pl.z)<o.r+1.4&&!o.hitDone){ o.hitDone=true; if(G.boostT>0){ o.alive=false; burst(o.x,o.y,o.z,40,[1,.6,.2],10,.9,.15); } else { G.light=Math.max(0,G.light-5); G.hits++; G.flash=1; G.shake=1; pl.v*=.4; Audio_.hit(); toast('Glut! −5 Funken'); } } } }
+        if(o.y<2.8&&Math.hypot(o.x-pl.x,o.z-pl.z)<o.r+1.4&&!o.hitDone){ o.hitDone=true; if(G.boostT>0){ o.alive=false; burst(o.x,o.y,o.z,40,[1,.6,.2],10,.9,.15); } else { G.light=Math.max(0,G.light-3); G.hits++; G.flash=1; G.shake=1; pl.v*=.4; Audio_.hit(); toast('Glut! −3 Funken'); } } } }
     G.dyn=G.dyn.filter(o=>o.alive!==false);
     if(G.event==='glow'){ G.eventT-=dt; UI.objText.textContent='Sammelt Funken auf dem Platz: '+G.eventGot+' / 25 · noch '+Math.ceil(G.eventT)+' s';
-      if(Math.random()<dt*1.6){ const fx=-Math.sin(pl.h), fz=-Math.cos(pl.h); const g=LM.glow; const lead=clamp(pl.v,4,20)*1.6; const tx=clamp(pl.x+fx*lead+rr(-6,6),g.x0-10,g.x1+10), tz=clamp(pl.z+fz*lead+rr(-6,6),g.z0-10,g.z1+10);
+      if(Math.random()<dt*1.2){ const fx=-Math.sin(pl.h), fz=-Math.cos(pl.h); const g=LM.glow; const lead=clamp(pl.v,4,20)*1.6; const tx=clamp(pl.x+fx*lead+rr(-6,6),g.x0-10,g.x1+10), tz=clamp(pl.z+fz*lead+rr(-6,6),g.z0-10,g.z1+10);
         G.dyn.push({type:'orb',x:tx,z:tz,y:28,vy:-6,r:rr(.9,1.4),alive:true,landed:false,ph:Math.random()*6}); }
       if(G.eventGot>=25||G.eventT<=0) endGlow(); }
     else { const M=MISSIONS[G.mission]; if(M){ const t=M.target(); if(t&&Math.hypot(t.x-pl.x,t.z-pl.z)<M.r) reachMission(); } }

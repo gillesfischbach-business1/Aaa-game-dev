@@ -152,7 +152,7 @@ const BMAT={ paint_white:[MAT.PAINT+.32,[.86,.86,.83],.15], paint_green:[MAT.PAI
  light_tail:[MAT.EMI,[1,.05,.03],3,'tail'], light_ind:[MAT.EMI,[1,.45,.05],1.2], seat:[MAT.STD+.85,[.06,.05,.05],0], dash:[MAT.STD+.7,[.05,.05,.055],0], carbon:[MAT.STD+.35,[.03,.03,.035],.3],
  gold:[MAT.STD+.25,[.72,.5,.2],1], skin:[MAT.SKIN,[.78,.53,.4],0], skin2:[MAT.SKIN,[.85,.6,.47],0], hair_dark:[MAT.STD+.85,[.05,.035,.025],0], hair_brown:[MAT.STD+.8,[.22,.12,.06],0],
  denim:[MAT.STD+.85,[.08,.09,.12],0], jogger:[MAT.STD+.95,[.5,.5,.52],0], knit:[MAT.STD+.98,[.28,.18,.11],0], jeans:[MAT.STD+.85,[.12,.16,.26],0], scarf:[MAT.STD+.98,[.42,.36,.28],0],
- shoe:[MAT.STD+.6,[.85,.85,.82],0], beanie:[MAT.STD+.95,[.06,.06,.07],0], frame_pink:[MAT.STD+.3,[.85,.5,.6],0] };
+ shoe:[MAT.STD+.6,[.85,.85,.82],0], beanie:[MAT.STD+.95,[.06,.06,.07],0], frame_pink:[MAT.STD+.3,[.85,.5,.6],0], eye:[MAT.STD+.1,[.03,.02,.015],0], eyewhite:[MAT.STD+.3,[.85,.83,.8],0], lips:[MAT.SKIN,[.6,.3,.28],0] };
 function blenderParts(model,x=0,y=0,z=0,ry=0){ const g=MODEL_GROUPS[model]; if(!g) return null;
   return g.map(({key,mat})=>{ const b=BMAT[mat]||[MAT.STD+.5,[.5,.5,.5],0]; return [key,x,y,z,1,1,1,b[0],b[1],b[2],0,ry,0,0,b[3]||'']; }); }
 function vanPartsB(){ const body=blenderParts('fidele'); if(!body) return vanParts(); const p=body.slice();

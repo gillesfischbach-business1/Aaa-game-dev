@@ -310,6 +310,14 @@ def person(M, who, seated=False):
     sphere('head', .11, (0, 0, hz), skinm, md, scale=(.92, 1.0, 1.18))
     sphere('nose', .02, (0, -.105, hz - .01), skinm, md, scale=(.8, 1, 1.2), seg=12, ring=8)
     for x in (-1, 1): sphere('ear', .025, (x * .1, 0, hz), skinm, md, scale=(.5, 1, 1.3), seg=12, ring=8)
+    eye = M.get('eye') or mat('eye', (0.03, 0.02, 0.015), 0.0, 0.1); M['eye'] = eye
+    white = M.get('eyewhite') or mat('eyewhite', (0.85, 0.83, 0.8), 0.0, 0.3); M['eyewhite'] = white
+    lips = M.get('lips') or mat('lips', (0.6, 0.3, 0.28), 0.0, 0.5); M['lips'] = lips
+    for x in (-1, 1):
+        sphere('eyewhite', .017, (x * .038, -.093, hz + .012), white, md, scale=(1, .6, .8), seg=12, ring=8)
+        sphere('pupil', .009, (x * .038, -.104, hz + .012), eye, md, seg=10, ring=6)
+        box('brow', (.035, .01, .008), (x * .04, -.1, hz + .04), hair, md, rot=(0, x * .12, 0))
+    sphere('mouth', .022, (0, -.098, hz - .045), lips, md, scale=(1.2, .4, .45), seg=12, ring=8)
     if who == 'leo':
         sphere('beard', .1, (0, -.03, hz - .07), hair, md, scale=(.95, .9, .75))
         sphere('beanie', .118, (0, .01, hz + .06), M['beanie'], md, scale=(1, 1.03, .85))
