@@ -2,8 +2,7 @@
 
 A WebGPU road story in four chapters (German), built from a couple's travel photos: Léo and Mira drive from the blast furnaces of Belval through Luxembourg City and a square of fire orbs to the harbour of Monte-Carlo, in their old white van "Fidèle" or Valère's green hypercar "Smaragd".
 
-**Play:** https://raw.githack.com/gillesfischbach-business1/Aaa-game-dev/main/games/lichter-der-reise/index.html
-(after GitHub Pages is enabled: https://gillesfischbach-business1.github.io/Aaa-game-dev/games/lichter-der-reise/)
+**Play:** https://gillesfischbach-business1.github.io/Aaa-game-dev/games/lichter-der-reise/ (once GitHub Pages is enabled for this repository: Settings → Pages → Deploy from a branch).
 
 Runs in current Chrome/Edge (desktop and Android) and Safari 26+ (macOS, iOS, iPadOS).
 

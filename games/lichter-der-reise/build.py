@@ -31,3 +31,10 @@ html = f'''<!doctype html>
 '''
 (root / 'index.html').write_text(html, encoding='utf-8')
 print('index.html', len(html) // 1024, 'KB')
+import sys
+if len(sys.argv) > 2 and sys.argv[1] == '--fragment':
+    # same page without the document skeleton (for hosts that wrap the page themselves)
+    head = html.split('<head>', 1)[1].split('</head>', 1)[0]
+    body = html.split('<body>', 1)[1].split('</body>', 1)[0]
+    Path(sys.argv[2]).write_text(head.replace('<meta charset="utf-8">\n', '') + body, encoding='utf-8')
+    print('fragment', sys.argv[2])
