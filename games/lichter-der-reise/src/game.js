@@ -72,7 +72,7 @@ function nextLine(){ const l=dlg.queue.shift();
   if(l.img){ if(UI.photoImg.getAttribute('src')!==l.img){ UI.photoImg.src=l.img; UI.photo.classList.remove('show'); void UI.photo.offsetWidth; } UI.photoCap.textContent=l.cap||''; UI.photo.classList.add('show'); }
   else UI.photo.classList.remove('show'); }
 function advance(){ if(!dlg.cur) return; if(dlg.cur.choices&&!dlg.typing) return; if(dlg.typing){ dlg.shown=dlg.cur.t.length; return; } nextLine(); }
-function tickDialog(dt){ if(!dlg.cur||!dlg.typing) return; dlg.shown=Math.min(dlg.cur.t.length,dlg.shown+dt*50); UI.dlgText.textContent=dlg.cur.t.slice(0,Math.floor(dlg.shown));
+function tickDialog(dt){ if(!dlg.cur||!dlg.typing) return; dlg.shown=Math.min(dlg.cur.t.length,dlg.shown+dt*SET.game.textSpeed); UI.dlgText.textContent=dlg.cur.t.slice(0,Math.floor(dlg.shown));
   if(dlg.shown>=dlg.cur.t.length){ dlg.typing=false; UI.dlgText.textContent=dlg.cur.t;
     if(dlg.cur.choices){ UI.dlgHint.hidden=true; UI.choices.hidden=false; UI.choices.innerHTML='';
       dlg.cur.choices.forEach((c,i)=>{ const b=document.createElement('button'); b.className=i===0?'btn':'btn ghost'; b.textContent=c.label; b.id='choice'+i;
@@ -88,7 +88,7 @@ function placeAtStart(){ const b=LM.belval; G.player=newCar('fidele',b.x-8,b.z,M
 function startGame(){ G.light=0; G.total=0; G.boosts=0; G.hits=0; for(const s of sparksAll) s.alive=true; LM.lit=false; G.dyn=[]; TRAFFIC.length=0;
   placeAtStart(); G.hour=18.6; G.mission=-1; G.event=null; G.state='talk'; G.camMode='orbit'; UI.hud.hidden=true;
   say(STORY.prologue.concat(STORY.tut),()=>{ nextMission(); }); }
-function nextMission(){ G.mission++; G.state='drive'; G.camMode='chase'; UI.hud.hidden=false; UI.touch.classList.toggle('on',isTouch);
+function nextMission(){ G.mission++; setTimeout(autosave,500); G.state='drive'; G.camMode='chase'; UI.hud.hidden=false; UI.touch.classList.toggle('on',isTouch);
   const M=MISSIONS[G.mission];
   if(M){ UI.objTitle.textContent=M.title; UI.objText.textContent=M.text; toast('Neues Ziel: '+M.title); }
   else { UI.objTitle.textContent='Freie Fahrt'; UI.objText.textContent='Erkundet beide Städte und sammelt alle Funken.'; } }
@@ -129,16 +129,16 @@ function tryBoost(){ if(G.boostT>0||G.light<5||G.state!=='drive') return; G.ligh
 // ---------- input ----------
 const keys={}; let touchL=false,touchR=false,touchUp=false,touchDn=false,gpA=false;
 const isTouch=(typeof matchMedia!=='undefined'&&matchMedia('(pointer:coarse)').matches)||(typeof window!=='undefined'&&'ontouchstart' in window);
-function readInput(){ let s=0,th=0,br=0; if(keys['arrowleft']||keys['a']||touchL) s-=1; if(keys['arrowright']||keys['d']||touchR) s+=1;
-  if(keys['arrowup']||keys['w']||touchUp) th=1; if(keys['arrowdown']||keys['s']||touchDn) br=1;
-  const gps=navigator.getGamepads?navigator.getGamepads():[]; for(const gp of gps){ if(gp&&gp.connected){ if(Math.abs(gp.axes[0])>.15) s=gp.axes[0]; const rt=gp.buttons[7]?gp.buttons[7].value:0, lt=gp.buttons[6]?gp.buttons[6].value:0; if(rt>.05) th=rt; if(lt>.05) br=lt;
+function readInput(){ const K=SET.ctl.keys; let s=0,th=0,br=0; if(keys['arrowleft']||keys[K.left]||touchL) s-=1; if(keys['arrowright']||keys[K.right]||touchR) s+=1;
+  if(keys['arrowup']||keys[K.up]||touchUp) th=1; if(keys['arrowdown']||keys[K.down]||touchDn) br=1;
+  const gps=navigator.getGamepads?navigator.getGamepads():[]; for(const gp of gps){ if(gp&&gp.connected){ if(Math.abs(gp.axes[0])>SET.ctl.deadzone) s=gp.axes[0]; const rt=gp.buttons[7]?gp.buttons[7].value:0, lt=gp.buttons[6]?gp.buttons[6].value:0; if(rt>.05) th=rt; if(lt>.05) br=lt;
     const a=gp.buttons[0]&&gp.buttons[0].pressed; if(a&&!gpA) tryBoost(); gpA=a; } }
-  return [s,th,br]; }
+  return [clamp(s*SET.ctl.steer,-1,1),th,br]; }
 
 // ---------- update ----------
 function update(dt){
   G.time+=dt; if(G.state==='drive'&&!G.event) G.hour+=dt*G.timeScale; if(G.hour>=24) G.hour-=24;
-  const rain=envCur.rain||0; envAt(G.hour,envCur); envCur.rain=rain; if(G.event==='glow'){ envCur.wet=1; envCur.fog=Math.max(envCur.fog,.004); }
+  const rain=envCur.rain||0; envAt(G.hour,envCur); envCur.rain=rain; if(!SET.gfx.shadows) envCur.shadow=0; if(G.event==='glow'){ envCur.wet=1; envCur.fog=Math.max(envCur.fog,.004); }
   if(LM.lit) envCur.windows*=1.3;
   if(barkTimer>0){ barkTimer-=dt; if(barkTimer<=0) UI.bark.classList.remove('show'); }
   if(toastT>0){ toastT-=dt; if(toastT<=0) UI.toast.classList.remove('show'); }
@@ -166,13 +166,14 @@ function update(dt){
     G.routeT=(G.routeT||0)-dt; if(G.routeT<=0){ G.routeT=.7; const t=currentTarget(); G.route=t?findRoute(pl.x,pl.z,t.x,t.z):[]; }
     G.barkT-=dt; if(G.barkT<=0){ G.barkT=rr(35,60); const b=pick(BARKS_FREE); bark(b[0],b[1]); }
     const mood=pl.x>MOTORWAY.x1?2:pl.x>MOTORWAY.x0?3:pl.z>200?0:1; if(mood!==G.regionMood){ G.regionMood=mood; Audio_.setMood(mood); }
-    Audio_.setEngine(Math.abs(pl.v),true,VEH[pl.car]);
-  } else { Audio_.setEngine(0,G.state==='talk',VEH[pl.car]); G.endT+=dt; pl.v*=Math.max(0,1-dt*3); }
+    Audio_.updateCar(pl.car,pl.v,th,br,true,dt); Audio_.ambience(G.hour,envCur.rain||0,(pl.x>MOTORWAY.x0&&pl.x<MOTORWAY.x1)?'motorway':'city');
+    G.saveT=(G.saveT||0)+dt; if(G.saveT>60){ G.saveT=0; autosave(); }
+  } else { Audio_.updateCar(pl.car,0,0,0,G.state==='talk'||G.state==='map',dt); G.endT+=dt; pl.v*=Math.max(0,1-dt*3); }
   if(G.camMode==='ignite'&&G.endT>3&&Math.random()<dt*1.6){ const L=LM.licht; burst(L.x+rr(-60,60),rr(35,60),L.z+rr(-60,60),80,pick([[1,.75,.3],[1,.4,.6],[.5,.7,1],[1,.9,.6]]),10,1.9,.3,-3,14); Audio_.boom(.2); }
   updateHUD();
 }
 function collect(x,z){ G.light++; G.total++; Audio_.pickup(G.light%6); burst(x,1.1,z,8,[1,.85,.4],4,.5,.07,2,9); }
-function updateHUD(){ const pl=G.player; UI.lightN.textContent=G.light; UI.speedN.textContent=Math.round(Math.abs(pl.v)*3.6); const hh=Math.floor(G.hour), mm=Math.floor((G.hour-hh)*60);
+function updateHUD(){ const pl=G.player; UI.lightN.textContent=G.light; UI.speedN.textContent=Math.round(Math.abs(pl.v)*(SET.ctl.unit==='mph'?2.237:3.6)); $('speedU').textContent=SET.ctl.unit==='mph'?'mph':'km/h'; const hh=Math.floor(G.hour), mm=Math.floor((G.hour-hh)*60);
   UI.clock.textContent=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); UI.carName.textContent=pl.car==='fidele'?'Fidèle':'Smaragd';
   UI.boostHint.textContent=G.boostT>0?'Lichtstoß aktiv':(G.light>=5?'Lichtstoß bereit':'Lichtstoß ab 5');
   const t=currentTarget();
@@ -214,18 +215,18 @@ function buildFrame(){
   // camera first, so culling uses this frame's camera
   const V=VEH[pl.car], sh=G.shake*.35;
   let dy=pl.h-G.camYaw; while(dy>Math.PI) dy-=2*Math.PI; while(dy<-Math.PI) dy+=2*Math.PI; G.camYaw+=dy*Math.min(1,(1/60)*(pl.v<-1?1:4.5));
-  if(G.camMode==='chase'){ const [ch,cd]=V.cam; const back=cd+Math.abs(pl.v)*.05; const sx=Math.sin(G.camYaw), sz=Math.cos(G.camYaw);
+  if(G.camMode==='chase'){ const ch=V.cam[0]*SET.ctl.camHeight, cd=V.cam[1]*SET.ctl.camDist; const back=cd+Math.abs(pl.v)*.05; const sx=Math.sin(G.camYaw), sz=Math.cos(G.camYaw);
     // keep the camera out of buildings: march from the car towards the wanted position
     let tHit=1; for(let k=1;k<=14;k++){ const tt=k/14; const px=pl.x+sx*back*tt, pz=pl.z+sz*back*tt; colsNear(px,pz,_camCols);
       let inside=false; for(const b of _camCols){ if(Math.min(b.x1-b.x0,b.z1-b.z0)>3&&px>b.x0-.5&&px<b.x1+.5&&pz>b.z0-.5&&pz<b.z1+.5){ inside=true; break; } } if(inside){ tHit=Math.max(.22,tt-.1); break; } }
     G.camK=tHit<(G.camK||1)?tHit:lerp(G.camK||1,tHit,.04);
-    const bk=back*G.camK; cam.pos=[pl.x+sx*bk+rr(-sh,sh),ch*lerp(1.25,1,G.camK)+Math.abs(pl.v)*.012+rr(-sh,sh),pl.z+sz*bk]; cam.tgt=[pl.x-sx*14,1.2,pl.z-sz*14]; cam.fov=lerp(cam.fov,56+(G.boostT>0?10:0)+Math.abs(pl.v)*.16,.08); }
+    const bk=back*G.camK; cam.pos=[pl.x+sx*bk+rr(-sh,sh),ch*lerp(1.25,1,G.camK)+Math.abs(pl.v)*.012+rr(-sh,sh),pl.z+sz*bk]; cam.tgt=[pl.x-sx*14,1.2,pl.z-sz*14]; cam.fov=lerp(cam.fov,56+SET.gfx.fov+(G.boostT>0?10:0)+Math.abs(pl.v)*.16,.08); }
   else if(G.camMode==='orbit'){ const a=G.time*.1; cam.pos=[pl.x+Math.sin(a)*10,2.6,pl.z+Math.cos(a)*10]; cam.tgt=[pl.x,1.1,pl.z]; cam.fov=50; }
   else if(G.camMode==='standing'){ const s=G.standAt, a=Math.sin(G.time*.15)*.35; cam.pos=[s.x+Math.sin(a)*6.5,1.4,s.z-Math.cos(a)*6.5]; cam.tgt=[s.x,3.0,s.z]; cam.fov=58; }
   else { const f=G.finalePos||{x:pl.x,z:pl.z}; const L=LM.licht;
     if(G.camMode==='ignite'){ const k=smooth(clamp(G.endT/6,0,1)); cam.pos=[f.x+lerp(4,10,k),lerp(1.8,9,k),f.z+lerp(11,32,k)]; cam.tgt=[lerp(f.x-1,L.x,k),lerp(1.4,40,k),lerp(f.z+2,L.z,k)]; cam.fov=lerp(48,62,k); }
     else { const b=G.endT*.03; cam.pos=[f.x+4+Math.sin(b),1.8,f.z+11]; cam.tgt=[f.x-1,1.4,f.z+2]; cam.fov=48; } }
-  const ccx=cam.pos[0], ccz=cam.pos[2]; const RAD=560, RS=230, gx=Math.floor(ccx/CELL), gz=Math.floor(ccz/CELL), nR=Math.ceil(RAD/CELL);
+  const ccx=cam.pos[0], ccz=cam.pos[2]; const RAD=SET.gfx.viewDist, RS=Math.min(230,RAD*.45), gx=Math.floor(ccx/CELL), gz=Math.floor(ccz/CELL), nR=Math.ceil(RAD/CELL);
   const fx=cam.tgt[0]-ccx, fz=cam.tgt[2]-ccz, fl=Math.hypot(fx,fz)||1; const lampK=E.lamps;
   for(const o of globalStatics) drawStatic(o,t,lampK,false);
   for(let i=-nR;i<=nR;i++) for(let j=-nR;j<=nR;j++){ const c=cells.get((gx+i)+','+(gz+j)); if(!c) continue;
@@ -261,9 +262,9 @@ function frame(now){
   const dtRaw=Math.max(0,(now-last)/1000); last=now; const dt=Math.min(.05,dtRaw);
   if(G.state!=='pause'&&G.state!=='map') update(dt);
   try{ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
-    renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1),bloom:.045,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:.5},[pl.x-Math.sin(G.camYaw)*14,0,pl.z-Math.cos(G.camYaw)*14],window.__snapReq||null);
+    renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},[pl.x-Math.sin(G.camYaw)*14,0,pl.z-Math.cos(G.camYaw)*14],window.__snapReq||null);
     window.__snapReq=null; }catch(e){ console.error(e); }
   acc+=dtRaw; frames++; adaptT+=dtRaw;
-  if(adaptT>2.5){ const avg=acc/frames; if(avg>.026&&R.scale>.5){ R.scale=Math.max(.5,R.scale*.82); R.needResize=true; } else if(avg<.012&&R.scale<R.maxScale){ R.scale=Math.min(R.maxScale,R.scale*1.12); R.needResize=true; } acc=0; frames=0; adaptT=0; }
+  if(adaptT>2.5){ const avg=acc/frames; const fb=$('fpsBox'); if(fb&&!fb.hidden) fb.textContent=Math.round(1/avg)+' FPS · '+R.W+'×'+R.H; if(!SET.gfx.adaptive){ acc=0; frames=0; adaptT=0; } else if(avg>.026&&R.scale>.5){ R.scale=Math.max(.5,R.scale*.82); R.needResize=true; } else if(avg<.012&&R.scale<R.maxScale){ R.scale=Math.min(R.maxScale,R.scale*1.12); R.needResize=true; } acc=0; frames=0; adaptT=0; }
   requestAnimationFrame(frame); }
 function onDeviceLost(info){ $('errText').textContent='Die Grafikkarte wurde zurückgesetzt ('+(info.message||info.reason)+'). Bitte lade die Seite neu.'; $('errO').hidden=false; }

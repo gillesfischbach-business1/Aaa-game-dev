@@ -44,7 +44,7 @@ const TCOL=[[.55,.05,.06],[.1,.12,.2],[.75,.75,.76],[.15,.3,.5],[.06,.06,.065],[
 function trafficParts(){ if(!TRAFFIC_PARTS) TRAFFIC_PARTS=TCOL.map(c=>sedanParts(c)); return TRAFFIC_PARTS; }
 function laneOffset(e){ return e.lanes>1?5:3; }
 function spawnTraffic(px,pz){ const E=graph.edges; if(!E.length) return;
-  for(let tries=0;tries<12&&TRAFFIC.length<16;tries++){ const e=E[(Math.random()*E.length)|0]; const t=Math.random(); const x=lerp(e.a.x,e.b.x,t), z=lerp(e.a.z,e.b.z,t); const d=Math.hypot(x-px,z-pz);
+  for(let tries=0;tries<12&&TRAFFIC.length<SET.gfx.traffic;tries++){ const e=E[(Math.random()*E.length)|0]; const t=Math.random(); const x=lerp(e.a.x,e.b.x,t), z=lerp(e.a.z,e.b.z,t); const d=Math.hypot(x-px,z-pz);
     if(d<90||d>320) continue; const fwd=Math.random()<.5; TRAFFIC.push({e,from:fwd?e.a:e.b,to:fwd?e.b:e.a,t:fwd?t:1-t,v:rr(9,13)*(e.lanes>1?2:1),vmax:rr(9,13)*(e.lanes>1?2.2:1),parts:pick(trafficParts()),x,z,h:0,spin:0,wait:0}); } }
 function updateTraffic(dt,P,others){
   for(let i=TRAFFIC.length-1;i>=0;i--){ const c=TRAFFIC[i];

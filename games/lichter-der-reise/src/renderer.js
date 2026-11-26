@@ -65,9 +65,10 @@ async function initGPU(canvas){
     {binding:2,visibility:FS,texture:{sampleType:'depth'}},{binding:3,visibility:FS,sampler:{type:'comparison'}},{binding:4,visibility:FS,texture:{sampleType:'float'}},{binding:5,visibility:FS,sampler:{type:'filtering'}}]});
   const bglS=device.createBindGroupLayout({entries:[{binding:0,visibility:VS|FS,buffer:{type:'uniform'}},{binding:1,visibility:VS,buffer:{type:'read-only-storage'}}]});
   const vbuf=[{arrayStride:32,attributes:[{shaderLocation:0,offset:0,format:'float32x3'},{shaderLocation:1,offset:12,format:'float32x3'},{shaderLocation:2,offset:24,format:'float32x2'}]}];
-  const HDR='rgba16float', MS=4;
+  const HDR='rgba16float';
   device.pushErrorScope('validation');
-  const lay=device.createPipelineLayout({bindGroupLayouts:[bgl]});
+  const lay=device.createPipelineLayout({bindGroupLayouts:[bgl]}); R.pipes={}; R.bgl=bgl;
+  for(const MS of [1,4]){
   R.pScene=device.createRenderPipeline({layout:lay,vertex:{module:M.scene,entryPoint:'vs',buffers:vbuf},fragment:{module:M.scene,entryPoint:'fs',targets:[{format:HDR}]},
     primitive:{topology:'triangle-list',cullMode:'none'},depthStencil:{format:'depth24plus',depthWriteEnabled:true,depthCompare:'less'},multisample:{count:MS}});
   R.pGlass=device.createRenderPipeline({layout:lay,vertex:{module:M.scene,entryPoint:'vs',buffers:vbuf},fragment:{module:M.scene,entryPoint:'fsGlass',targets:[{format:HDR,blend:{color:{srcFactor:'one',dstFactor:'one-minus-src-alpha'},alpha:{srcFactor:'one',dstFactor:'one-minus-src-alpha'}}}]},
@@ -76,22 +77,24 @@ async function initGPU(canvas){
     primitive:{topology:'triangle-list',cullMode:'none'},depthStencil:{format:'depth32float',depthWriteEnabled:true,depthCompare:'less',depthBias:3,depthBiasSlopeScale:2.0,depthBiasClamp:0.01}});
   R.pSky=device.createRenderPipeline({layout:'auto',vertex:{module:M.sky,entryPoint:'vs'},fragment:{module:M.sky,entryPoint:'fs',targets:[{format:HDR}]},primitive:{topology:'triangle-list'},
     depthStencil:{format:'depth24plus',depthWriteEnabled:false,depthCompare:'always'},multisample:{count:MS}});
+  R.pipes[MS]={scene:R.pScene,glass:R.pGlass,sky:R.pSky,bgSky:device.createBindGroup({layout:R.pSky.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:R.sceneBuf}}]})}; }
   R.pDown=device.createRenderPipeline({layout:'auto',vertex:{module:M.post,entryPoint:'vs'},fragment:{module:M.post,entryPoint:'down',targets:[{format:HDR}]},primitive:{topology:'triangle-list'}});
   R.pUp=device.createRenderPipeline({layout:'auto',vertex:{module:M.post,entryPoint:'vs'},fragment:{module:M.post,entryPoint:'up',targets:[{format:HDR,blend:{color:{srcFactor:'one',dstFactor:'one'},alpha:{srcFactor:'one',dstFactor:'one'}}}]},primitive:{topology:'triangle-list'}});
   R.pComp=device.createRenderPipeline({layout:'auto',vertex:{module:M.comp,entryPoint:'vs'},fragment:{module:M.comp,entryPoint:'fs',targets:[{format:R.fmt}]},primitive:{topology:'triangle-list'}});
   const err=await device.popErrorScope(); if(err) throw new Error('Pipeline: '+err.message);
-  R.bgScene=device.createBindGroup({layout:bgl,entries:[{binding:0,resource:{buffer:R.sceneBuf}},{binding:1,resource:{buffer:R.instBuf}},{binding:2,resource:R.shadow.createView()},{binding:3,resource:R.cmp},{binding:4,resource:R.atlas.createView()},{binding:5,resource:R.lin}]});
+  R.makeSceneBG=()=>{ R.bgScene=device.createBindGroup({layout:bgl,entries:[{binding:0,resource:{buffer:R.sceneBuf}},{binding:1,resource:{buffer:R.instBuf}},{binding:2,resource:R.shadow.createView()},{binding:3,resource:R.cmp},{binding:4,resource:R.atlas.createView()},{binding:5,resource:R.lin}]}); }; R.makeSceneBG(); R.ms=4;
   R.bgShadow=device.createBindGroup({layout:bglS,entries:[{binding:0,resource:{buffer:R.sceneBuf}},{binding:1,resource:{buffer:R.instBuf}}]});
-  R.bgSky=device.createBindGroup({layout:R.pSky.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:R.sceneBuf}}]});
   R.canvas=canvas; R.ok=true;
 }
 const TEX={};
+function setShadowSize(n){ if(!R.device||!n||n===R.shadowSize) return; R.shadow.destroy(); R.shadowSize=n; R.shadow=R.device.createTexture({size:[n,n],format:'depth32float',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.TEXTURE_BINDING}); R.makeSceneBG(); }
+function setMSAA(on){ const ms=on?4:1; if(ms!==R.ms){ R.ms=ms; R.needResize=true; } }
 function resizeTargets(){ const d=R.device, c=R.canvas;
   const lim=d.limits.maxTextureDimension2D; R.W=Math.max(1,Math.min(lim,Math.floor(c.clientWidth*R.scale))); R.H=Math.max(1,Math.min(lim,Math.floor(c.clientHeight*R.scale)));
   c.width=R.W; c.height=R.H;
   for(const k in TEX){ const t=TEX[k]; (Array.isArray(t)?t:[t]).forEach(x=>x.destroy()); delete TEX[k]; }
-  TEX.msaa=d.createTexture({size:[R.W,R.H],format:'rgba16float',sampleCount:4,usage:GPUTextureUsage.RENDER_ATTACHMENT});
-  TEX.depth=d.createTexture({size:[R.W,R.H],format:'depth24plus',sampleCount:4,usage:GPUTextureUsage.RENDER_ATTACHMENT});
+  if(R.ms>1) TEX.msaa=d.createTexture({size:[R.W,R.H],format:'rgba16float',sampleCount:R.ms,usage:GPUTextureUsage.RENDER_ATTACHMENT});
+  TEX.depth=d.createTexture({size:[R.W,R.H],format:'depth24plus',sampleCount:R.ms,usage:GPUTextureUsage.RENDER_ATTACHMENT});
   TEX.hdr=d.createTexture({size:[R.W,R.H],format:'rgba16float',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.TEXTURE_BINDING});
   TEX.mips=[]; let w=R.W,h=R.H; for(let i=0;i<6;i++){ w=Math.max(1,w>>1); h=Math.max(1,h>>1); TEX.mips.push(d.createTexture({size:[w,h],format:'rgba16float',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.TEXTURE_BINDING})); }
   (R.postBufs||[]).forEach(b=>b.destroy()); R.postBufs=[]; R.down=[]; R.up=[];
@@ -129,7 +132,7 @@ function renderFrame(cam,env,time,post,shadowCenter,snapCb){
   for(let m=0;m<lists.length;m++){ const L=lists[m]; opF.push(off); if(L.nop&&off+L.nop<=MAXI){ instAll.set(L.op.subarray(0,L.nop*16),off*16); off+=L.nop; } }
   for(let m=0;m<lists.length;m++){ const L=lists[m]; glF.push(off); if(L.ngl&&off+L.ngl<=MAXI){ instAll.set(L.gl.subarray(0,L.ngl*16),off*16); off+=L.ngl; } }
   if(off) d.queue.writeBuffer(R.instBuf,0,instAll,0,off*16);
-  compF.set([post.exposure,post.bloom,post.flash,post.fade, time,post.sat,0.018,0.01, post.tint[0],post.tint[1],post.tint[2],post.vignette]);
+  compF.set([post.exposure,post.bloom,post.flash,post.fade, time,post.sat,post.grain===undefined?0.018:post.grain,0.01, post.tint[0],post.tint[1],post.tint[2],post.vignette]);
   d.queue.writeBuffer(R.compBuf,0,compF);
   const enc=d.createCommandEncoder();
   const drawList=(pass,glass)=>{ for(let m=0;m<lists.length;m++){ const L=lists[m]; const n=glass?L.ngl:L.nop; if(!n)continue; const me=R.mesh[m]; pass.setVertexBuffer(0,me.vb); pass.setIndexBuffer(me.ib,me.fmt); pass.drawIndexed(me.n,n,0,0,glass?glF[m]:opF[m]); } };
@@ -137,11 +140,12 @@ function renderFrame(cam,env,time,post,shadowCenter,snapCb){
   const sp=enc.beginRenderPass({colorAttachments:[],depthStencilAttachment:{view:R.shadow.createView(),depthLoadOp:'clear',depthStoreOp:'store',depthClearValue:1}});
   if(env.shadow>0.01){ sp.setPipeline(R.pShadow); sp.setBindGroup(0,R.bgShadow); drawList(sp,false); } sp.end();
   // scene
-  const pass=enc.beginRenderPass({colorAttachments:[{view:TEX.msaa.createView(),resolveTarget:TEX.hdr.createView(),loadOp:'clear',storeOp:'discard',clearValue:{r:0,g:0,b:0,a:1}}],
+  const PP=R.pipes[R.ms];
+  const pass=enc.beginRenderPass({colorAttachments:[R.ms>1?{view:TEX.msaa.createView(),resolveTarget:TEX.hdr.createView(),loadOp:'clear',storeOp:'discard',clearValue:{r:0,g:0,b:0,a:1}}:{view:TEX.hdr.createView(),loadOp:'clear',storeOp:'store',clearValue:{r:0,g:0,b:0,a:1}}],
     depthStencilAttachment:{view:TEX.depth.createView(),depthLoadOp:'clear',depthStoreOp:'discard',depthClearValue:1}});
-  pass.setPipeline(R.pSky); pass.setBindGroup(0,R.bgSky); pass.draw(3);
-  pass.setPipeline(R.pScene); pass.setBindGroup(0,R.bgScene); drawList(pass,false);
-  pass.setPipeline(R.pGlass); pass.setBindGroup(0,R.bgScene); drawList(pass,true);
+  pass.setPipeline(PP.sky); pass.setBindGroup(0,PP.bgSky); pass.draw(3);
+  pass.setPipeline(PP.scene); pass.setBindGroup(0,R.bgScene); drawList(pass,false);
+  pass.setPipeline(PP.glass); pass.setBindGroup(0,R.bgScene); drawList(pass,true);
   pass.end();
   for(let i=0;i<TEX.mips.length;i++){ const p=enc.beginRenderPass({colorAttachments:[{view:TEX.mips[i].createView(),loadOp:'clear',storeOp:'store',clearValue:{r:0,g:0,b:0,a:1}}]}); p.setPipeline(R.pDown); p.setBindGroup(0,R.down[i]); p.draw(3); p.end(); }
   for(const u of R.up){ const p=enc.beginRenderPass({colorAttachments:[{view:u.dst.createView(),loadOp:'load',storeOp:'store'}]}); p.setPipeline(R.pUp); p.setBindGroup(0,u.bg); p.draw(3); p.end(); }
