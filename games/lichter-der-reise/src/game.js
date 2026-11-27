@@ -296,7 +296,10 @@ function frame(now){
     else calm=0;
     acc=0; frames=0; adaptT=0; slowN=0; }
   requestAnimationFrame(frame); }
-function onDeviceLost(info){ $('errText').textContent='Die Grafikkarte wurde zurückgesetzt ('+(info.message||info.reason)+'). Bitte lade die Seite neu.'; $('errO').hidden=false; }
+let gpuLost=false;
+// phones often drop the GPU while the game is in the background: save, then reload by itself as soon as the page is visible again
+function onDeviceLost(info){ gpuLost=true; try{ autosave(); }catch(e){} $('errText').textContent='Die Grafik wurde zurückgesetzt ('+(info.message||info.reason)+'). Das Spiel lädt gleich neu, dein Spielstand ist gesichert.'; $('errO').hidden=false;
+  const go=()=>{ if(!document.hidden) setTimeout(()=>location.reload(),1200); }; document.addEventListener('visibilitychange',go); go(); }
 
 function shadowCtr(pl){ WARP(pl.x-Math.sin(G.camYaw)*14,pl.z-Math.cos(G.camYaw)*14); return [WP.x,0,WP.z]; }
 /* test hook: render exactly one frame and wait until the GPU has finished it */

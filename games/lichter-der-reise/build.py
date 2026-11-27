@@ -15,7 +15,8 @@ html = f'''<!doctype html>
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Lichter der Reise</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307060c'/%3E%3Ccircle cx='32' cy='32' r='12' fill='%23ffd27a'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23ff8a3d' stroke-width='3' opacity='.6'/%3E%3C/svg%3E">
-<meta name="description" content="Eine WebGPU-Roadstory in vier Kapiteln: von Belval über Luxemburg nach Monte-Carlo.">
+<meta name="description" content="Eine Roadstory in offener Welt: mit Léo und Mira durch ein fiktives Luxemburg und Eindhoven.">
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#07060c"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;600;800&display=swap">
