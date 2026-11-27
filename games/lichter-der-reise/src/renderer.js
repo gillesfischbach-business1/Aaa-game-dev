@@ -32,14 +32,15 @@ const MAXI=48000;
 const lists=[]; // per mesh: {op:Float32Array, nop, gl:Float32Array, ngl}
 // P draws something given in street-grid coordinates: it is moved and turned by the world bend (see WARP). Praw takes final world coordinates.
 function P(m,x,y,z,ry,sx,sy,sz,mat,r,g,b,p,rx=0,rz=0,slot=0){ WARP(x,z); const sn=Math.sin(ry), cs=Math.cos(ry); Praw(m,WP.x,y,WP.z,Math.atan2(WP.a*sn+WP.b*cs,WP.c*sn+WP.d*cs),sx,sy,sz,mat,r,g,b,p,rx,rz,slot); }
-function Praw(m,x,y,z,ry,sx,sy,sz,mat,r,g,b,p,rx=0,rz=0,slot=0){ const L=lists[m]; const glass=mat>=6&&mat<7; if(mat>=9&&mat<10){ const n=L.nct|0; if(n>=1500) return; const c=L.ct||(L.ct=new Float32Array(1500*16)), o=n*16; c[o]=x;c[o+1]=y;c[o+2]=z;c[o+3]=ry;c[o+4]=sx;c[o+5]=sy;c[o+6]=sz;c[o+7]=mat;c[o+8]=r;c[o+9]=g;c[o+10]=b;c[o+11]=p;c[o+12]=rx;c[o+13]=rz;c[o+14]=slot;c[o+15]=0; L.nct=n+1; return; }
+// bend=1: x,z are street-grid coordinates bent in the vertex shader; qx0,qz0 is where the piece ends up (for culling)
+function Praw(m,x,y,z,ry,sx,sy,sz,mat,r,g,b,p,rx=0,rz=0,slot=0,bend=0,qx0=x,qz0=z){ const L=lists[m]; const glass=mat>=6&&mat<7; if(mat>=9&&mat<10){ const n=L.nct|0; if(n>=1500) return; const c=L.ct||(L.ct=new Float32Array(1500*16)), o=n*16; c[o]=x;c[o+1]=y;c[o+2]=z;c[o+3]=ry;c[o+4]=sx;c[o+5]=sy;c[o+6]=sz;c[o+7]=mat;c[o+8]=r;c[o+9]=g;c[o+10]=b;c[o+11]=p;c[o+12]=rx;c[o+13]=rz;c[o+14]=slot;c[o+15]=bend; L.nct=n+1; return; }
   const a=glass?L.gl:L.op; let n=glass?L.ngl:L.nop; if(n>=(glass?400:L.cap)) return;
   let sh=false;
   if(CULL.on){ const C=CULL, rad=L.rad*Math.max(Math.abs(sx),Math.abs(sy),Math.abs(sz));
-    if(!glass&&C.sr>0){ const ax=x-C.sx, az=z-C.sz, t=ax*C.dx+y*C.dy+az*C.dz, qx=ax-C.dx*t, qy=y-C.dy*t, qz=az-C.dz*t, q=C.sr+rad; sh=qx*qx+qy*qy+qz*qz<q*q; } /* distance to the sun axis through the shadow centre */
-    if(!sh){ const vx=x-C.cx, vy=y-C.cy, vz=z-C.cz, f=vx*C.fx+vy*C.fy+vz*C.fz; if(f<-rad||Math.abs(vx*C.rx+vz*C.rz)-f*C.tx>rad*C.k) return; } }
+    if(!glass&&C.sr>0){ const ax=qx0-C.sx, az=qz0-C.sz, t=ax*C.dx+y*C.dy+az*C.dz, qx=ax-C.dx*t, qy=y-C.dy*t, qz=az-C.dz*t, q=C.sr+rad; sh=qx*qx+qy*qy+qz*qz<q*q; } /* distance to the sun axis through the shadow centre */
+    if(!sh){ const vx=qx0-C.cx, vy=y-C.cy, vz=qz0-C.cz, f=vx*C.fx+vy*C.fy+vz*C.fz; if(f<-rad||Math.abs(vx*C.rx+vz*C.rz)-f*C.tx>rad*C.k) return; } }
   let o=n*16; if(sh){ const q=L.nsh*16; if(q!==o) for(let k=0;k<16;k++) a[o+k]=a[q+k]; o=q; L.nsh++; } /* shadow casters stay packed at the front of the list */
-  a[o]=x;a[o+1]=y;a[o+2]=z;a[o+3]=ry;a[o+4]=sx;a[o+5]=sy;a[o+6]=sz;a[o+7]=mat;a[o+8]=r;a[o+9]=g;a[o+10]=b;a[o+11]=p;a[o+12]=rx;a[o+13]=rz;a[o+14]=slot;a[o+15]=0;
+  a[o]=x;a[o+1]=y;a[o+2]=z;a[o+3]=ry;a[o+4]=sx;a[o+5]=sy;a[o+6]=sz;a[o+7]=mat;a[o+8]=r;a[o+9]=g;a[o+10]=b;a[o+11]=p;a[o+12]=rx;a[o+13]=rz;a[o+14]=slot;a[o+15]=bend;
   if(glass) L.ngl=n+1; else L.nop=n+1; }
 const CULL={on:false,cx:0,cy:0,cz:0,fx:0,fy:0,fz:1,rx:1,rz:0,tx:1,k:1,sx:0,sz:0,dx:0,dy:1,dz:0,sr:-1};
 function meshRad(m){ const v=m.v; let r2=0; for(let k=0;k<v.length;k+=8) r2=Math.max(r2,v[k]*v[k]+v[k+1]*v[k+1]+v[k+2]*v[k+2]); return Math.sqrt(r2)*1.3+.05; } /* bounding radius, +30 % for wind and leaf displacement */
@@ -108,7 +109,7 @@ async function initGPU(canvas){
 const TEX={};
 function setShadowSize(n){ if(!R.device||!n||n===R.shadowSize) return; R.shadow.destroy(); R.shadowSize=n; R.shadow=R.device.createTexture({size:[n,n],format:'depth32float',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.TEXTURE_BINDING}); R.makeSceneBG(); }
 function setMSAA(on){ const ms=on?4:1; if(ms!==R.ms){ R.ms=ms; R.needResize=true; } }
-function resizeTargets(){ const d=R.device, c=R.canvas;
+function resizeTargets(){ const d=R.device, c=R.canvas; if((!c.clientWidth||!c.clientHeight)&&TEX.hdr) { R.needResize=false; return; } // hidden or mid-rotation: keep the last size instead of collapsing to 1x1
   const lim=d.limits.maxTextureDimension2D; R.W=Math.max(1,Math.min(lim,Math.floor(c.clientWidth*R.scale))); R.H=Math.max(1,Math.min(lim,Math.floor(c.clientHeight*R.scale)));
   c.width=R.W; c.height=R.H;
   for(const k in TEX){ const t=TEX[k]; (Array.isArray(t)?t:[t]).forEach(x=>x.destroy()); delete TEX[k]; }

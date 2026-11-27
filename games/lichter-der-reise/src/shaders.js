@@ -45,12 +45,18 @@ fn rot(v:vec3f,it:Inst)->vec3f{
   let cy=cos(it.a.w); let sy=sin(it.a.w); return vec3f(p.x*cy+p.z*sy,p.y,-p.x*sy+p.z*cy);
 }
 @vertex fn vs(@location(0) p:vec3f,@location(1) n:vec3f,@location(2) uv:vec2f,@builtin(instance_index) ii:u32)->VO{
-  let it=I[ii]; let s=it.b.xyz; let lp=p*s; var wp=rot(lp,it)+it.a.xyz;
+  let it=I[ii]; let s=it.b.xyz; let lp=p*s; var wp=rot(lp,it)+it.a.xyz; var nw=rot(normalize(n/max(s,vec3f(1e-4))),it);
   if(floor(it.b.w)==11.0){ wp=leafDisp(wp,rot(p,it),s); }
-  var o:VO; o.pos=S.viewProj*vec4f(wp,1.0); o.wp=wp; o.n=rot(normalize(n/max(s,vec3f(1e-4))),it); o.lp=lp; o.on=n; o.col=it.c;
+  if(it.d.w>0.5){ let J=bendJ(wp.xz); nw=normalize(vec3f(J.x*nw.x+J.y*nw.z,nw.y,J.z*nw.x+J.w*nw.z)); wp=bendP(wp); } // ground pieces arrive in street-grid space and are bent here, vertex by vertex
+  var o:VO; o.pos=S.viewProj*vec4f(wp,1.0); o.wp=wp; o.n=nw; o.lp=lp; o.on=n; o.col=it.c;
   o.mat=vec4f(floor(it.b.w),fract(it.b.w),fract(it.a.x*0.137+it.a.z*0.0713+it.a.y*0.31),it.d.z); o.uv=uv; o.sc=vec4f(s,it.d.w);
   return o;
 }
+// The world bend, identical to WARP() in openworld.js: street-grid position -> winding world position (and its Jacobian a,b,c,d).
+fn bendP(p:vec3f)->vec3f{ let x=p.x; let z=p.z;
+  return vec3f(x+24.0*sin(z/118.0+1.3)+13.0*sin(z/53.0+x/210.0+0.5)+14.0*sin(x/260.0+2.1),p.y,z+20.0*sin(x/127.0+0.7)+12.0*sin(x/49.0-z/190.0+4.0)+12.0*sin(z/240.0+1.0)); }
+fn bendJ(q:vec2f)->vec4f{ let x=q.x; let z=q.y; let c1=cos(z/118.0+1.3); let c2=cos(z/53.0+x/210.0+0.5); let c3=cos(x/260.0+2.1); let c4=cos(x/127.0+0.7); let c5=cos(x/49.0-z/190.0+4.0); let c6=cos(z/240.0+1.0);
+  return vec4f(1.0+13.0*c2/210.0+14.0*c3/260.0,24.0*c1/118.0+13.0*c2/53.0,20.0*c4/127.0+12.0*c5/49.0,1.0-12.0*c5/190.0+12.0*c6/240.0); }
 // lumpy tree crowns: push sphere vertices in and out with 3D noise
 fn leafDisp(wp:vec3f,dir:vec3f,s:vec3f)->vec3f{
   let r=min(s.x,min(s.y,s.z)); if(r<0.5){ return wp; }
@@ -59,7 +65,7 @@ fn leafDisp(wp:vec3f,dir:vec3f,s:vec3f)->vec3f{
   return wp+normalize(dir)*(n-0.5)*r*0.42+sway; // crowns breathe in the wind
 }
 @vertex fn vsShadow(@location(0) p:vec3f,@builtin(instance_index) ii:u32)->@builtin(position) vec4f{
-  let it=I[ii]; var wp=rot(p*it.b.xyz,it)+it.a.xyz; if(floor(it.b.w)==11.0){ wp=leafDisp(wp,rot(p,it),it.b.xyz); } return S.lightVP*vec4f(wp,1.0);
+  let it=I[ii]; var wp=rot(p*it.b.xyz,it)+it.a.xyz; if(floor(it.b.w)==11.0){ wp=leafDisp(wp,rot(p,it),it.b.xyz); } if(it.d.w>0.5){ wp=bendP(wp); } return S.lightVP*vec4f(wp,1.0);
 }
 // analytic exponential height fog with forward scattering toward the sun
 fn applyFog(col:vec3f,P:vec3f,V:vec3f,dist:f32,a:f32)->vec3f{
@@ -262,7 +268,7 @@ fn fsBody(i:VO,ff:bool)->vec4f{
     let f=fract(px); let id=floor(px); let e=min(min(f.x,1.0-f.x)*0.32,min(f.y,1.0-f.y)*0.16);
     let fade=clamp(1.0-fwW*14.0,0.0,1.0);
     let joint=1.0-smoothstep(0.0,0.022,e); let hv=hash2(id);
-    s.alb=i.col.rgb*(0.7+0.55*hv)*mix(1.0,0.35,joint*fade);
+    s.alb=i.col.rgb*(0.88+0.2*hv)*(0.92+0.16*fbm2(i.wp.xz*0.4))*mix(1.0,0.55,joint*fade);
     let puddle=smoothstep(0.55,0.62,fbm2(i.wp.xz*0.18)+wetG*0.15);
     s.wet=wetG; s.rough=mix(mix(0.6,0.22,wetG),0.03,puddle*wetG);
     let gx=select(0.0,sign(f.x-0.5),min(f.x,1.0-f.x)*0.32<0.03); let gz=select(0.0,sign(f.y-0.5),min(f.y,1.0-f.y)*0.16<0.03);
@@ -277,7 +283,7 @@ fn fsBody(i:VO,ff:bool)->vec4f{
     s.alb=i.col.rgb*(0.75+0.5*ag)*(0.85+0.3*pch)*(1.0-crack*0.6);
     let track=0.0;
     let puddle=smoothstep(0.58,0.66,fbm2(i.wp.xz*0.11+vec2f(3.0,1.0))+wetG*0.12);
-    s.wet=max(wetG,0.35); s.rough=mix(mix(0.75,0.35,wetG),0.03,puddle*max(wetG,0.3))*(1.0-track*0.15);
+    s.wet=wetG; s.rough=mix(mix(0.88,0.35,wetG),0.03,puddle*wetG)*(1.0-track*0.15); // dry asphalt is matte; it only shines when wet
     s.alb*=mix(1.0,0.5,wetG);
     s.n=flatBump(N,(ag-0.5)*0.04*(1.0-puddle),(ag2-0.5)*0.04*fade*(1.0-puddle));
   }

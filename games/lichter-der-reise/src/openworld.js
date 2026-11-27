@@ -18,19 +18,23 @@ function WARP(x,z){ const p1=z/118+1.3, p2=z/53+x/210+.5, p3=x/260+2.1, p4=x/127
   WP.a=1+13*c2/210+14*c3/260; WP.b=24*c1/118+13*c2/53; WP.c=20*c4/127+12*c5/49; WP.d=1-12*c5/190+12*c6/240; return WP; }
 function yawW(x,z,h){ WARP(x,z); const sn=Math.sin(h), cs=Math.cos(h); return Math.atan2(WP.a*sn+WP.b*cs,WP.c*sn+WP.d*cs); }
 // bake the bend into the static world: buildings stay rigid, long flat pieces are cut into tiles that follow the curve
-function bakeWarp(list){ const out=[]; const fac=Math.floor(MAT.FACADE), dec=Math.floor(MAT.DECAL);
+function bakeWarp(list){ const out=[]; const fac=Math.floor(MAT.FACADE);
+  // Standing things (trees, lamps, signs, single props) are moved and turned as a whole.
   const place=(o)=>{ const flat0=o.ry===0&&!o.rx&&!o.rz; WARP(o.x,o.z); const tz=Math.atan2(WP.b,WP.d), tx=-Math.atan2(WP.c,WP.a); const asp=Math.max(o.sx,o.sz)/Math.max(.01,Math.min(o.sx,o.sz));
     const th=(flat0&&asp>2.5)?(o.sx>o.sz?tx:tz):(tx+tz)/2; if(o.L){ const lx=o.L.x-o.x, lz=o.L.z-o.z, c=Math.cos(th), s=Math.sin(th); o.L.x=WP.x+lx*c+lz*s; o.L.z=WP.z-lx*s+lz*c; }
     o.x=WP.x; o.z=WP.z; o.ry+=th; out.push(o); };
+  // Ground and everything lying on it (carriageway, pavement, kerbs, paint, rails, walls) stays in grid space and is bent per vertex on the GPU.
+  // Neighbouring pieces then share the very same curve: no steps, no overlaps, no cut-up crossings. Long pieces are cut so each edge is short enough to look curved.
+  const bent=(o)=>{ WARP(o.x,o.z); o.bend=1; o.cx=WP.x; o.cz=WP.z; out.push(o); };
   for(const o of list){
     if(o.grp){ const g=o.grp; if(g.wx===undefined){ WARP(g.x,g.z); g.wx=WP.x; g.wz=WP.z; g.th=g.ax?-Math.atan2(WP.c,WP.a):Math.atan2(WP.b,WP.d); g.cs=Math.cos(g.th); g.sn=Math.sin(g.th); }
       const rel=(px,pz)=>[g.wx+(px-g.x)*g.cs+(pz-g.z)*g.sn,g.wz-(px-g.x)*g.sn+(pz-g.z)*g.cs]; if(o.L){ const q=rel(o.L.x,o.L.z); o.L.x=q[0]; o.L.z=q[1]; }
       const q=rel(o.x,o.z); o.x=q[0]; o.z=q[1]; o.ry+=g.th; out.push(o); continue; }
-    const id=Math.floor(o.mat), big=Math.max(o.sx,o.sz);
-    if(o.m===MESHIDX.box&&o.ry===0&&!o.rx&&!o.rz&&big>16&&id!==fac&&id!==dec&&id!==1&&id!==2&&!o.L&&!o.turbine&&!o.blink&&o.bob===undefined){
-      const T=(o.sy<1&&Math.min(o.sx,o.sz)>10)?24:13; const nx=Math.ceil(o.sx/T), nz=Math.ceil(o.sz/T), px=o.sx/nx, pz=o.sz/nz, ov=o.sy<1?1.05:1.01; // wide flat slabs can use bigger tiles
-      for(let i=0;i<nx;i++) for(let j=0;j<nz;j++){ const t={...o,x:o.x-o.sx/2+px*(i+.5),z:o.z-o.sz/2+pz*(j+.5),sx:px*(nx>1?ov:1),sz:pz*(nz>1?ov:1)}; t.ext=Math.max(t.sx,t.sz)*.6; place(t); }
-      continue; }
+    const id=Math.floor(o.mat), big=Math.max(o.sx,o.sz), sm=Math.min(o.sx,o.sz), plain=!o.L&&!o.turbine&&!o.blink&&o.bob===undefined&&id!==fac;
+    const lying=o.sy<=.25&&o.y<.6&&!o.rz&&(!o.rx||Math.abs(o.rx+Math.PI/2)<.01); // slabs, paint, manholes, decals on the road
+    if(plain&&o.m===MESHIDX.box&&o.ry===0&&!o.rx&&!o.rz&&big>16&&id!==1&&id!==2&&!o.keep){ const T=sm>30?12:9; const nx=Math.ceil(o.sx/T), nz=Math.ceil(o.sz/T), px=o.sx/nx, pz=o.sz/nz;
+      for(let i=0;i<nx;i++) for(let j=0;j<nz;j++){ const t={...o,x:o.x-o.sx/2+px*(i+.5),z:o.z-o.sz/2+pz*(j+.5),sx:px,sz:pz}; t.ext=Math.max(px,pz)*.6; bent(t); } continue; }
+    if(plain&&(lying||o.keep)){ bent(o); continue; }
     place(o); }
   return out; }
 let colliders=new Map(), cells=new Map(), globalStatics=[], roadsList=[], graph={nodes:new Map(),edges:[]}, mapItems=[], sparksAll=[];
@@ -44,10 +48,32 @@ function node(x,z){ const k=Math.round(x)+','+Math.round(z); let n=graph.nodes.g
 function edge(a,b,lanes=1){ const e={a,b,lanes}; a.edges.push(e); b.edges.push(e); graph.edges.push(e); }
 
 // ---------- road pieces ----------
+const ASPH=[.115,.115,.12], PAINT=[.66,.66,.62];
+/* A city street segment, kerb to kerb (12 m): parking lane 2.1 m | lane 3.9 m | lane 3.9 m | parking lane 2.1 m.
+   Dressing follows the real thing: dashed centre line, parking lane lines, stop lines on the approaching lane, gutters,
+   manholes and drains, parked cars in groups, and now and then a painted 30, an arrow or a bicycle. */
 function roadRect(x0,z0,x1,z1,marks=true){ const cx=(x0+x1)/2, cz=(z0+z1)/2, w=Math.abs(x1-x0), d=Math.abs(z1-z0);
-  S('box',cx,-.04,cz,w,.1,d,MAT.ROAD+.6,[.075,.075,.08]); roadsList.push({x0:Math.min(x0,x1),z0:Math.min(z0,z1),x1:Math.max(x0,x1),z1:Math.max(z0,z1)}); mapRect('road',x0,z0,x1,z1);
-  if(!marks) return; const along=w>d;
-  const L=along?w:d; for(let t=-L/2+3;t<L/2-3;t+=8){ if(along) S('box',cx+t,.012,cz,3,.01,.14,MAT.STD+.6,[.72,.72,.68]); else S('box',cx,.012,cz+t,.14,.01,3,MAT.STD+.6,[.72,.72,.68]); } }
+  S('box',cx,-.04,cz,w,.1,d,MAT.ROAD+.6,ASPH); roadsList.push({x0:Math.min(x0,x1),z0:Math.min(z0,z1),x1:Math.max(x0,x1),z1:Math.max(z0,z1)}); mapRect('road',x0,z0,x1,z1);
+  if(!marks) return; const ax=w>d, L=ax?w:d, W=ax?d:w, hw=W/2;
+  // local frame: t along the street, q across it
+  const at=(t,q)=>ax?[cx+t,cz+q]:[cx-q,cz+t]; const B=(t,q,lt,lq,y,mat,col,p=0)=>{ const [x,z]=at(t,q); return S('box',x,y,z,ax?lt:lq,.012,ax?lq:lt,mat,col,p); };
+  for(let t=-L/2+7;t<L/2-8;t+=7.5) B(t+1.5,0,3,.12,.012,MAT.STD+.6,PAINT);                 // centre line: 3 m dash, 4.5 m gap
+  for(const sq of [-1,1]){ B(0,sq*(hw-.2),L,.4,.006,MAT.ROAD+.6,[.06,.06,.064]);              // gutter
+    if(L>40) B(0,sq*(hw-2.1),L-18,.1,.012,MAT.STD+.6,PAINT);                                   // parking lane line
+    B(sq*(L/2-4.7),sq*(hw-2.1)/2,.42,hw-2.1,.012,MAT.STD+.6,PAINT);                           // stop line across the approaching lane
+    for(let t=-L/2+12;t<L/2-10;t+=rr(14,22)){ const [x,z]=at(t,sq*(hw-.25)); S('box',x,.012,z,ax?.5:.3,.012,ax?.3:.5,MAT.STD+.4,[.035,.035,.04],.5); } } // drains
+  for(let k=0;k<2;k++){ const [x,z]=at(rr(-L/2+10,L/2-10),rr(-2.8,2.8)); S('cylY',x,.008,z,.72,.02,.72,MAT.STD+.5,[.05,.05,.055],.4); }
+  if(L>40){ const r=rnd(); const sgn=rnd()<.5?1:-1, [x,z]=at(sgn*(L/2-13),sgn*2); const ry=ax?(sgn>0?-Math.PI/2:Math.PI/2):(sgn>0?Math.PI:0);
+    if(r<.3) S('quad',x,.016,z,1.5,4.6,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.Z30); else if(r<.5) S('quad',x,.016,z,1.1,3.4,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.ARROW);
+    else if(r<.62){ const [bx,bz]=at(sgn*(L/2-13),sgn*(hw-3)); S('quad',bx,.016,bz,1.0,1.6,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.BIKE); }
+    // parked cars: groups of 2-4 in the parking lanes, none near the junctions
+    for(const sq of [-1,1]){ let t=-L/2+13; while(t<L/2-16){ if(rnd()<.45){ const n=2+((rnd()*3)|0); for(let k=0;k<n&&t<L/2-14;k++){ const [x,z]=at(t,sq*(hw-1.12)); GRP={x,z,ax};
+            sedan(x,z,ax?(sq>0?Math.PI/2:-Math.PI/2):(sq>0?0:Math.PI)); GRP=null; if(ax) addCol(x-2.15,z-.9,x+2.15,z+.9); else addCol(x-.9,z-2.15,x+.9,z+2.15); t+=5.6; } t+=rr(3,9); } else t+=rr(8,16); } }
+    // signs on the pavement at the ends: pedestrian crossing, and sometimes 30 or no parking
+    for(const e of [-1,1]){ const sq=e; const [x,z]=at(e*(L/2-5.4),sq*(hw+.7)); const fr=ax?(e>0?-Math.PI/2:Math.PI/2):(e>0?Math.PI:0);
+      roadSign(x,z,fr,rnd()<.75?SLOT.SG_PED:SLOT.SG_ONEWAY); if(rnd()<.4){ const [x2,z2]=at(e*(L/2-15),sq*(hw+.7)); roadSign(x2,z2,fr,rnd()<.5?SLOT.SG_30:SLOT.SG_NOPARK); } } } }
+function roadSign(x,z,ry,slot){ S('cylY',x,1.3,z,.07,2.6,.07,MAT.STD+.35,[.55,.56,.58],.8); S('box',x,2.3,z,.64,.64,.03,MAT.STD+.4,[.5,.5,.52],.6,ry);
+  S('quad',x+Math.sin(ry)*.025,2.3,z+Math.cos(ry)*.025,.6,.6,1,MAT.DECAL,[1,1,1],.25,ry,0,0,slot); addCol(x-.1,z-.1,x+.1,z+.1); }
 function lampAt(x,z,ry,col,style){ const c=Math.cos(ry), s=Math.sin(ry); // arm points along local -X rotated by ry
   if(style==='lantern'){ S('cylY',x,1.9,z,.12,3.8,.12,MAT.STD+.5,[.05,.05,.06],.8); const ax=x-c*.6, az=z+s*.6; S('box',(x+ax)/2,3.9,(z+az)/2,.62,.05,.05,MAT.STD+.5,[.05,.05,.06],.8,ry);
     S('box',ax,3.62,az,.3,.42,.3,MAT.GLASSO,[.03,.03,.03],0,ry); const o=S('box',ax,3.6,az,.24,.34,.24,MAT.EMI,col,7,ry); lightAt(o,ax,3.4,az,col,30,16); }
@@ -77,7 +103,7 @@ function luxDistrict(i,j){ if(i===-3&&j<3) return 'valley'; if(j>=3) return 'bel
 function ehvDistrict(i,j){ if(j===1) return 'canal'; if(i===0&&j===-2) return 'glow'; if(i===-1&&j===-1) return 'lichtturm'; if(i===2&&j===2) return 'ufo'; if(i===1&&j===2) return 'station'; if(i===2&&j===-3) return 'park'; if(i<=-3) return 'strijp'; return 'brick'; }
 
 function fillBlock(x0,z0,x1,z1,st,env){
-  S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.42,.4,.38]); mapRect('block',x0,z0,x1,z1);
+  S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.5,.48,.45]); mapRect('block',x0,z0,x1,z1);
   for(const zz of [z0+.14,z1-.14]) S('box',(x0+x1)/2,.09,zz,x1-x0,.2,.28,MAT.STONE,[.5,.49,.47]); for(const xx of [x0+.14,x1-.14]) S('box',xx,.09,(z0+z1)/2,.28,.2,z1-z0,MAT.STONE,[.5,.49,.47]);
   const s=3, D=rr(st.d[0],st.d[1]);
   const rows=[ // [axis along x?, fixed coordinate of facade, inward direction, start, end]
@@ -253,16 +279,16 @@ function genCity(key,env){ const C=CITY[key], n=C.n, P=OW.P, h=OW.W/2;
     if(remH.has(nk(i,j))) return false;
     if(key==='lux'&&i===-3&&j<3&&j>-5) return LUX_BRIDGES.includes(j); return true; };
   const hasV=(i,j)=>{ if(remV.has(nk(i,j))) return false; if(key==='ehv'&&j===1) return EHV_BRIDGES.includes(i); return true; };
-  for(let i=-n;i<=n;i++) for(let j=-n;j<=n;j++){ const x=X(i), z=Z(j); S('box',x,-.04,z,OW.W,.1,OW.W,MAT.ROAD+.6,[.075,.075,.08]); mapRect('road',x-h,z-h,x+h,z+h);
+  for(let i=-n;i<=n;i++) for(let j=-n;j<=n;j++){ const x=X(i), z=Z(j); S('box',x,-.04,z,OW.W,.1,OW.W,MAT.ROAD+.6,ASPH); mapRect('road',x-h,z-h,x+h,z+h);
     if(key==='lux'&&i===-3&&j<3&&j>-5) continue;
     for(const [dx,dz,ry] of [[0,-h-2.2,0],[0,h+2.2,0],[-h-2.2,0,Math.PI/2],[h+2.2,0,Math.PI/2]]){ if((dz<0&&j===-n)||(dz>0&&j===n)||(dx<0&&i===-n)||(dx>0&&i===n)) continue;
       if((dz<0&&remV.has(nk(i,j-1)))||(dz>0&&remV.has(nk(i,j)))||(dx<0&&remH.has(nk(i-1,j)))||(dx>0&&remH.has(nk(i,j)))) continue;
-      S('quad',x+dx,.016,z+dz,OW.W-.6,3.2,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.ZEBRA); } }
+      S('quad',x+dx,.016,z+dz,OW.W-.5,3.6,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.ZEBRA); } }
   for(let j=-n;j<=n;j++) for(let i=-n;i<n;i++){ if(!hasH(i,j)) continue; const x0=X(i)+h, x1=X(i+1)-h, z=Z(j);
-    const bridge=key==='lux'&&i===-3&&j<3; if(!bridge) roadRect(x0,z-h,x1,z+h); else { roadsList.push({x0,z0:z-h,x1,z1:z+h}); mapRect('road',x0,z-h,x1,z+h); S('box',(x0+x1)/2,-.04,z,x1-x0,.1,OW.W,MAT.ROAD+.6,[.075,.075,.08]); }
+    const bridge=key==='lux'&&i===-3&&j<3; if(!bridge) roadRect(x0,z-h,x1,z+h); else { roadsList.push({x0,z0:z-h,x1,z1:z+h}); mapRect('road',x0,z-h,x1,z+h); S('box',(x0+x1)/2,-.04,z,x1-x0,.1,OW.W,MAT.ROAD+.6,ASPH); }
     edge(node(X(i),z),node(X(i+1),z)); }
   for(let i=-n;i<=n;i++) for(let j=-n;j<n;j++){ if(!hasV(i,j)) continue; const z0=Z(j)+h, z1=Z(j+1)-h, x=X(i);
-    if(key==='ehv'&&j===1){ roadsList.push({x0:x-h,z0,x1:x+h,z1}); mapRect('road',x-h,z0,x+h,z1); S('box',x,-.04,(z0+z1)/2,OW.W,.1,z1-z0,MAT.ROAD+.6,[.075,.075,.08]); } else roadRect(x-h,z0,x+h,z1);
+    if(key==='ehv'&&j===1){ roadsList.push({x0:x-h,z0,x1:x+h,z1}); mapRect('road',x-h,z0,x+h,z1); S('box',x,-.04,(z0+z1)/2,OW.W,.1,z1-z0,MAT.ROAD+.6,ASPH); } else roadRect(x-h,z0,x+h,z1);
     edge(node(x,Z(j)),node(x,Z(j+1))); }
   for(const k of remH){ const [i,j]=k.split(',').map(Number); lane(X(i)+h,Z(j)-h,X(i+1)-h,Z(j)+h,true,env); }
   for(const k of remV){ const [i,j]=k.split(',').map(Number); lane(X(i)-h,Z(j)+h,X(i)+h,Z(j+1)-h,false,env); }
@@ -279,7 +305,7 @@ function genCity(key,env){ const C=CITY[key], n=C.n, P=OW.P, h=OW.W/2;
     const d=key==='lux'?luxDistrict(i,j):ehvDistrict(i,j);
     if(d==='valley'||d==='canal') continue;
     if(key==='lux'&&i===-1&&j===3){ belvalPlaza(x0,z0,x1,z1); LM.belval={x:(x0+x1)/2,z:z0-6}; continue; }
-    if(key==='lux'&&i===0&&j===3){ S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.42,.4,.38]); mapRect('block',x0,z0,x1,z1); redBuilding((x0+x1)/2,(z0+z1)/2); continue; }
+    if(key==='lux'&&i===0&&j===3){ S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.5,.48,.45]); mapRect('block',x0,z0,x1,z1); redBuilding((x0+x1)/2,(z0+z1)/2); continue; }
     if(key==='lux'&&j>=3&&i<=-3){ S('box',(x0+x1)/2,.02,(z0+z1)/2,x1-x0,.04,z1-z0,MAT.PAVER+.6,[.3,.28,.26]); mapRect('industry',x0,z0,x1,z1); furnaceBlock((x0+x1)/2,(z0+z1)/2); continue; }
     if(key==='lux'&&i===-1&&j===-3){ S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.5,.47,.42]); mapRect('block',x0,z0,x1,z1); cathedral((x0+x1)/2,(z0+z1)/2); continue; }
     if(key==='lux'&&i===-2&&j===0){ fillBlock(x0,z0,x1,z1,STYLE.altstadt,env); continue; }
@@ -300,7 +326,7 @@ function genGround(){ const W=WORLD, V=VALLEY, C=CANAL, g=[.13,.2,.08];
   const rect=(x0,z0,x1,z1)=>{ const ix0=Math.max(x0,I.x0), ix1=Math.min(x1,I.x1), iz0=Math.max(z0,I.z0), iz1=Math.min(z1,I.z1);
     if(ix1-ix0>1&&iz1-iz0>1){ const nx=Math.ceil((ix1-ix0)/40), nz=Math.ceil((iz1-iz0)/40), px=(ix1-ix0)/nx, pz=(iz1-iz0)/nz;
       for(let i=0;i<nx;i++) for(let j=0;j<nz;j++){ const tx=ix0+px*(i+.5), tz=iz0+pz*(j+.5); const town=(Math.abs(tx)<432&&Math.abs(tz)<432)||(Math.abs(tx-1900)<348&&Math.abs(tz)<348); // under the cities the base is dark, so seams between bent tiles never show grass
-        const o=S('box',tx,-.3,tz,px*1.07,.3,pz*1.07,town?MAT.ROAD+.6:MAT.GRASS,town?[.07,.07,.075]:g); o.ext=24; } }
+        const o=S('box',tx,-.3,tz,px*1.07,.3,pz*1.07,town?MAT.ROAD+.6:MAT.GRASS,town?[.07,.07,.075]:g); o.ext=24; o.keep=true; } } // keep: one coarse piece is enough for the base layer
     far(x0,z0,Math.min(x1,I.x0+O),z1); far(Math.max(x0,I.x1-O),z0,x1,z1); far(Math.max(x0,I.x0),z0,Math.min(x1,I.x1),Math.min(z1,I.z0+O)); far(Math.max(x0,I.x0),Math.max(z0,I.z1-O),Math.min(x1,I.x1),z1); };
   rect(W.x0,W.z0,V.x0,W.z1); rect(V.x0,W.z0,V.x1,V.z0); rect(V.x0,V.z1,V.x1,W.z1); rect(V.x1,W.z0,C.x0,W.z1); rect(C.x0,W.z0,C.x1,C.z0); rect(C.x0,C.z1,C.x1,W.z1); rect(C.x1,W.z0,W.x1,W.z1);
   for(const [x,z,w,h,d] of [[-1000,-1000,1300,160,700],[300,-1250,1800,120,500],[1500,-1150,1400,140,600],[2900,-500,900,170,1200],[2700,900,1200,120,600],[900,1200,2000,100,500],[-1100,700,1000,130,900]]) globalStatics.push({m:MESHIDX.sph,x,y:-20,z,sx:w,sy:h*2,sz:d,mat:MAT.GRASS,r:.1,g:.15,b:.07,p:0,ry:.3,rx:0,rz:0,slot:0});
@@ -313,7 +339,7 @@ function genSparks(){ sparksAll=[]; for(const r of roadsList){ const len=Math.ma
 function buildWorld(env){ seed=4242; statics=[]; globalStatics=[]; colliders=new Map(); cells=new Map(); roadsList=[]; mapItems=[]; graph={nodes:new Map(),edges:[]};
   genGround(); genCity('lux',env); genValley(env); genMotorway(env); genCity('ehv',env); genCanal(); genSparks();
   statics=bakeWarp(statics);
-  for(const o of statics){ o.small=Math.max(o.sx,o.sy,o.sz)<3.2&&!o.L; if(o.ext>CELL*.9){ globalStatics.push(o); continue; } const k=Math.floor(o.x/CELL)+','+Math.floor(o.z/CELL); let a=cells.get(k); if(!a){ a=[]; cells.set(k,a); } a.push(o); }
+  for(const o of statics){ o.small=Math.max(o.sx,o.sy,o.sz)<3.2&&!o.L; if(o.ext>CELL*.9){ globalStatics.push(o); continue; } const k=Math.floor((o.bend?o.cx:o.x)/CELL)+','+Math.floor((o.bend?o.cz:o.z)/CELL); let a=cells.get(k); if(!a){ a=[]; cells.set(k,a); } a.push(o); }
   statics=[];
   for(const s of sparksAll){ const k=Math.floor(s.x/CELL)+','+Math.floor(s.z/CELL); let c=cells.get(k); if(!c){ c=[]; cells.set(k,c); } (c.sparks||(c.sparks=[])).push(s); }
 }
