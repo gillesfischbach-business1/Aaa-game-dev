@@ -11,9 +11,9 @@ const ENGINE_SPEC={
  // cyl, loop rpm points, exhaust formants [Hz, gain, width], harmonic roll-off [on-load, off-load], cylinder unevenness, noise level [on, off], noise band, level
  fidele:{cyl:4,pts:[850,1350,2000,2800,3700,4600],form:[[105,.6,55],[250,1,110],[600,.95,230],[1400,.5,520],[2600,.18,900]],roll:[.95,1.5],rough:.34,noise:[.16,.07],band:[1100,3600],clatter:.55,wobble:.014,gain:.62},
  petrol:{cyl:4,pts:[800,1500,2400,3400,4500,5600,6400],form:[[165,.55,75],[400,1,170],[900,.9,340],[2100,.5,750],[3800,.16,1200]],roll:[.8,1.4],rough:.1,noise:[.09,.035],band:[700,4400],clatter:0,wobble:.005,gain:.52},
- // 4.0 l twin-turbo V8 with a flat-plane crank behind the cabin: fires evenly, bank after bank, so it sounds like two four-cylinders at once:
- // a hard, raspy howl with a strong second order from the separate top exhausts, turbos softening the very top, 7000 rpm limit
- smaragd:{cyl:8,flat:true,flatGain:5.2,pts:[1100,1900,2800,3800,4800,5800,6500,7000],form:[[150,.45,70],[330,.9,130],[720,1,260],[1500,.95,520],[3000,.6,950],[4800,.2,1300]],roll:[.72,1.3],rough:.15,noise:[.13,.05],band:[1200,6000],clatter:0,wobble:.004,gain:.54} };
+ // 4.0 l twin-turbo flat-plane V8 behind the cabin, 7000 rpm limit. Road tests describe it as mechanical and purposeful rather than sonorous:
+ // a coarse lower end, a lot of turbo noise over a muted exhaust, and an audible whine from the electric motors
+ smaragd:{cyl:8,flat:true,flatGain:3.3,pts:[1100,1900,2800,3800,4800,5800,6500,7000],form:[[120,.7,70],[260,1,120],[560,.95,220],[1150,.8,420],[2300,.42,800],[4200,.1,1200]],roll:[.86,1.42],rough:.24,noise:[.17,.07],band:[700,4200],clatter:0,wobble:.006,gain:.56} };
 const LOOP_SR=22050, LOOP_N=16384;
 function fftInverse(re,im){ const n=re.length; // in-place radix-2, returns the real signal in re
   for(let i=1,j=0;i<n;i++){ let b=n>>1; for(;j&b;b>>=1) j^=b; j^=b; if(i<j){ let t=re[i]; re[i]=re[j]; re[j]=t; t=im[i]; im[i]=im[j]; im[j]=t; } }
@@ -106,9 +106,9 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
      if(L.key==='smaragd'&&this.prevLoad>.6&&load<.1&&this.rpm>4300){ for(let k=0;k<3;k++) setTimeout(()=>{ if(this.ctx) this.noiseBurst(.05,'bandpass',900+Math.random()*900,.1); },90+k*130+Math.random()*60); } }
    this.prevLoad=load;
    // turbos: a hiss that grows with load and revs, and a short sigh from the blow-off valves when the throttle shuts
-   if(this.turbo){ const tb=on&&ek==='smaragd'?clamp((this.rpm-2200)/4000,0,1)*load:0; this.turbo.g.gain.setTargetAtTime(tb*.07,t,.12); this.turbo.f.frequency.setTargetAtTime(2200+this.rpm*.55,t,.1);
-     if(ek==='smaragd'&&(this.tbPrev||0)>.45&&load<.15) this.noiseBurst(.22,'highpass',2600,.06); this.tbPrev=tb; }
-   this.whine.frequency.setTargetAtTime(500+v*42,t,.08); this.whineG.gain.setTargetAtTime(on&&ek==='smaragd'?clamp(v/70,0,1)*.018:0,t,.15);
+   if(this.turbo){ const tb=on&&ek==='smaragd'?clamp((this.rpm-2200)/4000,0,1)*load:0; this.turbo.g.gain.setTargetAtTime(tb*.14,t,.16); this.turbo.f.frequency.setTargetAtTime(1900+this.rpm*.62,t,.14);
+     if(ek==='smaragd'&&(this.tbPrev||0)>.45&&load<.15) this.noiseBurst(.3,'highpass',2400,.1); this.tbPrev=tb; }
+   this.whine.frequency.setTargetAtTime(420+v*46,t,.08); this.whineG.gain.setTargetAtTime(on&&ek==='smaragd'?(.008+clamp(v/45,0,1)*.022)*(.55+.45*load):0,t,.15);
    // tyres and wind grow with speed; braking adds a scrub
    const sl=on?clamp((this.slide||0)/6,0,1):0; // sliding tyres squeal: louder and higher
    this.tyre.g.gain.setTargetAtTime(on?clamp(v/30,0,1)*.22+(brk&&v>4?.08:0)+sl*.3:0,t,.06); this.tyre.f.frequency.setTargetAtTime(250+v*14+sl*900,t,.06);
