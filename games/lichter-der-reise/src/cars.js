@@ -152,6 +152,7 @@ const BMAT={ paint_white:[MAT.PAINT+.32,[.86,.86,.83],.15], paint_green:[MAT.PAI
  light_tail:[MAT.EMI,[1,.05,.03],3,'tail'], light_ind:[MAT.EMI,[1,.45,.05],1.2], seat:[MAT.STD+.85,[.06,.05,.05],0], dash:[MAT.STD+.7,[.05,.05,.055],0], carbon:[MAT.STD+.35,[.03,.03,.035],.3],
  gold:[MAT.STD+.25,[.72,.5,.2],1], skin:[MAT.SKIN,[.78,.53,.4],0], skin2:[MAT.SKIN,[.85,.6,.47],0], hair_dark:[MAT.STD+.85,[.05,.035,.025],0], hair_brown:[MAT.STD+.8,[.22,.12,.06],0],
  denim:[MAT.STD+.85,[.08,.09,.12],0], jogger:[MAT.STD+.95,[.5,.5,.52],0], knit:[MAT.STD+.98,[.28,.18,.11],0], jeans:[MAT.STD+.85,[.12,.16,.26],0], scarf:[MAT.STD+.98,[.42,.36,.28],0],
+ paint_car:[MAT.PAINT+.22,[.5,.06,.07],.7,'paint'], glass_dark:[MAT.GLASSO,[.02,.025,.03],0], plate:[MAT.STD+.5,[.85,.7,.1],0],
  shoe:[MAT.STD+.6,[.85,.85,.82],0], beanie:[MAT.STD+.95,[.06,.06,.07],0], frame_pink:[MAT.STD+.3,[.85,.5,.6],0], eye:[MAT.STD+.1,[.03,.02,.015],0], eyewhite:[MAT.STD+.3,[.85,.83,.8],0], lips:[MAT.SKIN,[.6,.3,.28],0] };
 function blenderParts(model,x=0,y=0,z=0,ry=0){ const g=MODEL_GROUPS[model]; if(!g) return null;
   return g.map(({key,mat})=>{ const b=BMAT[mat]||[MAT.STD+.5,[.5,.5,.5],0]; return [key,x,y,z,1,1,1,b[0],b[1],b[2],0,ry,0,0,b[3]||'']; }); }
@@ -163,3 +164,20 @@ function supPartsB(){ const body=blenderParts('smaragd'); if(!body) return supPa
   p.push(['quad',0,.27,-2.43,.52,.11,1,MAT.DECAL,[1,1,1],0,-0.15,Math.PI,0,1],['quad',0,.48,2.41,.52,.11,1,MAT.DECAL,[1,1,1],0,0,0,0,1]);
   for(const [x,z,r,w] of [[-.86,-1.42,.36,.27],[.86,-1.42,.36,.27],[-.87,1.46,.37,.32],[.87,1.46,.37,.32]]) p.push(...wheelParts(x,r,z,r,w,'sport'));
   return p; }
+
+/* ----- everyday cars: three present-day shapes from Blender, in many paint colours. They park along the streets, drive as traffic and can be taken. ----- */
+const CCAR={ kompakt:{name:'Kompaktwagen',L:4.06,W:1.77,H:1.47,belt:.99,gc:.17,wr:.31,ww:.21,zf:-1.24,zr:1.30,tw:.775,rim:'steel'},
+             limo:{name:'Limousine',L:4.72,W:1.84,H:1.43,belt:.96,gc:.15,wr:.33,ww:.23,zf:-1.44,zr:1.42,tw:.80,rim:'sport'},
+             suv:{name:'SUV',L:4.46,W:1.88,H:1.67,belt:1.14,gc:.22,wr:.36,ww:.25,zf:-1.34,zr:1.36,tw:.815,rim:'sport'} };
+const CAR_NAMES={fidele:'Fidèle',smaragd:'Smaragd',kompakt:'Kompaktwagen',limo:'Limousine',suv:'SUV'};
+const CAR_COLS=[[.42,.04,.05],[.03,.06,.15],[.6,.61,.63],[.025,.025,.03],[.72,.72,.7],[.06,.17,.13],[.5,.27,.06],[.12,.22,.4],[.27,.28,.3],[.45,.42,.36]];
+const CITY_CACHE={};
+function cityParts(type,ci=0,lod=false){ const k=type+'|'+ci+'|'+(lod?1:0); if(CITY_CACHE[k]) return CITY_CACHE[k]; const C=CCAR[type], col=CAR_COLS[ci%CAR_COLS.length]; let p;
+  const body=lod?null:blenderParts(type);
+  if(body){ p=body.map(q=>q[14]==='paint'?[q[0],q[1],q[2],q[3],q[4],q[5],q[6],q[7],col,q[9],q[10],q[11],q[12],q[13],'']:q);
+    for(const [x,z] of [[-C.tw,C.zf],[C.tw,C.zf],[-C.tw,C.zr],[C.tw,C.zr]]) p.push(...wheelParts(x,C.wr,z,C.wr,C.ww,C.rim)); }
+  else { // far away (or without the Blender data): a simple stand-in with the same proportions
+    p=[['rbox',0,(C.gc+C.belt)/2+.02,0,C.W,C.belt-C.gc,C.L,MAT.PAINT+.25,col,.6],['rbox',0,(C.belt+C.H)/2-.03,.2,C.W*.84,C.H-C.belt+.06,C.L*.5,MAT.GLASSO,[.02,.025,.03],0],
+       ['box',0,C.belt-.2,C.L/2-.01,C.W*.7,.06,.03,MAT.EMI,[1,.05,.03],1.5,0,0,0,0,'tail'],['box',0,C.belt-.2,-C.L/2+.01,C.W*.7,.05,.03,MAT.EMI,[.85,.92,1],2,0,0,0,0,'head']];
+    for(const [x,z] of [[-C.tw,C.zf],[C.tw,C.zf],[-C.tw,C.zr],[C.tw,C.zr]]) p.push(['cylX',x,C.wr,z,C.ww,C.wr*2,C.wr*2,MAT.TYRE,COL.black,0]); }
+  return CITY_CACHE[k]=compileParts(p,MESHIDX); }

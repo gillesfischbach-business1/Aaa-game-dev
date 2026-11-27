@@ -16,7 +16,11 @@ function sedanParts(col){ return compileParts([
   ['box',-.6,.68,-2.16,.38,.12,.03,MAT.EMI,[.9,.9,.85],.6],['box',.6,.68,-2.16,.38,.12,.03,MAT.EMI,[.9,.9,.85],.6],
   ['box',-.65,.74,2.16,.32,.12,.03,MAT.EMI,[1,.05,.03],1.5],['box',.65,.74,2.16,.32,.12,.03,MAT.EMI,[1,.05,.03],1.5],
   ...wheelParts(-.78,.32,-1.35,.32,.2,'steel'),...wheelParts(.78,.32,-1.35,.32,.2,'steel'),...wheelParts(-.78,.32,1.35,.32,.2,'steel'),...wheelParts(.78,.32,1.35,.32,.2,'steel')],MESHIDX); }
-function sedan(x,z,ry=0){ if(!SEDANS) SEDANS=[[.55,.05,.06],[.1,.12,.2],[.75,.75,.76],[.15,.3,.5],[.06,.06,.065],[.5,.45,.4]].map(sedanParts); partsAt(pick(SEDANS),x,0,z,ry); }
+/* A parked car is not scenery but a thing in the world: it can be taken and driven, and a car you leave stays where you left it. */
+const PARKCARS=[];
+function parkCar(car,col,x,z,h){ const V=VEH[car]||VEH.kompakt, alongX=Math.abs(Math.sin(h))>.7, a=alongX?V.half[1]:V.half[0], b=alongX?V.half[0]:V.half[1];
+  const k={car,col,x,z,h,c:addCol(x-a,z-b,x+a,z+b,'car')}; PARKCARS.push(k); return k; }
+function sedan(x,z,ry=0){ parkCar(pick(['kompakt','kompakt','limo','suv','kompakt','limo']),(rnd()*CAR_COLS.length)|0,x,z,ry); }
 function lamp(x,z,col,style='modern'){ const s=Math.sign(x)||1;
   if(style==='lantern'){ S('cylY',x,1.9,z,.12,3.8,.12,MAT.STD+.5,[.05,.05,.06],.8); S('box',x-s*.35,3.9,z,.7,.05,.05,MAT.STD+.5,[.05,.05,.06],.8);
     S('box',x-s*.65,3.62,z,.3,.42,.3,MAT.GLASSO,[.03,.03,.03],0); const o=S('box',x-s*.65,3.6,z,.24,.34,.24,MAT.EMI,col,7); lightAt(o,x-s*.65,3.4,z,col,30,16); return; }

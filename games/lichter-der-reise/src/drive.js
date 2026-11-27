@@ -1,9 +1,12 @@
 /* ===== Free driving: arcade vehicle physics, collisions, traffic ===== */
 const VEH={
  fidele:{max:33,rev:9,accel:7.5,brake:16,grip:5.5,steer:.62,wb:2.55,half:[.86,2.1],cam:[4.0,11.5],eng:[34,1.4],mass:1.4},
- smaragd:{max:64,rev:12,accel:17,brake:26,grip:9,steer:.55,wb:2.85,half:[1.0,2.35],cam:[3.2,10.5],eng:[50,1.25],mass:1}
+ smaragd:{max:64,rev:12,accel:17,brake:26,grip:9,steer:.55,wb:2.85,half:[1.0,2.35],cam:[3.2,10.5],eng:[50,1.25],mass:1},
+ kompakt:{max:44,rev:10,accel:9,brake:20,grip:7.5,steer:.6,wb:2.54,half:[.9,2.03],cam:[3.3,9.6],eng:[38,1.3],mass:1.1},
+ limo:{max:54,rev:11,accel:11.5,brake:22,grip:8,steer:.56,wb:2.86,half:[.93,2.36],cam:[3.3,10.2],eng:[44,1.3],mass:1.2},
+ suv:{max:47,rev:10,accel:9.5,brake:20,grip:6.5,steer:.58,wb:2.7,half:[.95,2.23],cam:[3.8,10.6],eng:[40,1.35],mass:1.4}
 };
-function newCar(car,x,z,h){ return {car,x,z,h,v:0,lat:0,steer:0,yawRate:0,roll:0,pitch:0,spin:0,brake:false,bump:0}; }
+function newCar(car,x,z,h,col=0){ if(!VEH[car]) car='fidele'; return {car,col,x,z,h,v:0,lat:0,steer:0,yawRate:0,roll:0,pitch:0,spin:0,brake:false,bump:0}; }
 const _cols=[];
 function stepCar(c,thr,brk,steerIn,dt,boost){ const V=VEH[c.car];
   // longitudinal
@@ -44,7 +47,7 @@ function stepCar(c,thr,brk,steerIn,dt,boost){ const V=VEH[c.car];
 // ---------- traffic ----------
 const TRAFFIC=[]; let TRAFFIC_PARTS=null;
 const TCOL=[[.55,.05,.06],[.1,.12,.2],[.75,.75,.76],[.15,.3,.5],[.06,.06,.065],[.5,.45,.4],[.85,.82,.75],[.2,.35,.25]];
-function trafficParts(){ if(!TRAFFIC_PARTS) TRAFFIC_PARTS=TCOL.map(c=>sedanParts(c)); return TRAFFIC_PARTS; }
+function trafficParts(){ if(!TRAFFIC_PARTS){ TRAFFIC_PARTS=[]; let k=0; for(const t of ['kompakt','limo','suv','kompakt']) for(let q=0;q<3;q++) TRAFFIC_PARTS.push(cityParts(t,(k++*3+1)%CAR_COLS.length,false)); } return TRAFFIC_PARTS; }
 function laneOffset(e){ return e.lanes>1?5:2.1; }
 function spawnTraffic(px,pz){ const E=graph.edges; if(!E.length) return;
   for(let tries=0;tries<12&&TRAFFIC.length<SET.gfx.traffic;tries++){ const e=E[(Math.random()*E.length)|0]; const t=Math.random(); const x=lerp(e.a.x,e.b.x,t), z=lerp(e.a.z,e.b.z,t); const d=Math.hypot(x-px,z-pz);

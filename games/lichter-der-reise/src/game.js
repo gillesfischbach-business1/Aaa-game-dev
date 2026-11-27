@@ -44,10 +44,10 @@ function drawParts(parts,X,Y,Z,yaw,o={}){ const c=Math.cos(yaw), s=Math.sin(yaw)
     if(tag==='spin'){ rx+=spin; if(z<0) ry+=steer; }
     else { y+=-z*pitch+x*roll; rz+=-roll; rx-=pitch; if(tag==='tail') p*=o.brake?2.6:1; if(tag==='head') p*=o.headOn===false?0.05:1; }
     P(m,X+x*c+z*s,Y+y,Z-x*s+z*c,yaw+ry,sx,sy,sz,mat,r,g,b,p,rx,rz,slot); } }
-function carParts(car){ return car==='fidele'?VAN_P:SUP_P; }
-function drawCar(c,people,lightsOn){ drawParts(carParts(c.car),c.x,0,c.z,c.h,{pitch:c.pitch,roll:c.roll,spin:-c.spin,steer:c.steer,brake:c.brake,headOn:lightsOn});
-  if(people){ const pp=c.car==='smaragd'?people:(people===PEOPLE_SUP?PEOPLE_VAN:null); if(pp) drawParts(pp,c.x,0,c.z,c.h,{pitch:c.pitch,roll:c.roll}); }
-  const fx=-Math.sin(c.h), fz=-Math.cos(c.h); const L=c.car==='fidele'?2.1:2.3; const k=envCur.lamps;
+function carParts(c,lod){ return CCAR[c.car]?cityParts(c.car,c.col|0,!!lod):c.car==='fidele'?VAN_P:SUP_P; }
+function drawCar(c,people,lightsOn){ drawParts(carParts(c),c.x,0,c.z,c.h,{pitch:c.pitch,roll:c.roll,spin:-c.spin,steer:c.steer,brake:c.brake,headOn:lightsOn});
+  if(people&&!CCAR[c.car]){ const pp=c.car==='smaragd'?people:(people===PEOPLE_SUP?PEOPLE_VAN:null); if(pp) drawParts(pp,c.x,0,c.z,c.h,{pitch:c.pitch,roll:c.roll}); }
+  const fx=-Math.sin(c.h), fz=-Math.cos(c.h); const L=VEH[c.car].half[1]; const k=envCur.lamps;
   if(lightsOn) Lt(c.x+fx*(L+5),.9,c.z+fz*(L+5),26*k+2,22*k+2,16*k+1.5,22);
   Lt(c.x-fx*L,.6,c.z-fz*L,c.brake?6:1.2,.05,.02,5); }
 
@@ -120,8 +120,16 @@ function showEnd(good){ $('endO').hidden=false; $('btnRethink').hidden=good; $('
 function freeRoam(){ $('endO').hidden=true; G.mission=MISSIONS.length-1; G.hour=9; G.camMode='chase'; nextMission(); }
 function loadBest(){ try{ return +localStorage.getItem('ldr_best3')||0 }catch(e){ return 0 } }
 function saveBest(v){ try{ if(v>loadBest()) localStorage.setItem('ldr_best3',String(v)) }catch(e){} }
+/* Change cars. Standing next to a parked car you take that one and leave yours at the kerb; otherwise the two story cars swap as before. */
+function nearestParked(pl,r){ let b=null, bd=r; for(const k of PARKCARS){ const d=Math.hypot(k.x-pl.x,k.z-pl.z); if(d<bd){ bd=d; b=k; } } return b; }
 function swapCar(){ const pl=G.player; if(G.state!=='drive') return; if(Math.abs(pl.v)>3){ toast('Zum Wechseln erst anhalten'); return; }
-  const other=G.parked&&Math.hypot(G.parked.x-pl.x,G.parked.z-pl.z)<40?G.parked:null; const name=pl.car==='fidele'?'smaragd':'fidele';
+  const t=nearestParked(pl,6.5);
+  if(t){ PARKCARS.splice(PARKCARS.indexOf(t),1); removeCol(t.c); parkCar(pl.car,pl.col|0,pl.x,pl.z,pl.h);
+    G.player=newCar(t.car,t.x,t.z,t.h,t.col); G.camYaw=G.player.h; toast('Ihr fahrt jetzt: '+(CAR_NAMES[t.car]||t.car)); Audio_.chime(); return; }
+  const story=pl.car==='fidele'||pl.car==='smaragd';
+  const other=G.parked&&Math.hypot(G.parked.x-pl.x,G.parked.z-pl.z)<40?G.parked:null;
+  if(!story){ if(!other){ toast('Kein Auto in der Nähe. Stellt euch neben ein geparktes Auto.'); return; } parkCar(pl.car,pl.col|0,pl.x,pl.z,pl.h); G.player=newCar(other.car,other.x,other.z,other.h); G.parked=null; G.camYaw=G.player.h; toast('Ihr fahrt jetzt: '+CAR_NAMES[other.car]); Audio_.chime(); return; }
+  const name=pl.car==='fidele'?'smaragd':'fidele';
   const left=newCar(pl.car,pl.x,pl.z,pl.h); const rx=Math.cos(pl.h), rz=-Math.sin(pl.h);
   G.player=newCar(name,other?other.x:pl.x+rx*3.4,other?other.z:pl.z+rz*3.4,other?other.h:pl.h); G.parked=left; G.camYaw=G.player.h;
   toast(name==='smaragd'?'Ihr fahrt jetzt den Smaragd':'Ihr fahrt jetzt Fidèle'); Audio_.chime(); }
@@ -177,7 +185,7 @@ function update(dt){
 function collect(x,z){ G.light++; G.total++; Audio_.pickup(G.light%6); burst(x,1.1,z,8,[1,.85,.4],4,.5,.07,2,9); }
 function setT(el,v){ if(el&&el._v!==v){ el._v=v; el.textContent=v; } } /* write the DOM only when the text really changed */
 function updateHUD(){ const pl=G.player; setT(UI.lightN,G.light); setT(UI.speedN,Math.round(Math.abs(pl.v)*(SET.ctl.unit==='mph'?2.237:3.6))); setT($('speedU'),SET.ctl.unit==='mph'?'mph':'km/h'); const hh=Math.floor(G.hour), mm=Math.floor((G.hour-hh)*60);
-  setT(UI.clock,String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')); setT(UI.carName,pl.car==='fidele'?'Fidèle':'Smaragd');
+  setT(UI.clock,String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')); setT(UI.carName,CAR_NAMES[pl.car]||pl.car);
   setT(UI.boostHint,G.boostT>0?'Lichtstoß aktiv':(G.light>=5?'Lichtstoß bereit':'Lichtstoß ab 5'));
   const t=currentTarget();
   if(t){ const dx=t.x-pl.x, dz=t.z-pl.z; setT(UI.objDist,Math.round(Math.hypot(dx,dz))+' m'); const ang=Math.atan2(dx,-dz)+pl.h; UI.objArrow.style.transform='rotate('+ang+'rad)'; UI.objArrow.hidden=false; }
@@ -243,7 +251,7 @@ function buildFrame(){
     G.camK=tHit<(G.camK||1)?tHit:lerp(G.camK||1,tHit,.04);
     const bk=back*G.camK; cam.pos=[pl.x+sx*bk+rr(-sh,sh),ch*lerp(1.25,1,G.camK)+Math.abs(pl.v)*.012+rr(-sh,sh),pl.z+sz*bk]; cam.tgt=[pl.x-sx*14,1.2,pl.z-sz*14]; cam.fov=lerp(cam.fov,56+SET.gfx.fov+(G.boostT>0?10:0)+Math.abs(pl.v)*.16,.08);
     if(G.view){ // 1 = from the dashboard, 2 = from the front bumper: you sit in the car instead of watching it
-      const E=window.__eye||(G.view===1?(pl.car==='fidele'?[0,1.62,-.9]:[0,1.05,-.6]):[0,pl.car==='fidele'?.85:.55,-(V.half[1]+.25)]); const c=Math.cos(pl.h), s=Math.sin(pl.h);
+      const CC2=CCAR[pl.car]; const E=window.__eye||(G.view===1?(CC2?[0,CC2.belt+.2,CC2.zf+.3]:pl.car==='fidele'?[0,1.62,-.9]:[0,1.05,-.6]):[0,CC2?.62:pl.car==='fidele'?.85:.55,-(V.half[1]+.25)]); const c=Math.cos(pl.h), s=Math.sin(pl.h);
       const hb=Math.sin(G.time*11)*.0035*Math.min(1,Math.abs(pl.v)/12)+rr(-sh,sh)*.5; const look=(pl.steer||0)*7;
       cam.pos=[pl.x+E[0]*c+E[2]*s,E[1]+hb,pl.z-E[0]*s+E[2]*c]; cam.tgt=[cam.pos[0]-s*30+c*look,E[1]-.9-(pl.pitch||0)*20,cam.pos[2]-c*30-s*look]; cam.fov=lerp(cam.fov,(G.view===1?70:74)+SET.gfx.fov+(G.boostT>0?9:0)+Math.abs(pl.v)*.12,.1); } }
   else if(G.camMode==='orbit'){ const a=G.time*.1; cam.pos=[pl.x+Math.sin(a)*10,2.6,pl.z+Math.cos(a)*10]; cam.tgt=[pl.x,1.1,pl.z]; cam.fov=50; }
@@ -274,6 +282,9 @@ function buildFrame(){
   const lightsOn=E.lamps>.3;
   drawCar(pl,PEOPLE_SUP,lightsOn);
   if(G.parked) drawCar(G.parked,G.state==='drive'?null:VAL_SUP,false);
+  { let near=null, nd=6.5; for(const k of PARKCARS){ const d=Math.hypot(k.x-pl.x,k.z-pl.z); if(d>170) continue; if(d<nd){ nd=d; near=k; } drawParts(carParts(k,d>42),k.x,0,k.z,k.h,{headOn:false}); }
+    // a soft glow under the car you could take, and a one-time hint
+    if(near&&G.state==='drive'&&Math.abs(pl.v)<3){ { const fx2=-Math.sin(near.h), fz2=-Math.cos(near.h), Ln=VEH[near.car].half[1]+.5; for(const e of [-1,1]) P(MESHIDX.sph,near.x+fx2*Ln*e,.35,near.z+fz2*Ln*e,0,.22,.22,.22,MAT.EMI,1,.78,.35,3+2*Math.sin(t*5)); } if(G.nearCar!==near){ G.nearCar=near; toast(isTouch?'Auto nehmen: ⇄ antippen':'Auto nehmen: Taste '+String(SET.ctl.keys.swap).toUpperCase()); } } else if(!near) G.nearCar=null; }
   for(const c of TRAFFIC){ drawParts(c.parts,c.x,0,c.z,c.h,{spin:-c.spin,headOn:lightsOn}); if(Math.hypot(c.x-cam.pos[0],c.z-cam.pos[2])<90){ const cs=Math.cos(c.h), sn=Math.sin(c.h); const lx=-.38, lz=.15; if(!c.look) c.look=pedLook();
     P(MESHIDX.head,c.x+lx*cs+lz*sn,1.2,c.z-lx*sn+lz*cs,c.h,.19,.23,.21,MAT.SKIN,...c.look.skin,0); P(MESHIDX.head,c.x+lx*cs+(lz+.02)*sn,1.28,c.z-lx*sn+(lz+.02)*cs,c.h,.21,.14,.23,MAT.STD+.85,...c.look.hair,0); P(MESHIDX.rbox,c.x+lx*cs+(lz+.05)*sn,.88,c.z-lx*sn+(lz+.05)*cs,c.h,.42,.42,.24,MAT.STD+.9,...c.look.top,0); } }
   drawHumans(cam.pos[0],cam.pos[2]);

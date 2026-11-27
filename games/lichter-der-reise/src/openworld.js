@@ -48,6 +48,7 @@ const CC=32, CELL=64;
 function addCol(x0,z0,x1,z1,tag){ const c={x0:Math.min(x0,x1),z0:Math.min(z0,z1),x1:Math.max(x0,x1),z1:Math.max(z0,z1),tag};
   for(let gx=Math.floor(c.x0/CC);gx<=Math.floor(c.x1/CC);gx++) for(let gz=Math.floor(c.z0/CC);gz<=Math.floor(c.z1/CC);gz++){ const k=gx+','+gz; let a=colliders.get(k); if(!a){ a=[]; colliders.set(k,a); } a.push(c); } return c; }
 function colsNear(x,z,out){ out.length=0; const gx=Math.floor(x/CC), gz=Math.floor(z/CC); for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ const a=colliders.get((gx+i)+','+(gz+j)); if(a) for(const c of a) if(!out.includes(c)) out.push(c); } return out; }
+function removeCol(c){ if(!c) return; for(let gx=Math.floor(c.x0/CC);gx<=Math.floor(c.x1/CC);gx++) for(let gz=Math.floor(c.z0/CC);gz<=Math.floor(c.z1/CC);gz++){ const a=colliders.get(gx+','+gz); if(a){ const i=a.indexOf(c); if(i>=0) a.splice(i,1); } } }
 function boxCol(x,z,w,d,ry=0){ const sw=Math.abs(Math.cos(ry))*w+Math.abs(Math.sin(ry))*d, sd=Math.abs(Math.sin(ry))*w+Math.abs(Math.cos(ry))*d; return addCol(x-sw/2,z-sd/2,x+sw/2,z+sd/2); }
 function mapRect(kind,x0,z0,x1,z1){ mapItems.push({kind,x0:Math.min(x0,x1),z0:Math.min(z0,z1),x1:Math.max(x0,x1),z1:Math.max(z0,z1)}); }
 function node(x,z){ const k=Math.round(x)+','+Math.round(z); let n=graph.nodes.get(k); if(!n){ n={x,z,edges:[]}; graph.nodes.set(k,n); } return n; }
@@ -73,8 +74,7 @@ function roadRect(x0,z0,x1,z1,marks=true){ const cx=(x0+x1)/2, cz=(z0+z1)/2, w=M
     if(r<.3) S('quad',x,.016,z,1.5,4.6,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.Z30); else if(r<.5) S('quad',x,.016,z,1.1,3.4,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.ARROW);
     else if(r<.62){ const [bx,bz]=at(sgn*(L/2-13),sgn*(hw-3)); S('quad',bx,.016,bz,1.0,1.6,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.BIKE); }
     // parked cars: groups of 2-4 in the parking lanes, none near the junctions
-    for(const sq of [-1,1]){ let t=-L/2+13; while(t<L/2-16){ if(rnd()<.45){ const n=2+((rnd()*3)|0); for(let k=0;k<n&&t<L/2-14;k++){ const [x,z]=at(t,sq*(hw-1.12)); GRP={x,z,ax};
-            sedan(x,z,ax?(sq>0?Math.PI/2:-Math.PI/2):(sq>0?0:Math.PI)); GRP=null; if(ax) addCol(x-2.15,z-.9,x+2.15,z+.9); else addCol(x-.9,z-2.15,x+.9,z+2.15); t+=5.6; } t+=rr(3,9); } else t+=rr(8,16); } }
+    for(const sq of [-1,1]){ let t=-L/2+13; while(t<L/2-16){ if(rnd()<.3){ const n=1+((rnd()*3)|0); for(let k=0;k<n&&t<L/2-14;k++){ const [x,z]=at(t,sq*(hw-1.12)); sedan(x,z,ax?(sq>0?-Math.PI/2:Math.PI/2):(sq>0?Math.PI:0)); t+=5.7; } t+=rr(3,9); } else t+=rr(8,16); } }
     // signs on the pavement at the ends: pedestrian crossing, and sometimes 30 or no parking
     for(const e of [-1,1]){ const sq=e; const [x,z]=at(e*(L/2-5.4),sq*(hw+.7)); const fr=ax?(e>0?-Math.PI/2:Math.PI/2):(e>0?Math.PI:0);
       roadSign(x,z,fr,rnd()<.75?SLOT.SG_PED:SLOT.SG_ONEWAY); if(rnd()<.4){ const [x2,z2]=at(e*(L/2-15),sq*(hw+.7)); roadSign(x2,z2,fr,rnd()<.5?SLOT.SG_30:SLOT.SG_NOPARK); } } } }
@@ -342,7 +342,7 @@ function genSparks(){ sparksAll=[]; for(const r of roadsList){ const len=Math.ma
     const along=(r.x1-r.x0)>(r.z1-r.z0); const x=along?r.x0+t*(r.x1-r.x0):(r.x0+r.x1)/2+rr(-3,3), z=along?(r.z0+r.z1)/2+rr(-3,3):r.z0+t*(r.z1-r.z0);
     sparksAll.push({x,y:1.1,z,ph:rnd()*6,alive:true}); } } }
 
-function buildWorld(env){ seed=4242; statics=[]; globalStatics=[]; colliders=new Map(); cells=new Map(); roadsList=[]; mapItems=[]; graph={nodes:new Map(),edges:[]};
+function buildWorld(env){ seed=4242; PARKCARS.length=0; statics=[]; globalStatics=[]; colliders=new Map(); cells=new Map(); roadsList=[]; mapItems=[]; graph={nodes:new Map(),edges:[]};
   genGround(); genCity('lux',env); genValley(env); genMotorway(env); genCity('ehv',env); genCanal(); genSparks();
   statics=bakeWarp(statics);
   // tiles are bucketed into the cell of their coarse chunk, so the two levels of detail switch together

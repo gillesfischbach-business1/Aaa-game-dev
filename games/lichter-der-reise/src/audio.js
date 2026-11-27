@@ -50,7 +50,8 @@ class Engine extends AudioWorkletProcessor{
     return true; } }
 registerProcessor('engine',Engine);`;
 
-const GEARS={ fidele:{idle:850,red:4600,ratios:[3.8,2.2,1.45,1.05,.8],final:4.1,wheel:.3,up:3800,down:1500},
+const PETROL={idle:800,red:6400,ratios:[3.6,2.1,1.4,1.05,.82,.66],final:3.9,wheel:.33,up:5400,down:1700};
+const GEARS={ kompakt:PETROL, limo:PETROL, suv:PETROL, fidele:{idle:850,red:4600,ratios:[3.8,2.2,1.45,1.05,.8],final:4.1,wheel:.3,up:3800,down:1500},
               smaragd:{idle:1100,red:7200,ratios:[3.4,2.6,2.0,1.6,1.3,1.05,.85,.68],final:3.6,wheel:.36,up:6600,down:2400} };
 const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,amb:.6}, worklet:false, eng:{}, gear:1, rpm:850, shiftT:0, mood:0, musicOn:false, nextNote:0, step:0,
  init(){ if(this.ctx) return; try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const c=this.ctx=new AC({latencyHint:'interactive'});

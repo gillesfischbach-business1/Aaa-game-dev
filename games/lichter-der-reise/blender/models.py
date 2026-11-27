@@ -150,6 +150,9 @@ def materials():
         shoe=mat('shoe', (0.85, 0.85, 0.82), 0.0, 0.6),
         beanie=mat('beanie', (0.06, 0.06, 0.07), 0.0, 0.95),
         pink=mat('frame_pink', (0.85, 0.5, 0.6), 0.0, 0.3),
+        carpaint=mat('paint_car', (0.5, 0.06, 0.07), 0.5, 0.25),
+        gdark=mat('glass_dark', (0.015, 0.02, 0.025), 0.0, 0.06),
+        plate=mat('plate', (0.85, 0.7, 0.1), 0.0, 0.5),
     )
 
 # ---------------------------------------------------------------- van "Fidèle"
@@ -267,6 +270,78 @@ def build_sup(M):
     box('dash', (1.2, .3, .14), (0, gy(-.55), .74), M['carbon'], md, bevel=.03)
     cyl('steer', .16, .03, (-.33, gy(-.38), .82), M['carbon'], md, rot=(1.2, 0, 0), verts=24)
 
+# ---------------------------------------------------------------- everyday cars (generic present-day shapes, no real model)
+def beam(name, p0, p1, thick, material, model):
+    """a bar between two points given in game coordinates (x, y_up, z)"""
+    a = Vector((p0[0], -p0[2], p0[1])); b = Vector((p1[0], -p1[2], p1[1])); d = b - a
+    o = box(name, (thick[0], d.length, thick[1]), tuple((a + b) / 2), material, model, bevel=min(thick) * .3)
+    o.rotation_euler = d.to_track_quat('Y', 'Z').to_euler(); return o
+
+def build_city_car(M, md, L, W, H, hood, belt, gc, wr, zf, zr, kind):
+    h = L / 2; w = W / 2
+    tail = belt - .03 if kind == 'sedan' else belt + .05
+    st = [(-h, w * .60, gc + .17, hood - .22, 4, 1), (-h + .05, w * .80, gc + .08, hood - .13, 5, 1), (-h + .24, w * .955, gc + .02, hood - .05, 6, .98),
+          (zf - .12, w, gc, hood, 7, .96), (zf + .5, w, gc, belt - .05, 7, .94), (zf + .95, w, gc, belt, 8, .93), (.1, w, gc, belt + .012, 8, .93),
+          (zr - .3, w, gc, belt + .03, 8, .93), (zr + .38, w * .99, gc + .01, tail, 7, .94), (h - .22, w * .945, gc + .04, tail - .02, 6, .96),
+          (h - .05, w * .82, gc + .1, tail - .09, 5, 1), (h, w * .64, gc + .19, tail - .2, 4, 1)]
+    body = loft(md + '_body', st, 40, M['carpaint'], md)
+    cuts = []
+    for x in (-1, 1):
+        for z in (zf, zr): cuts.append(cutter(None, (x * w, gy(z), wr), kind='cyl', r=wr + .065, depth=.56, rot=(0, math.pi / 2, 0)))
+        for z in (zf + .58, .16, zr - .5): cuts.append(cutter((.05, .014, belt - gc - .16), (x * w, gy(z), (gc + belt) / 2 + .06)))   # door gaps
+    boolean(body, cuts)
+    for p in body.data.polygons: p.use_smooth = True
+    # glasshouse: one dark glass volume with a painted roof and pillars
+    a = zf + .46
+    c, b = {'sedan': (zr - .42, zr + .5), 'hatch': (zr + .22, zr + .62), 'suv': (zr + .3, zr + .64)}[kind]
+    gb = belt - .07
+    cab = [(a, w * .86, gb, belt + .02, 5, .92), (a + .36, w * .885, gb, belt + (H - belt) * .56, 5, .85), (a + .8, w * .9, gb, H - .025, 5, .8), (.25, w * .9, gb, H - .005, 5, .8),
+           (c, w * .9, gb, H - .03, 5, .8), (c + (b - c) * .62, w * .885, gb, belt + (H - belt) * .5, 5, .85), (b, w * .86, gb, belt + .03, 5, .92)]
+    loft(md + '_cabin', cab, 32, M['gdark'], md)
+    roof = [(a + .7, w * .64, H - .09, H - .03, 6, 1), (a + .92, w * .715, H - .06, H + .008, 6, 1), (.25, w * .72, H - .05, H + .02, 6, 1), (c - .08, w * .715, H - .06, H + .006, 6, 1), (c + .14, w * .64, H - .1, H - .04, 6, 1)]
+    loft(md + '_roof', roof, 24, M['carpaint'], md)
+    for x in (-1, 1):
+        beam('pillar_a', (x * w * .83, belt - .01, a + .03), (x * w * .70, H - .04, a + .8), (.075, .06), M['carpaint'], md)
+        beam('pillar_c', (x * w * .70, H - .05, c + .02), (x * w * .83, belt, b - .03), (.11 if kind != 'sedan' else .09, .06), M['carpaint'], md)
+        beam('pillar_b', (x * w * .86, belt - .02, .16), (x * w * .715, H - .04, .2), (.075, .03), M['plastic'], md)
+        beam('roofrail', (x * w * .71, H - .03, a + .82), (x * w * .71, H - .03, c - .02), (.05, .035), M['carpaint'], md)
+        # wheel arch liners
+        for z in (zf, zr):
+            o = cyl('arch', wr + .06, .26, (x * (w - .16), gy(z), wr), M['plastic'], md, rot=(0, math.pi / 2, 0), verts=32)
+            bm = bmesh.new(); bm.from_mesh(o.data); bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -0.02], context='VERTS'); bm.to_mesh(o.data); bm.free()
+        # lights: slim LED headlamps with a dark housing, tail clusters joined by a light bar
+        box('hl_house', (.46, .16, .115), (x * w * .60, gy(-h + .07), hood - .2), M['plastic'], md, bevel=.02, rot=(0, 0, -x * .22))
+        box('hl_led', (.36, .05, .045), (x * w * .60, gy(-h - .005), hood - .185), M['led'], md, bevel=.012, rot=(0, 0, -x * .22))
+        box('hl_drl', (.2, .04, .02), (x * w * .62, gy(-h - .005), hood - .245), M['head'], md, rot=(0, 0, -x * .22))
+        box('fog', (.2, .04, .05), (x * w * .66, gy(-h + .02), gc + .2), M['plastic'], md, bevel=.01)
+        box('tl_cluster', (.34, .07, .12), (x * w * .62, gy(h - .02), tail - .16), M['tail'], md, bevel=.02, rot=(0, 0, x * .2))
+        box('ind_r', (.12, .05, .04), (x * w * .74, gy(h - .04), tail - .26), M['orange'], md, rot=(0, 0, x * .3))
+        box('mirror', (.2, .12, .11), (x * (w + .09), gy(a + .2), belt + .07), M['carpaint'], md, bevel=.035)
+        box('mirror_arm', (.12, .05, .03), (x * (w - .0), gy(a + .2), belt + .03), M['plastic'], md)
+        for z in (zf + .95, .5): box('handle', (.025, .17, .035), (x * (w * .985), gy(z), belt - .12), M['chrome'], md, bevel=.01)
+        box('sill', (.05, zr - zf - 2 * wr - .25, .1), (x * (w - .02), gy((zf + zr) / 2), gc + .07), M['plastic'], md, bevel=.02)
+        if kind == 'suv':
+            box('rail', (.035, 1.5, .035), (x * w * .62, gy(.35), H + .05), M['steel'], md, bevel=.012)
+            for z in (zf, zr):
+                o = cyl('clad', wr + .1, .1, (x * (w - .03), gy(z), wr), M['plastic'], md, rot=(0, math.pi / 2, 0), verts=32)
+                bm = bmesh.new(); bm.from_mesh(o.data); bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < 0.0 or v.co.length < wr + .03], context='VERTS'); bm.to_mesh(o.data); bm.free()
+    box('tl_bar', (W * .62, .05, .035), (0, gy(h - .005), tail - .15), M['tail'], md, bevel=.01)
+    box('grille', (W * .46, .06, .13), (0, gy(-h - .0), gc + .34), M['plastic'], md, bevel=.02)
+    box('intake', (W * .62, .06, .09), (0, gy(-h + .015), gc + .16), M['plastic'], md, bevel=.02)
+    box('badge', (.09, .02, .05), (0, gy(-h - .012), hood - .2), M['chrome'], md, bevel=.01)
+    box('plate_f', (.5, .02, .11), (0, gy(-h - .035), gc + .34), M['plate'], md)
+    box('plate_r', (.5, .02, .11), (0, gy(h + .012), tail - .3), M['plate'], md)
+    box('diffuser', (W * .66, .08, .1), (0, gy(h - .03), gc + .14), M['plastic'], md, bevel=.02)
+    box('wiper', (.6, .03, .02), (-.1, gy(a + .1), belt + .06), M['plastic'], md)
+    # a simple interior so the cabin is not empty when seen through the open sides of the glass
+    box('floor', (W * .8, zr - zf, .05), (0, gy((zf + zr) / 2), gc + .12), M['trim'], md)
+
+CITY_CARS = {  # L, W, H, bonnet, beltline, ground clearance, wheel radius, front axle z, rear axle z, shape
+    'kompakt': (4.06, 1.77, 1.47, .93, .99, .17, .31, -1.24, 1.30, 'hatch'),
+    'limo': (4.72, 1.84, 1.43, .90, .96, .15, .33, -1.44, 1.42, 'sedan'),
+    'suv': (4.46, 1.88, 1.67, 1.08, 1.14, .22, .36, -1.34, 1.36, 'suv'),
+}
+
 # ---------------------------------------------------------------- characters
 def skin_body(name, chain, material, model, sub=2):
     """chain: list of (vertex position, radius) pairs plus edges; builds an organic shape with the Skin modifier."""
@@ -379,7 +454,7 @@ def export(path):
 
 def place_for_render():
     """Lay the models out side by side and render a preview with Cycles."""
-    off = {'fidele': (-2.6, 0), 'smaragd': (2.6, 0), 'leo_stand': (-0.6, -4.2), 'mira_stand': (0.4, -4.2), 'leo_seat': (99, 0), 'mira_seat': (99, 0)}
+    off = {'fidele': (-2.6, 60), 'smaragd': (2.6, 60), 'kompakt': (-2.4, -1), 'limo': (0, -1), 'suv': (2.4, -1), 'leo_stand': (-0.6, 64.2), 'mira_stand': (0.4, 64.2), 'leo_seat': (99, 0), 'mira_seat': (99, 0)}
     for o in bpy.context.scene.objects:
         if 'model' in o:
             dx, dy = off.get(o['model'], (0, 0)); o.location.x += dx; o.location.y += dy
@@ -397,6 +472,7 @@ def place_for_render():
 def main():
     reset(); M = materials()
     build_van(M); build_sup(M)
+    for md, spec in CITY_CARS.items(): build_city_car(M, md, *spec)
     for who in ('leo', 'mira'):
         person(M, who, seated=False); person(M, who, seated=True)
     export(OUT)
