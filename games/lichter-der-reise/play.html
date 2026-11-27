@@ -1426,6 +1426,27 @@ function fillBlock(x0,z0,x1,z1,st,env){
       else if(r2<.75&&(st===STYLE.brick||st===STYLE.strijp)) for(let q=0;q<4;q++) parkedBike(ax?tx+q*.7-1:tx,ax?tz:tz+q*.7-1,ax?0:Math.PI/2); }
     for(const [bx,bz] of [[x0+.5,z0+.5],[x1-.5,z0+.5],[x0+.5,z1-.5],[x1-.5,z1-.5]]) if(rnd()<.5) bollard(bx,bz); }
 }
+/* a car-free lane where a street used to be: pavers, a row of trees, benches, lanterns and strings of lights between the houses */
+const PLACES={lanes:[],squares:[]};
+function lane(x0,z0,x1,z1,alongX,env){ const cx=(x0+x1)/2, cz=(z0+z1)/2, L=alongX?x1-x0:z1-z0; PLACES.lanes.push({x:cx,z:cz,alongX});
+  S('box',cx,.06,cz,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.5,.46,.4]); mapRect('block',x0,z0,x1,z1);
+  for(const e of [0,1]){ const t=e?L/2-.5:-L/2+.5; for(let q=-4.5;q<=4.5;q+=1.8) bollard(alongX?cx+t:cx+q,alongX?cz+q:cz+t); if(alongX) addCol(cx+t-.2,z0,cx+t+.2,z1); else addCol(x0,cz+t-.2,x1,cz+t+.2); }
+  for(let t=-L/2+9;t<L/2-6;t+=12){ const k=Math.round(t/12); const px=alongX?cx+t:cx, pz=alongX?cz:cz+t;
+    if(k%2===0){ tree(px,pz,rr(5.5,7.5)); S('cylY',px,.14,pz,2.2,.06,2.2,MAT.STD+.5,[.12,.1,.09],.3); }
+    else { bench(alongX?px:px+1.6,alongX?pz+1.6:pz,alongX?0:Math.PI/2); const o=S('cylY',px,1.6,pz,.1,3.2,.1,MAT.STD+.5,[.05,.05,.06],.8); const l=S('sph',px,3.35,pz,.36,.36,.36,MAT.EMI,env.lamp,6); lightAt(l,px,3.2,pz,env.lamp,22,13); }
+    // string lights sagging between the facades
+    for(let q=-5;q<=5;q+=1.25){ const sag=4.9-(1-(q/5.4)**2)*.7; S('sphLo',alongX?px+3:px+q,sag,alongX?pz+q:pz+3,.22,.22,.22,MAT.EMI,pick([[1,.75,.4],[1,.55,.3],[1,.85,.6]]),9); } }
+}
+/* an open town square instead of a block: fountain, ring of trees, market stalls, lanterns */
+function townSquare(x0,z0,x1,z1,env){ const cx=(x0+x1)/2, cz=(z0+z1)/2; PLACES.squares.push({x:cx,z:cz}); S('box',cx,.06,cz,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.52,.47,.4]); mapRect('block',x0,z0,x1,z1);
+  for(const zz of [z0+.14,z1-.14]) S('box',cx,.09,zz,x1-x0,.2,.28,MAT.STONE,[.5,.49,.47]); for(const xx of [x0+.14,x1-.14]) S('box',xx,.09,cz,.28,.2,z1-z0,MAT.STONE,[.5,.49,.47]);
+  S('cylY',cx,.45,cz,9,.9,9,MAT.STONE,[.6,.58,.55]); S('cylY',cx,.82,cz,7.8,.2,7.8,MAT.WATER,[.03,.1,.12]); S('cylY',cx,1.4,cz,1.2,2.8,1.2,MAT.STONE,[.62,.6,.56]); S('sph',cx,3.1,cz,2.2,.7,2.2,MAT.STONE,[.62,.6,.56]); addCol(cx-4.5,cz-4.5,cx+4.5,cz+4.5);
+  for(let k=0;k<10;k++){ const a=k/10*6.283+.3, r=24; const tx=cx+Math.cos(a)*r, tz=cz+Math.sin(a)*r; tree(tx,tz,rr(6.5,9)); addCol(tx-.35,tz-.35,tx+.35,tz+.35); S('cylY',tx,.14,tz,2.4,.06,2.4,MAT.STD+.5,[.12,.1,.09],.3); }
+  for(let k=0;k<6;k++){ const a=k/6*6.283, r=14; const sx=cx+Math.cos(a)*r, sz=cz+Math.sin(a)*r; const col=pick([[.7,.12,.1],[.12,.32,.22],[.14,.22,.5],[.85,.62,.18],[.8,.78,.7]]);
+    S('box',sx,.5,sz,2.6,1,1.4,MAT.STD+.8,[.4,.28,.16],0,-a); S('box',sx,2.5,sz,3.2,.08,2.2,MAT.STD+.95,col,0,-a,0,.12); for(const d of [-1.3,1.3]) S('cylY',sx+Math.cos(a+1.57)*d,1.25,sz+Math.sin(a+1.57)*d,.07,2.5,.07,MAT.STD+.5,[.2,.2,.2],.6);
+    for(let q=0;q<4;q++) S('sphLo',sx+Math.cos(a+1.57)*(q*.6-.9),1.12,sz+Math.sin(a+1.57)*(q*.6-.9),.3,.24,.3,MAT.STD+.7,pick([[.85,.2,.1],[.9,.6,.1],[.3,.5,.12],[.7,.1,.3]])); addCol(sx-1.3,sz-1.3,sx+1.3,sz+1.3); }
+  for(const [dx,dz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ const lx=cx+dx*30, lz=cz+dz*30; S('cylY',lx,1.9,lz,.12,3.8,.12,MAT.STD+.5,[.05,.05,.06],.8); const l=S('sph',lx,4,lz,.44,.44,.44,MAT.EMI,env.lamp,7); lightAt(l,lx,3.8,lz,env.lamp,30,18); bench(lx-dx*3,lz-dz*3,dx*dz>0?.78:-.78); }
+}
 function parkBlock(x0,z0,x1,z1){ S('box',(x0+x1)/2,.05,(z0+z1)/2,x1-x0,.1,z1-z0,MAT.GRASS,[.1,.19,.07]); mapRect('park',x0,z0,x1,z1);
   for(let k=0;k<14;k++){ const tx=rr(x0+4,x1-4), tz=rr(z0+4,z1-4); tree(tx,tz,rr(6,9)); addCol(tx-.4,tz-.4,tx+.4,tz+.4); }
   S('cylY',(x0+x1)/2,.4,(z0+z1)/2,10,.8,10,MAT.STONE,[.6,.58,.55]); S('cylY',(x0+x1)/2,.75,(z0+z1)/2,8.6,.2,8.6,MAT.WATER,[.03,.1,.12]); addCol((x0+x1)/2-5,(z0+z1)/2-5,(x0+x1)/2+5,(z0+z1)/2+5); }
@@ -1523,12 +1544,22 @@ function genMotorway(env){ const M=MOTORWAY, cx=(M.x0+M.x1)/2, L=M.x1-M.x0;
 // ---------- city grid ----------
 function genCity(key,env){ const C=CITY[key], n=C.n, P=OW.P, h=OW.W/2;
   const X=i=>C.cx+i*P, Z=j=>C.cz+j*P;
+  // ----- break the grid: some street segments become car-free lanes, so junctions turn into T-junctions and blocks differ -----
+  const hsh=(a,b,c)=>{ const v=Math.sin(a*127.1+b*311.7+c*74.7+(key==='lux'?1.3:7.9))*43758.5453; return v-Math.floor(v); };
+  const plain=(i,j)=>{ if(i<-n||i>=n||j<-n||j>=n) return false; if(key==='lux'){ if(i<=-2||j>=3||(i===-1&&j===-3)) return false; return ['center','west','altstadt','kirchberg'].includes(luxDistrict(i,j)); }
+    if(j>=0&&j<=2) return false; return ['brick','strijp'].includes(ehvDistrict(i,j)); };
+  const remH=new Set(), remV=new Set(), usedN=new Set(), nk=(i,j)=>i+','+j;
+  for(let j=-n+1;j<n;j++) for(let i=-n+1;i<n-1;i++){ if(j===0||hsh(i,j,1)>.3) continue; if(!plain(i,j-1)||!plain(i,j)) continue; if(usedN.has(nk(i,j))||usedN.has(nk(i+1,j))) continue; remH.add(nk(i,j)); usedN.add(nk(i,j)); usedN.add(nk(i+1,j)); }
+  for(let i=-n+1;i<n;i++) for(let j=-n+1;j<n-1;j++){ if(j===0||j===-1||hsh(i,j,2)>.3) continue; if(!plain(i-1,j)||!plain(i,j)) continue; if(usedN.has(nk(i,j))||usedN.has(nk(i,j+1))) continue; remV.add(nk(i,j)); usedN.add(nk(i,j)); usedN.add(nk(i,j+1)); }
+  const squares=new Set(); for(let i=-n+1;i<n-1;i++) for(let j=-n+1;j<n-1;j++) if(plain(i,j)&&hsh(i,j,3)<.09) squares.add(nk(i,j));
   const hasH=(i,j)=>{ // horizontal road on line j between columns i and i+1
+    if(remH.has(nk(i,j))) return false;
     if(key==='lux'&&i===-3&&j<3&&j>-5) return LUX_BRIDGES.includes(j); return true; };
-  const hasV=(i,j)=>{ if(key==='ehv'&&j===1) return EHV_BRIDGES.includes(i); return true; };
+  const hasV=(i,j)=>{ if(remV.has(nk(i,j))) return false; if(key==='ehv'&&j===1) return EHV_BRIDGES.includes(i); return true; };
   for(let i=-n;i<=n;i++) for(let j=-n;j<=n;j++){ const x=X(i), z=Z(j); S('box',x,-.04,z,OW.W,.1,OW.W,MAT.ROAD+.6,[.075,.075,.08]); mapRect('road',x-h,z-h,x+h,z+h);
     if(key==='lux'&&i===-3&&j<3&&j>-5) continue;
     for(const [dx,dz,ry] of [[0,-h-2.2,0],[0,h+2.2,0],[-h-2.2,0,Math.PI/2],[h+2.2,0,Math.PI/2]]){ if((dz<0&&j===-n)||(dz>0&&j===n)||(dx<0&&i===-n)||(dx>0&&i===n)) continue;
+      if((dz<0&&remV.has(nk(i,j-1)))||(dz>0&&remV.has(nk(i,j)))||(dx<0&&remH.has(nk(i-1,j)))||(dx>0&&remH.has(nk(i,j)))) continue;
       S('quad',x+dx,.016,z+dz,OW.W-.6,3.2,1,MAT.DECAL,[.9,.9,.88],0,ry,-Math.PI/2,0,SLOT.ZEBRA); } }
   for(let j=-n;j<=n;j++) for(let i=-n;i<n;i++){ if(!hasH(i,j)) continue; const x0=X(i)+h, x1=X(i+1)-h, z=Z(j);
     const bridge=key==='lux'&&i===-3&&j<3; if(!bridge) roadRect(x0,z-h,x1,z+h); else { roadsList.push({x0,z0:z-h,x1,z1:z+h}); mapRect('road',x0,z-h,x1,z+h); S('box',(x0+x1)/2,-.04,z,x1-x0,.1,OW.W,MAT.ROAD+.6,[.075,.075,.08]); }
@@ -1536,6 +1567,8 @@ function genCity(key,env){ const C=CITY[key], n=C.n, P=OW.P, h=OW.W/2;
   for(let i=-n;i<=n;i++) for(let j=-n;j<n;j++){ if(!hasV(i,j)) continue; const z0=Z(j)+h, z1=Z(j+1)-h, x=X(i);
     if(key==='ehv'&&j===1){ roadsList.push({x0:x-h,z0,x1:x+h,z1}); mapRect('road',x-h,z0,x+h,z1); S('box',x,-.04,(z0+z1)/2,OW.W,.1,z1-z0,MAT.ROAD+.6,[.075,.075,.08]); } else roadRect(x-h,z0,x+h,z1);
     edge(node(x,Z(j)),node(x,Z(j+1))); }
+  for(const k of remH){ const [i,j]=k.split(',').map(Number); lane(X(i)+h,Z(j)-h,X(i+1)-h,Z(j)+h,true,env); }
+  for(const k of remV){ const [i,j]=k.split(',').map(Number); lane(X(i)-h,Z(j)+h,X(i)+h,Z(j+1)-h,false,env); }
   // dead ends at the valley / canal
   if(key==='lux') for(let j=-n+1;j<3;j++) if(!LUX_BRIDGES.includes(j)) for(const [x,d] of [[X(-3)+h,1],[X(-2)-h,-1]]){ S('box',x+d*.4,.5,Z(j),.5,1,OW.W,MAT.STD+.5,[.95,.95,.95]); addCol(x+d*.15,Z(j)-h,x+d*.65,Z(j)+h); }
   // outer ring wall so cars stay on the map (except the motorway exit)
@@ -1554,6 +1587,7 @@ function genCity(key,env){ const C=CITY[key], n=C.n, P=OW.P, h=OW.W/2;
     if(key==='lux'&&i===-1&&j===-3){ S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.5,.47,.42]); mapRect('block',x0,z0,x1,z1); cathedral((x0+x1)/2,(z0+z1)/2); continue; }
     if(key==='lux'&&i===-2&&j===0){ fillBlock(x0,z0,x1,z1,STYLE.altstadt,env); continue; }
     if(d==='park'){ parkBlock(x0,z0,x1,z1); continue; }
+    if(squares.has(nk(i,j))){ townSquare(x0,z0,x1,z1,env); continue; }
     if(d==='glow'){ glowPlaza(x0,z0,x1,z1); continue; }
     if(d==='lichtturm'){ S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.5,.5,.5]); mapRect('block',x0,z0,x1,z1); lichtturm((x0+x1)/2,(z0+z1)/2); continue; }
     if(d==='ufo'){ mapRect('block',x0,z0,x1,z1); ufo((x0+x1)/2,(z0+z1)/2); continue; }
