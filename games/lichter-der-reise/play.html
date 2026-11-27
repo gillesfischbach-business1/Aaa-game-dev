@@ -2082,9 +2082,13 @@ const ENGINE_SPEC={
  // cyl, loop rpm points, exhaust formants [Hz, gain, width], harmonic roll-off [on-load, off-load], cylinder unevenness, noise level [on, off], noise band, level
  fidele:{cyl:4,pts:[850,1350,2000,2800,3700,4600],form:[[105,.6,55],[250,1,110],[600,.95,230],[1400,.5,520],[2600,.18,900]],roll:[.95,1.5],rough:.34,noise:[.16,.07],band:[1100,3600],clatter:.55,wobble:.014,gain:.62},
  petrol:{cyl:4,pts:[800,1500,2400,3400,4500,5600,6400],form:[[165,.55,75],[400,1,170],[900,.9,340],[2100,.5,750],[3800,.16,1200]],roll:[.8,1.4],rough:.1,noise:[.09,.035],band:[700,4400],clatter:0,wobble:.005,gain:.52},
- // 4.0 l twin-turbo flat-plane V8 behind the cabin, 7000 rpm limit. Road tests describe it as mechanical and purposeful rather than sonorous:
- // a coarse lower end, a lot of turbo noise over a muted exhaust, and an audible whine from the electric motors
- smaragd:{cyl:8,flat:true,flatGain:3.3,pts:[1100,1900,2800,3800,4800,5800,6500,7000],form:[[120,.7,70],[260,1,120],[560,.95,220],[1150,.8,420],[2300,.42,800],[4200,.1,1200]],roll:[.86,1.42],rough:.24,noise:[.17,.07],band:[700,4200],clatter:0,wobble:.006,gain:.56} };
+ // 4.0 l twin-turbo flat-plane V8 behind the cabin, 7000 rpm limit. Tuned to measurements of a recording of the real car (only numbers were taken from it):
+ // ord = level in dB of each half engine order (the firing order is the 8th entry, the strong 4th entry is the flat-plane bank pulse),
+ // env = tone balance in dB over frequency: nearly all energy sits below 600 Hz, the exhaust is muted above, turbo noise fills the top
+ smaragd:{cyl:8,flat:true,pts:[1100,1900,2800,3800,4800,5800,6500,7000],
+  ord:[-28,-16.4,-28,-6,-28,-21,-28,0,-28,-13.7,-28,-11.9,-28,-16.5,-28,-8.2,-28,-25.5],ordTail:-24,
+  env:[[40,-8],[90,-2],[160,0],[320,0],[640,-6],[1280,-12],[2560,-18],[5120,-22],[9000,-34]],
+  form:[],roll:[1,1],rough:.2,noise:[.1,.05],band:[450,3800],clatter:0,wobble:.006,gain:.58} };
 const LOOP_SR=22050, LOOP_N=16384;
 function fftInverse(re,im){ const n=re.length; // in-place radix-2, returns the real signal in re
   for(let i=1,j=0;i<n;i++){ let b=n>>1; for(;j&b;b>>=1) j^=b; j^=b; if(i<j){ let t=re[i]; re[i]=re[j]; re[j]=t; t=im[i]; im[i]=im[j]; im[j]=t; } }
@@ -2092,11 +2096,11 @@ function fftInverse(re,im){ const n=re.length; // in-place radix-2, returns the 
     for(let i=0;i<n;i+=len){ let cr=1, ci=0; for(let k=0;k<len/2;k++){ const a=i+k, b=a+len/2; const xr=re[b]*cr-im[b]*ci, xi=re[b]*ci+im[b]*cr; re[b]=re[a]-xr; im[b]=im[a]-xi; re[a]+=xr; im[a]+=xi; const t=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=t; } } } }
 function engineLoop(ctx,S,rpm,load,seed){ const N=LOOP_N, re=new Float32Array(N), im=new Float32Array(N); let sd=seed>>>0; const rnd=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
   const K=Math.max(1,Math.round(rpm/120*N/LOOP_SR)), fc=K*LOOP_SR/N; // whole engine cycles per loop -> seamless
-  const form=f=>{ let g=.05; for(const [f0,a,w] of S.form){ const d=(f-f0)/w; g+=a*Math.exp(-d*d); } return g; };
+  const form=f=>{ if(S.env){ const E=S.env, lf=Math.log(f); let i=0; while(i<E.length-2&&f>E[i+1][0]) i++; const w=Math.min(1,Math.max(0,(lf-Math.log(E[i][0]))/(Math.log(E[i+1][0])-Math.log(E[i][0])))); return Math.pow(10,(E[i][1]+(E[i+1][1]-E[i][1])*w)/20); } let g=.05; for(const [f0,a,w] of S.form){ const d=(f-f0)/w; g+=a*Math.exp(-d*d); } return g; };
   const put=(bin,a,ph)=>{ if(bin<1||bin>=N/2) return; const r=a*Math.cos(ph), q=a*Math.sin(ph); re[bin]+=r; im[bin]+=q; re[N-bin]+=r; im[N-bin]-=q; };
   const roll=S.roll[load?0:1], bright=load?1:.55;
   for(let h=1;h*fc<9000;h++){ const f=h*fc, n=h/S.cyl, firing=h%S.cyl===0; const ph=rnd()*6.283*(firing&&n<=3?.3:1); // the phase depends only on h: equal in every loop of this engine
-    let a=1/Math.pow(Math.max(n,.5),roll); if(!firing) a*=S.rough*((S.flat&&h%(S.cyl/2)===0)?(S.flatGain||2.4):1)*(load?1:1.3);
+    let a=1/Math.pow(Math.max(n,.5),roll); if(S.ord) a=Math.pow(10,(h<=S.ord.length?S.ord[h-1]:S.ordTail)/20)*(firing||load?1:1.3)*(h>S.cyl&&!load?.7:1); else if(!firing) a*=S.rough*((S.flat&&h%(S.cyl/2)===0)?(S.flatGain||2.4):1)*(load?1:1.3);
     a*=form(f)*(f>1200?bright:1); put(h*K,a,ph); }
   fftInverse(re,im); const tone=re.slice();
   // noise: band-limited, pulsing with the firing (intake and exhaust), plus injector clatter for the diesel
@@ -2177,7 +2181,7 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
      if(L.key==='smaragd'&&this.prevLoad>.6&&load<.1&&this.rpm>4300){ for(let k=0;k<3;k++) setTimeout(()=>{ if(this.ctx) this.noiseBurst(.05,'bandpass',900+Math.random()*900,.1); },90+k*130+Math.random()*60); } }
    this.prevLoad=load;
    // turbos: a hiss that grows with load and revs, and a short sigh from the blow-off valves when the throttle shuts
-   if(this.turbo){ const tb=on&&ek==='smaragd'?clamp((this.rpm-2200)/4000,0,1)*load:0; this.turbo.g.gain.setTargetAtTime(tb*.14,t,.16); this.turbo.f.frequency.setTargetAtTime(1900+this.rpm*.62,t,.14);
+   if(this.turbo){ const tb=on&&ek==='smaragd'?clamp((this.rpm-2200)/4000,0,1)*load:0; this.turbo.g.gain.setTargetAtTime(tb*.09,t,.16); this.turbo.f.frequency.setTargetAtTime(1900+this.rpm*.62,t,.14);
      if(ek==='smaragd'&&(this.tbPrev||0)>.45&&load<.15) this.noiseBurst(.3,'highpass',2400,.1); this.tbPrev=tb; }
    this.whine.frequency.setTargetAtTime(420+v*46,t,.08); this.whineG.gain.setTargetAtTime(on&&ek==='smaragd'?(.008+clamp(v/45,0,1)*.022)*(.55+.45*load):0,t,.15);
    // tyres and wind grow with speed; braking adds a scrub
