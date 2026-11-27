@@ -106,7 +106,7 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    if(this.shiftT>0){ this.shiftT-=dt; }
    else if(rpm>(thr>.5?G.up:G.up*.72)&&this.gear<G.ratios.length){ this.gear++; this.shiftT=car==='fidele'?.35:.12;
      if(car==='smaragd'&&thr>.5&&rpm>4200&&Math.random()<.6) this.spit(1+((Math.random()*2)|0),.9); } // full-throttle upshift: the ignition cut spits unburnt fuel into the exhaust
-   else if(rpm<G.down&&this.gear>1){ this.gear--; this.shiftT=.2; if(car==='smaragd'&&v>12&&Math.random()<.45) this.spit(2+((Math.random()*3)|0),.55); }
+   else if(rpm<G.down&&this.gear>1){ this.gear--; this.shiftT=.2; if(car==='smaragd'&&v>12&&Math.random()<.45) this.spit(2+((Math.random()*3)|0),.7); }
    rpm=Math.max(G.idle,wheelRpm*G.ratios[this.gear-1]*G.final);
    if(v<1.2) rpm=G.idle+thr*(G.red-G.idle)*.35;
    if(this.shiftT>0) rpm*=car==='fidele'?.82:.9;
@@ -150,7 +150,7 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    const f=c.createBiquadFilter(); f.type=type; f.frequency.setValueAtTime(freq,t); if(sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo,t+dur); const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
    s.connect(f); f.connect(g); g.connect(dest||this.bus.fx); s.start(t,Math.random()*2); s.stop(t+dur+.05); },
  /* exhaust spit: n short cracks, each a band of noise with a low thump; the game adds the flame */
- spit(n,vol){ if(!this.ctx) return; for(let k=0;k<n;k++) setTimeout(()=>{ if(!this.ctx) return; this.noiseBurst(.035+Math.random()*.03,'bandpass',500+Math.random()*700,.3*vol); this.thump(110+Math.random()*40,.05,.22*vol); this.spitFlag=(this.spitFlag||0)+1; },k*(70+Math.random()*60)); },
+ spit(n,vol){ if(!this.ctx) return; for(let k=0;k<n;k++) setTimeout(()=>{ if(!this.ctx) return; this.noiseBurst(.04+Math.random()*.03,'bandpass',500+Math.random()*700,.75*vol); this.noiseBurst(.012,'highpass',1800,.4*vol); this.thump(110+Math.random()*40,.06,.55*vol); this.spitFlag=(this.spitFlag||0)+1; },k*(70+Math.random()*60)); },
  /* overrun burble: one soft irregular crack from the exhaust */
  crackle(vol){ this.noiseBurst(.025+Math.random()*.03,'bandpass',350+Math.random()*900,.1*vol,this.bus.engine); if(Math.random()<.4) this.thump(90+Math.random()*50,.04,.08*vol); },
  thump(freq,dur,vol){ const c=this.ctx; if(!c) return; const t=c.currentTime; const o=c.createOscillator(); o.frequency.setValueAtTime(freq,t); o.frequency.exponentialRampToValueAtTime(freq*.45,t+dur); const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur); o.connect(g); g.connect(this.bus.fx); o.start(t); o.stop(t+dur+.05); },
