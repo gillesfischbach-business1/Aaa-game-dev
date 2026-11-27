@@ -2147,7 +2147,7 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    this.live={key,out,v,S,load:0}; },
  stopEngine(){ const L=this.live; if(!L) return; const t=this.ctx.currentTime; L.out.gain.setTargetAtTime(0,t,.05); for(const o of L.v) for(const k of ['on','off']){ try{ o[k].src.stop(t+.4); }catch(e){} } setTimeout(()=>{ try{ L.out.disconnect(); }catch(e){} },600); this.live=null; },
  resume(){ if(this.ctx&&this.ctx.state!=='running') this.ctx.resume().catch(()=>{}); },
- applyVolumes(){ if(!this.ctx) return; const t=this.ctx.currentTime; this.master.gain.setTargetAtTime(this.muted?0:this.vol.master,t,.05);
+ applyVolumes(){ if(this.song) this.song.volume=this.songVol(); if(!this.ctx) return; const t=this.ctx.currentTime; this.master.gain.setTargetAtTime(this.muted?0:this.vol.master,t,.05);
    for(const k of ['music','engine','fx','amb']) this.bus[k].gain.setTargetAtTime(this.vol[k],t,.05); },
  setMuted(m){ this.muted=m; this.applyVolumes(); },
  setVolume(k,v){ this.vol[k]=v; this.applyVolumes(); },
@@ -2210,8 +2210,18 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
  // ---- generative score: warm pads, plucked piano-like arpeggios, reverb ----
  MOODS:[{ch:[[57,60,64],[53,57,60],[48,52,55],[55,59,62]],bpm:84},{ch:[[50,53,57],[46,50,53],[48,52,55],[45,48,52]],bpm:80},{ch:[[52,55,59],[48,52,55],[50,53,57],[47,50,54]],bpm:92},{ch:[[53,57,60],[57,60,64],[50,53,57],[55,59,62]],bpm:88},{ch:[[48,52,55,59],[53,57,60,64],[57,60,64,67],[55,59,62,65]],bpm:70}],
  m2f:m=>440*Math.pow(2,(m-69)/12),
- setMood(m){ this.mood=m; this.musicOn=true; },
- tick(){ if(!this.ctx||!this.musicOn) return; const c=this.ctx; const M=this.MOODS[this.mood]; const sp=60/M.bpm/2;
+ // ---- radio: real hip-hop instrumentals by Kontext ("Rest In Beats John Dope", CC BY 4.0, archive.org), streamed one at a time so start-up stays quick.
+ // If the files cannot be loaded the generated score below takes over again.
+ TRACKS:[['sky-blue','Sky Blue'],['june-2023','June 2023'],['stranger-things','Stranger Things'],['winter','Winter'],['july-2018','July 2018'],['october-2019','October 2019']],
+ song:null, songI:0, songOk:true, songFail:0,
+ songVol(){ return this.muted?0:Math.min(1,this.vol.master*this.vol.music*1.5); },
+ playSong(step){ if(!this.songOk) return; const T=this.TRACKS;
+   if(!this.song){ const a=new Audio(); a.preload='auto'; this.songI=(Math.random()*T.length)|0; step=0;
+     a.onended=()=>this.playSong(1); a.onerror=()=>{ if(++this.songFail>2){ this.songOk=false; this.song=null; } else this.playSong(1); };
+     a.onplaying=()=>{ this.songFail=0; if(typeof toast==='function') toast('♪ '+T[this.songI][1]+' · Kontext'); }; this.song=a; }
+   this.songI=(this.songI+step+T.length)%T.length; const a=this.song; a.src='https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/music/'+T[this.songI][0]+'.mp3'; a.volume=this.songVol(); const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); },
+ setMood(m){ this.mood=m; this.musicOn=true; if(!this.song) this.playSong(0); },
+ tick(){ if(!this.ctx||!this.musicOn) return; if(this.songOk&&this.song){ if(this.song.paused&&!document.hidden&&this.song.readyState>1){ const pr=this.song.play(); if(pr&&pr.catch) pr.catch(()=>{}); } this.nextNote=this.ctx.currentTime+.1; return; } const c=this.ctx; const M=this.MOODS[this.mood]; const sp=60/M.bpm/2;
    while(this.nextNote<c.currentTime+.3){ const t=this.nextNote-c.currentTime; const chord=M.ch[(this.step>>4)%M.ch.length]; const s=this.step%16;
      if(s===0){ chord.forEach(n=>this.pad(this.m2f(n-12),sp*16,t)); this.pluck(this.m2f(chord[0]-24),sp*12,t,.09); }
      if(s%2===0&&Math.random()<.85){ const n=chord[[0,1,2,1,2,0,1,2][(s>>1)%8]%chord.length]+12+(s>=8?12:0); this.pluck(this.m2f(n),sp*3,t,.035); }
@@ -2221,6 +2231,9 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=700; f.Q.value=.5; f.connect(g); g.connect(this.bus.music);
    for(const dt of [-9,0,9]){ const o=c.createOscillator(); o.type='sawtooth'; o.frequency.value=freq; o.detune.value=dt; o.connect(f); o.start(t); o.stop(t+dur+.05); } }
 };
+
+addEventListener('visibilitychange',()=>{ const a=Audio_.song; if(!a) return; if(document.hidden) a.pause(); else if(Audio_.musicOn){ const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); } });
+addEventListener('keydown',e=>{ if(e.code==='KeyN'&&Audio_.song&&Audio_.musicOn) Audio_.playSong(1); });
 
 /* ===== Open-world game: time of day, player, missions, events, camera, HUD ===== */
 const $=id=>document.getElementById(id);
@@ -2668,7 +2681,7 @@ function renderOptions(){ document.querySelectorAll('#optTabs button').forEach(b
     h+=row('Helligkeit',slider('o_exposure',-1.5,1.5,.1,g.exposure,v=>(v>0?'+':'')+(+v).toFixed(1)+' EV'));
     h+=row('Sichtfeld',slider('o_fov',-10,20,1,g.fov,v=>(v>0?'+':'')+v+'°'));
     h+=row('Vignette',toggle('o_vignette',g.vignette)); h+=row('Filmkorn',toggle('o_grain',g.grain)); h+=row('Bilder pro Sekunde anzeigen',toggle('o_fps',g.fps)); }
-  else if(optTab==='snd'){ h+=row('Gesamtlautstärke',slider('o_master',0,1,.01,s.master,pct)); h+=row('Musik',slider('o_music',0,1,.01,s.music,pct)); h+=row('Motoren',slider('o_engine',0,1,.01,s.engine,pct),'Diesel von Fidèle, V8 des Smaragd');
+  else if(optTab==='snd'){ h+=row('Gesamtlautstärke',slider('o_master',0,1,.01,s.master,pct)); h+=row('Musik',slider('o_music',0,1,.01,s.music,pct),'Hip-Hop von Kontext, „Rest In Beats John Dope“ (CC BY 4.0) · Taste N: nächstes Lied'); h+=row('Motoren',slider('o_engine',0,1,.01,s.engine,pct),'Diesel von Fidèle, V8 des Smaragd');
     h+=row('Effekte',slider('o_fx',0,1,.01,s.fx,pct)); h+=row('Umgebung',slider('o_amb',0,1,.01,s.amb,pct),'Stadt, Regen, Wind, Grillen'); h+=row('Stumm',toggle('o_mute',s.mute)); }
   else if(optTab==='ctl'){ for(const a in ACTION_LABEL) h+=row(ACTION_LABEL[a],`<button class="keybtn" data-act="${a}">${rebinding===a?'Taste drücken …':keyName(c.keys[a])}</button>`);
     h+=row('Lenkempfindlichkeit',slider('o_steer',.5,1.5,.05,c.steer,pct)); h+=row('Kamera-Abstand',slider('o_camd',.7,1.6,.05,c.camDist,pct)); h+=row('Kamera-Höhe',slider('o_camh',.6,1.6,.05,c.camHeight,pct));

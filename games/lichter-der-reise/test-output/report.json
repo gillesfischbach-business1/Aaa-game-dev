@@ -1,0 +1,190 @@
+{
+  "url": "http://localhost:8777/lichter-der-reise/index.html",
+  "passed": 9,
+  "failed": 1,
+  "results": [
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 15966,
+      "info": {
+        "title": "Lichter der Reise",
+        "webgpu": true,
+        "canvas": [
+          960,
+          540
+        ],
+        "cells": 1059,
+        "sparks": 186,
+        "nodes": 202,
+        "models": [
+          "fidele",
+          "kompakt",
+          "leo_seat",
+          "leo_stand",
+          "limo",
+          "mira_seat",
+          "mira_stand",
+          "smaragd",
+          "suv"
+        ]
+      },
+      "errors": []
+    },
+    {
+      "name": "rendering",
+      "ok": true,
+      "ms": 6981,
+      "info": {
+        "mean": 73.9,
+        "std": 46.9
+      },
+      "errors": []
+    },
+    {
+      "name": "options_menu",
+      "ok": true,
+      "ms": 31407,
+      "info": {
+        "low": {
+          "ms": 1,
+          "scale": 0.6
+        },
+        "kb": "x",
+        "persisted": true
+      },
+      "errors": []
+    },
+    {
+      "name": "prologue_and_controls",
+      "ok": true,
+      "ms": 17421,
+      "info": {
+        "moved": 35,
+        "turned": 1.03,
+        "mapOpen": true,
+        "swap": "fidele→smaragd",
+        "paused": true
+      },
+      "errors": []
+    },
+    {
+      "name": "save_load",
+      "ok": true,
+      "ms": 2,
+      "info": {
+        "ok": true,
+        "back": true,
+        "light": 0
+      },
+      "errors": []
+    },
+    {
+      "name": "story_playthrough",
+      "ok": true,
+      "ms": 3711,
+      "info": {
+        "minutes": 10,
+        "title": "Beide Städte leuchten.",
+        "light": 14,
+        "total": 38,
+        "stuck": 9,
+        "st1": "Error\n    at window.showEnd (eval at evaluate (:311:30), <anonymous>:1:80)\n    at http://localhost:8777/lichter-der-reise/index.html:2347:137 | state=ending m5",
+        "st2": "Error\n    at HTMLDivElement.set (eval at evaluate (:311:30), <anonymous>:1:392)\n    at showEnd (http://localhost:8777/lichter-der-reise/index.html:2349:41)\n    at window.showEnd (eval at evaluate (:311:30), <anonymous>:1:149)\n    at http://localhost:8777/lichter-der-reise/index.html:2347:137",
+        "pos": [
+          1863,
+          -20,
+          1.57
+        ],
+        "spots": [
+          [
+            -254,
+            231,
+            0
+          ],
+          [
+            -243,
+            83,
+            0
+          ],
+          [
+            -153,
+            78,
+            2
+          ],
+          [
+            -161,
+            -122,
+            3
+          ],
+          [
+            -164,
+            -104,
+            3
+          ],
+          [
+            1584,
+            0,
+            4
+          ],
+          [
+            1587,
+            0,
+            4
+          ],
+          [
+            1914,
+            -176,
+            4
+          ],
+          [
+            1944,
+            -116,
+            4
+          ]
+        ],
+        "states": 7
+      },
+      "errors": []
+    },
+    {
+      "name": "free_roam_stuck_scan",
+      "ok": false,
+      "ms": 5717,
+      "error": "{\"reached\":3,\"tries\":6,\"stuck\":23,\"spots\":[[-254,231,0],[-243,83,0],[-153,78,2],[-161,-122,3],[-164,-104,3],[1584,0,4],[1587,0,4],[1914,-176,4],[1944,-116,4],[1170,-9,6],[1173,-9,6],[1230,-6,6],[1442,9,6],[1505,-9,6],[1523,9,6],[1542,-9,6],[1552,9,6],[1550,-9,6],[1555,-2,6],[1561,-4,6],[1563,-153,6],[1648,-229,6],[1655,-262,6],[10,245,6],[-153,252,6],[-336,180,6],[-335,-24,6],[-329,-95,6],[918,9,6],[916,9,6],[855,-9,6],[821,9,6]]}",
+      "errors": []
+    },
+    {
+      "name": "performance",
+      "ok": true,
+      "ms": 34,
+      "info": {
+        "updateMs": 0.03,
+        "buildFrameMs": 0.39,
+        "instances": 2742,
+        "traffic": 0
+      },
+      "errors": []
+    },
+    {
+      "name": "locations",
+      "ok": true,
+      "ms": 42338,
+      "info": {
+        "count": 10
+      },
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "ok": true,
+      "ms": 9849,
+      "info": {
+        "touchVisible": true,
+        "speedAfterGas": 12,
+        "overflow": false
+      },
+      "errors": []
+    }
+  ]
+}

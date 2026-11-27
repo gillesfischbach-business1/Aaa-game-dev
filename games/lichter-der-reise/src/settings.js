@@ -76,7 +76,7 @@ function renderOptions(){ document.querySelectorAll('#optTabs button').forEach(b
     h+=row('Helligkeit',slider('o_exposure',-1.5,1.5,.1,g.exposure,v=>(v>0?'+':'')+(+v).toFixed(1)+' EV'));
     h+=row('Sichtfeld',slider('o_fov',-10,20,1,g.fov,v=>(v>0?'+':'')+v+'°'));
     h+=row('Vignette',toggle('o_vignette',g.vignette)); h+=row('Filmkorn',toggle('o_grain',g.grain)); h+=row('Bilder pro Sekunde anzeigen',toggle('o_fps',g.fps)); }
-  else if(optTab==='snd'){ h+=row('Gesamtlautstärke',slider('o_master',0,1,.01,s.master,pct)); h+=row('Musik',slider('o_music',0,1,.01,s.music,pct)); h+=row('Motoren',slider('o_engine',0,1,.01,s.engine,pct),'Diesel von Fidèle, V8 des Smaragd');
+  else if(optTab==='snd'){ h+=row('Gesamtlautstärke',slider('o_master',0,1,.01,s.master,pct)); h+=row('Musik',slider('o_music',0,1,.01,s.music,pct),'Hip-Hop von Kontext, „Rest In Beats John Dope“ (CC BY 4.0) · Taste N: nächstes Lied'); h+=row('Motoren',slider('o_engine',0,1,.01,s.engine,pct),'Diesel von Fidèle, V8 des Smaragd');
     h+=row('Effekte',slider('o_fx',0,1,.01,s.fx,pct)); h+=row('Umgebung',slider('o_amb',0,1,.01,s.amb,pct),'Stadt, Regen, Wind, Grillen'); h+=row('Stumm',toggle('o_mute',s.mute)); }
   else if(optTab==='ctl'){ for(const a in ACTION_LABEL) h+=row(ACTION_LABEL[a],`<button class="keybtn" data-act="${a}">${rebinding===a?'Taste drücken …':keyName(c.keys[a])}</button>`);
     h+=row('Lenkempfindlichkeit',slider('o_steer',.5,1.5,.05,c.steer,pct)); h+=row('Kamera-Abstand',slider('o_camd',.7,1.6,.05,c.camDist,pct)); h+=row('Kamera-Höhe',slider('o_camh',.6,1.6,.05,c.camHeight,pct));
