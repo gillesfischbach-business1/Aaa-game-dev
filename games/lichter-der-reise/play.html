@@ -193,6 +193,17 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
 .tbtn{transform:scale(var(--touch,1));transform-origin:bottom center}
 @media (max-width:560px){ .opt-row{grid-template-columns:1fr;gap:6px} #optBody{max-height:calc(100vh - 240px)} }
 
+/* leaderboard on the end screen */
+#lbWrap{margin:6px 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03)}
+.lb-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#lbName{flex:1 1 160px;min-width:0;height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--ink);font:600 15px Manrope,system-ui,sans-serif}
+#lbName:focus{outline:2px solid var(--gold);outline-offset:1px}
+.lb-more{color:var(--gold);font-size:13px;min-height:44px;display:inline-flex;align-items:center}
+.lb-msg{margin-top:8px;font-size:13px;color:#d6ccc0;min-height:18px}
+.lb-list{margin:8px 0 0;padding-left:22px;font-size:14px;display:grid;gap:4px}
+.lb-list li{padding-left:4px}.lb-list li b{float:right;font-weight:600;font-variant-numeric:tabular-nums;color:var(--gold)}
+.lb-note{margin-top:8px;font-size:12px;color:#b9aea3}
+
 </style>
 </head>
 <body>
@@ -270,6 +281,13 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
     <div id="albumWrap" hidden>
       <div class="eyebrow" style="margin-bottom:10px;color:var(--gold)">Das Album der Reise</div>
       <div class="album" id="album"></div>
+    </div>
+    <div id="lbWrap" hidden>
+      <div class="eyebrow" style="margin-bottom:8px;color:var(--gold)">Bestenliste</div>
+      <div class="lb-row"><input id="lbName" maxlength="16" placeholder="Spitzname" aria-label="Spitzname für die Bestenliste" autocomplete="off"><button class="btn sm" id="lbSend">Eintragen</button><a id="lbMore" class="lb-more" target="_blank" rel="noopener">Ganze Liste</a></div>
+      <div id="lbMsg" class="lb-msg" aria-live="polite"></div>
+      <ol id="lbList" class="lb-list"></ol>
+      <div class="lb-note">Gesendet werden nur Spitzname und Ergebnis, und nur wenn du auf „Eintragen“ tippst.</div>
     </div>
     <div class="row"><button class="btn" id="btnFree">Weiterfahren (freie Fahrt)</button><button class="btn ghost" id="btnAgain">Neues Spiel</button><button class="btn ghost" id="btnRethink" hidden>Entscheidung überdenken</button></div>
   </div>
@@ -2146,7 +2164,7 @@ let toastT=0; function toast(t){ UI.toast.textContent=t; UI.toast.classList.add(
 // ---------- flow ----------
 function fadeTo(v,ms=600){ UI.fade.style.transitionDuration=ms+'ms'; UI.fade.style.opacity=v; return new Promise(r=>setTimeout(r,ms)); }
 function placeAtStart(){ const b=LM.belval; G.player=newCar('fidele',b.x-8,b.z,Math.PI/2); G.parked=newCar('smaragd',b.x+4,b.z-.5,Math.PI/2); G.camYaw=G.player.h; }
-function startGame(){ G.light=0; G.total=0; G.boosts=0; G.hits=0; for(const s of sparksAll) s.alive=true; LM.lit=false; G.dyn=[]; TRAFFIC.length=0;
+function startGame(){ G.playT=0; G.light=0; G.total=0; G.boosts=0; G.hits=0; for(const s of sparksAll) s.alive=true; LM.lit=false; G.dyn=[]; TRAFFIC.length=0;
   placeAtStart(); G.hour=18.6; G.mission=-1; G.event=null; G.state='talk'; G.camMode='orbit'; UI.hud.hidden=true;
   say(STORY.prologue.concat(STORY.tut),()=>{ nextMission(); }); }
 function nextMission(){ G.mission++; setTimeout(autosave,500); G.state='drive'; G.camMode='chase'; UI.hud.hidden=false; UI.touch.classList.toggle('on',isTouch);
@@ -2176,6 +2194,7 @@ function showEnd(good){ $('endO').hidden=false; $('btnRethink').hidden=good; $('
     $('endStats').innerHTML=`<div><b>${G.light}</b><small>Funken entzündet</small></div><div><b>${G.total}</b><small>gesammelt</small></div><div><b>${G.boosts}</b><small>Lichtstöße</small></div><div><span class="stars">${'★'.repeat(stars)}<span class="dim">${'★'.repeat(3-stars)}</span></span><small>Leuchtkraft</small></div>`;
   } else { $('endEyebrow').textContent='Ein anderes Ende'; $('endTitle').textContent='Manche Dinge kann man nicht kaufen.';
     $('endText').textContent='Der Lichtturm bleibt dunkel, und der schnellste Wagen der Welt bringt euch nirgendwohin, wo ihr hinwollt. Vielleicht verdient diese Geschichte ein anderes Ende.'; $('endStats').innerHTML=''; }
+  lbShow(good);
   setTimeout(()=>{ const b=$(good?'btnFree':'btnRethink'); b&&b.focus&&b.focus(); },50); }
 function freeRoam(){ $('endO').hidden=true; G.mission=MISSIONS.length-1; G.hour=9; G.camMode='chase'; nextMission(); }
 function loadBest(){ try{ return +localStorage.getItem('ldr_best3')||0 }catch(e){ return 0 } }
@@ -2198,7 +2217,7 @@ function readInput(){ const K=SET.ctl.keys; let s=0,th=0,br=0; if(keys['arrowlef
 
 // ---------- update ----------
 function update(dt){
-  G.time+=dt; if(G.state==='drive'&&!G.event) G.hour+=dt*G.timeScale; if(G.hour>=24) G.hour-=24;
+  G.time+=dt; if(G.state==='drive'||G.state==='talk') G.playT=(G.playT||0)+dt; if(G.state==='drive'&&!G.event) G.hour+=dt*G.timeScale; if(G.hour>=24) G.hour-=24;
   const rain=envCur.rain||0; envAt(G.hour,envCur); envCur.rain=rain; if(!SET.gfx.shadows) envCur.shadow=0; if(G.event==='glow'){ envCur.wet=1; envCur.fog=Math.max(envCur.fog,.004); }
   if(LM.lit) envCur.windows*=1.3;
   if(barkTimer>0){ barkTimer-=dt; if(barkTimer<=0) UI.bark.classList.remove('show'); }
@@ -2409,9 +2428,9 @@ function applySettings(){
 // ---------- save games ----------
 const SLOTS=['auto','1','2','3'];
 function snapshot(){ const pl=G.player; let bits=''; for(let i=0;i<sparksAll.length;i+=6){ let v=0; for(let k=0;k<6;k++) if(sparksAll[i+k]&&!sparksAll[i+k].alive) v|=1<<k; bits+=String.fromCharCode(48+v); }
-  return {v:1,date:Date.now(),mission:G.mission,light:G.light,total:G.total,boosts:G.boosts,hits:G.hits,hour:G.hour,lit:!!LM.lit,
+  return {v:1,pt:Math.round(G.playT||0),date:Date.now(),mission:G.mission,light:G.light,total:G.total,boosts:G.boosts,hits:G.hits,hour:G.hour,lit:!!LM.lit,
     car:pl.car,x:pl.x,z:pl.z,h:pl.h,parked:G.parked?{car:G.parked.car,x:G.parked.x,z:G.parked.z,h:G.parked.h}:null,sparks:bits}; }
-function restore(s){ if(!s||s.v!==1) return false; G.light=s.light; G.total=s.total; G.boosts=s.boosts||0; G.hits=s.hits||0; G.hour=s.hour; LM.lit=!!s.lit; G.event=null; G.dyn=[]; TRAFFIC.length=0;
+function restore(s){ if(!s||s.v!==1) return false; G.playT=s.pt||0; G.light=s.light; G.total=s.total; G.boosts=s.boosts||0; G.hits=s.hits||0; G.hour=s.hour; LM.lit=!!s.lit; G.event=null; G.dyn=[]; TRAFFIC.length=0;
   for(let i=0;i<sparksAll.length;i++){ const c=s.sparks.charCodeAt(Math.floor(i/6))-48; sparksAll[i].alive=!(c>=0&&(c>>(i%6))&1); }
   G.player=newCar(s.car,s.x,s.z,s.h); G.parked=s.parked?newCar(s.parked.car,s.parked.x,s.parked.z,s.parked.h):null; G.camYaw=s.h;
   G.mission=s.mission-1; nextMission(); return true; }
@@ -2481,6 +2500,26 @@ function bindOptions(){ const on=(id,ev,fn)=>{ const e=$(id); if(e) e.addEventLi
 function formatOut(id,v){ const m={o_scale:x=>Math.round(x*100)+' %',o_view:x=>x+' m',o_traffic:x=>x+' Autos',o_exposure:x=>(x>0?'+':'')+(+x).toFixed(1)+' EV',o_fov:x=>(x>0?'+':'')+x+'°',o_timeSpeed:x=>x==0?'angehalten':x+'×',o_text:x=>x+' Zeichen/s'}; return (m[id]||pct)(v); }
 function handleRebind(k){ if(!rebinding) return false; if(k!=='escape'){ const other=actionOfKey(k); if(other&&other!==rebinding) SET.ctl.keys[other]=SET.ctl.keys[rebinding]; SET.ctl.keys[rebinding]=k; saveSettings(); } rebinding=null; renderOptions(); return true; }
 
+/* ===== Online leaderboard (optional). The game works without it; nothing is sent unless the player presses "Eintragen". =====
+   Only the chosen nickname and the result are transmitted: no account, no e-mail, no device identifiers. */
+const LB={ url:'', page:'' }; // set in build: the leaderboard service and its public page
+let lbSent=false;
+function lbFmt(t){ t=Math.max(0,Math.round(t)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); }
+function lbShow(good){ const w=$('lbWrap'); if(!w) return; if(!LB.url){ w.hidden=true; return; } w.hidden=false; lbSent=false;
+  $('lbSend').disabled=false; $('lbMsg').textContent='Zeit: '+lbFmt(G.playT||0)+' · '+G.light+' Funken'; $('lbMore').href=LB.page||'#'; $('lbMore').hidden=!LB.page;
+  try{ $('lbName').value=localStorage.getItem('ldr_nick')||''; }catch(e){} G.lbGood=good; lbLoad(); }
+async function lbLoad(){ const ol=$('lbList'); try{ const r=await fetch(LB.url+'?limit=5',{headers:{accept:'application/json'}}); if(!r.ok) throw 0; const d=await r.json();
+    ol.innerHTML=''; for(const s of (d.scores||[]).slice(0,5)){ const li=document.createElement('li'); const n=document.createElement('span'); n.textContent=s.nickname; const v=document.createElement('b'); v.textContent=s.sparks+' Funken · '+lbFmt(s.time_seconds); li.append(n,v); ol.append(li); }
+    if(!ol.children.length){ const li=document.createElement('li'); li.textContent='Noch keine Einträge. Sei die oder der Erste!'; ol.append(li); } }
+  catch(e){ ol.innerHTML=''; const li=document.createElement('li'); li.textContent='Die Bestenliste ist gerade nicht erreichbar.'; ol.append(li); } }
+async function lbSubmit(){ if(lbSent||!LB.url) return; const name=($('lbName').value||'').trim(); const msg=$('lbMsg');
+  if(!/^[\p{L}\p{N} _-]{2,16}$/u.test(name)){ msg.textContent='Bitte 2 bis 16 Zeichen: Buchstaben, Ziffern, Leerzeichen, _ oder -.'; return; }
+  $('lbSend').disabled=true; msg.textContent='Wird eingetragen …';
+  try{ const r=await fetch(LB.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({nickname:name,sparks:Math.min(200,G.light|0),time_seconds:clamp(Math.round(G.playT||0),60,36000),car:G.player.car,ending:G.lbGood?'good':'bad',device:isTouch?'mobile':'desktop'})});
+    const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||('Fehler '+r.status));
+    lbSent=true; try{ localStorage.setItem('ldr_nick',name); }catch(e){} msg.textContent='Eingetragen! Du stehst auf Platz '+d.rank+'.'; lbLoad(); }
+  catch(e){ msg.textContent='Das hat nicht geklappt: '+(e.message||'keine Verbindung')+'.'; $('lbSend').disabled=false; } }
+
 /* ===== Boot, UI wiring, input ===== */
 function initUI(){
   bindUI();
@@ -2512,7 +2551,7 @@ function initUI(){
   document.querySelectorAll('#optTabs button').forEach(b=>b.onclick=()=>{ optTab=b.dataset.tab; rebinding=null; renderOptions(); });
   $('btnContinue').onclick=()=>{ const s=readSlot('auto'); if(s){ goImmersive(); Audio_.init(); Audio_.resume(); $('title').hidden=true; restore(s); toast('Weiter, wo ihr aufgehört habt'); } };
   if(readSlot('auto')) $('btnContinue').hidden=false; $('btnPause').onclick=()=>togglePause(); $('btnResume').onclick=()=>togglePause();
-  $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('btnView').onclick=()=>cycleView(); $('mapClose').onclick=()=>toggleMap();
+  $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('lbSend').onclick=()=>lbSubmit(); $('lbName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') lbSubmit(); }); $('lbName').addEventListener('keyup',e=>e.stopPropagation()); $('btnView').onclick=()=>cycleView(); $('mapClose').onclick=()=>toggleMap();
   $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; const p=G.player; const n=nearestRoadPoint(p.x,p.z); p.x=n.x; p.z=n.z; p.v=0; p.lat=0; toast('Zurück auf die Straße'); };
   $('btnRestart').onclick=()=>{ $('pauseO').hidden=true; startGame(); };
   $('btnAgain').onclick=()=>{ $('endO').hidden=true; startGame(); };

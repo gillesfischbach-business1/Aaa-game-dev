@@ -3,7 +3,7 @@
 from pathlib import Path
 root = Path(__file__).parent
 src = root / 'src'
-order = ['meshes.js', 'shaders.js', 'atlas.js', 'cars.js', 'renderer.js', 'world.js', 'openworld.js', 'drive.js', 'humans.js', 'story.js', 'audio.js', 'game.js', 'settings.js', 'main.js']
+order = ['meshes.js', 'shaders.js', 'atlas.js', 'cars.js', 'renderer.js', 'world.js', 'openworld.js', 'drive.js', 'humans.js', 'story.js', 'audio.js', 'game.js', 'settings.js', 'online.js', 'main.js']
 import base64
 models = root / 'assets' / 'models.bin'
 js = ('const MODELS_B64="' + base64.b64encode(models.read_bytes()).decode() + '";\n' if models.exists() else '') + '\n'.join((src / f).read_text(encoding='utf-8') for f in order)

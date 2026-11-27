@@ -39,9 +39,9 @@ function applySettings(){
 // ---------- save games ----------
 const SLOTS=['auto','1','2','3'];
 function snapshot(){ const pl=G.player; let bits=''; for(let i=0;i<sparksAll.length;i+=6){ let v=0; for(let k=0;k<6;k++) if(sparksAll[i+k]&&!sparksAll[i+k].alive) v|=1<<k; bits+=String.fromCharCode(48+v); }
-  return {v:1,date:Date.now(),mission:G.mission,light:G.light,total:G.total,boosts:G.boosts,hits:G.hits,hour:G.hour,lit:!!LM.lit,
+  return {v:1,pt:Math.round(G.playT||0),date:Date.now(),mission:G.mission,light:G.light,total:G.total,boosts:G.boosts,hits:G.hits,hour:G.hour,lit:!!LM.lit,
     car:pl.car,x:pl.x,z:pl.z,h:pl.h,parked:G.parked?{car:G.parked.car,x:G.parked.x,z:G.parked.z,h:G.parked.h}:null,sparks:bits}; }
-function restore(s){ if(!s||s.v!==1) return false; G.light=s.light; G.total=s.total; G.boosts=s.boosts||0; G.hits=s.hits||0; G.hour=s.hour; LM.lit=!!s.lit; G.event=null; G.dyn=[]; TRAFFIC.length=0;
+function restore(s){ if(!s||s.v!==1) return false; G.playT=s.pt||0; G.light=s.light; G.total=s.total; G.boosts=s.boosts||0; G.hits=s.hits||0; G.hour=s.hour; LM.lit=!!s.lit; G.event=null; G.dyn=[]; TRAFFIC.length=0;
   for(let i=0;i<sparksAll.length;i++){ const c=s.sparks.charCodeAt(Math.floor(i/6))-48; sparksAll[i].alive=!(c>=0&&(c>>(i%6))&1); }
   G.player=newCar(s.car,s.x,s.z,s.h); G.parked=s.parked?newCar(s.parked.car,s.parked.x,s.parked.z,s.parked.h):null; G.camYaw=s.h;
   G.mission=s.mission-1; nextMission(); return true; }

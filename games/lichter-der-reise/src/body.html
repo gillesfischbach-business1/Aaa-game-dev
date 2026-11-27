@@ -73,6 +73,13 @@
       <div class="eyebrow" style="margin-bottom:10px;color:var(--gold)">Das Album der Reise</div>
       <div class="album" id="album"></div>
     </div>
+    <div id="lbWrap" hidden>
+      <div class="eyebrow" style="margin-bottom:8px;color:var(--gold)">Bestenliste</div>
+      <div class="lb-row"><input id="lbName" maxlength="16" placeholder="Spitzname" aria-label="Spitzname für die Bestenliste" autocomplete="off"><button class="btn sm" id="lbSend">Eintragen</button><a id="lbMore" class="lb-more" target="_blank" rel="noopener">Ganze Liste</a></div>
+      <div id="lbMsg" class="lb-msg" aria-live="polite"></div>
+      <ol id="lbList" class="lb-list"></ol>
+      <div class="lb-note">Gesendet werden nur Spitzname und Ergebnis, und nur wenn du auf „Eintragen“ tippst.</div>
+    </div>
     <div class="row"><button class="btn" id="btnFree">Weiterfahren (freie Fahrt)</button><button class="btn ghost" id="btnAgain">Neues Spiel</button><button class="btn ghost" id="btnRethink" hidden>Entscheidung überdenken</button></div>
   </div>
 </div>
