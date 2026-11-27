@@ -29,7 +29,7 @@ function initUI(){
   $('dlgSkip').addEventListener('click',e=>{ e.stopPropagation(); skipDialog(); });
   $('btnMute').onclick=toggleMute; $('btnOptTitle').onclick=()=>openOptions('title'); $('btnOptPause').onclick=()=>openOptions('pause'); $('optClose').onclick=()=>closeOptions();
   document.querySelectorAll('#optTabs button').forEach(b=>b.onclick=()=>{ optTab=b.dataset.tab; rebinding=null; renderOptions(); });
-  $('btnContinue').onclick=()=>{ const s=readSlot('auto'); let ok=false; try{ ok=!!s&&restore(s); }catch(e){ showErr(e); }
+  $('btnContinue').onclick=()=>{ if(!G.ready) return; const s=readSlot('auto'); let ok=false; try{ ok=!!s&&restore(s); }catch(e){ showErr(e); }
     if(ok){ $('title').hidden=true; toast('Weiter, wo ihr aufgehört habt'); } else { toast('Der Spielstand ließ sich nicht laden. Ein neues Spiel beginnt.'); $('title').hidden=true; try{ startGame(); }catch(e){ $('title').hidden=false; showErr(e); return; } }
     soft(()=>{ Audio_.init(); Audio_.resume(); }); soft(goImmersive); graceFor(3000); };
   if(readSlot('auto')) $('btnContinue').hidden=false; $('btnPause').onclick=()=>togglePause(); $('btnResume').onclick=()=>togglePause();
@@ -41,7 +41,7 @@ function initUI(){
   $('btnRethink').onclick=()=>{ $('endO').hidden=true; G.state='talk'; G.camMode='finale'; LM.lit=false; say(STORY.finale.slice(-1)); };
   // starting must never leave an empty screen: the game starts first, comfort features (fullscreen, sound) may fail without harm
   const soft=f=>{ try{ f(); }catch(e){ showErr(e); } };
-  $('btnStart').onclick=()=>{ $('title').hidden=true; try{ startGame(); }catch(e){ $('title').hidden=false; showErr(e); return; } soft(()=>{ Audio_.init(); Audio_.resume(); Audio_.setMood(0); }); soft(goImmersive); graceFor(3000); };
+  $('btnStart').onclick=()=>{ if(!G.ready) return; $('title').hidden=true; try{ startGame(); }catch(e){ $('title').hidden=false; showErr(e); return; } soft(()=>{ Audio_.init(); Audio_.resume(); Audio_.setMood(0); }); soft(goImmersive); graceFor(3000); };
   const best=loadBest(); if(best>0) $('bestLbl').textContent='Hellster Lichtturm bisher: '+best+' Funken';
   const al=$('album'); [['assets/panel_belval.jpg','Belval','-3deg'],['assets/panel_bar.jpg','Le Pont Violet','2deg'],['assets/glutplatz.jpg','Glutplatz, Eindhoven','-1deg'],['assets/monaco.jpg','Monte-Carlo','2.5deg']].forEach(([src,cap,r])=>{
     const f=document.createElement('figure'); f.className='polaroid'; f.style.setProperty('--r',r); const im=document.createElement('img'); im.src=src; im.alt=cap; im.loading='lazy'; f.appendChild(im); const s=document.createElement('span'); s.textContent=cap; f.appendChild(s); al.appendChild(f); });
@@ -59,10 +59,13 @@ function togglePause(){ if(G.state==='drive'){ G.state='pause'; $('pauseO').hidd
 function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false; drawBigMap(); } else if(G.state==='map'){ G.state='drive'; UI.mapO.hidden=true; } }
 
 (async()=>{
-  try{ initUI(); await initGPU($('gfx')); loadSettings(); /* after initGPU: the adapter info is needed to choose the first-run preset */ initModels(); buildWorld({lamp:[1,.72,.42]}); genCafes(); buildMapImage();
+  // Nothing may be started before the world exists: the buttons stay locked and show the loading step until boot has finished.
+  const lockBtns=['btnStart','btnContinue','btnOptTitle'], startLabel=$('btnStart').textContent; const step=async t=>{ $('btnStart').textContent=t; await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); };
+  for(const id of lockBtns){ const b=$(id); if(b) b.disabled=true; }
+  try{ initUI(); await step('Grafik wird gestartet …'); await initGPU($('gfx')); loadSettings(); /* after initGPU: the adapter info is needed to choose the first-run preset */ await step('Fahrzeuge werden geladen …'); initModels(); await step('Die Städte werden gebaut …'); buildWorld({lamp:[1,.72,.42]}); genCafes(); await step('Karte wird gezeichnet …'); buildMapImage();
     R.scale=SET.gfx.scale*Math.min(window.devicePixelRatio||1,SET.gfx.dprCap||1.5); applySettings();
     if(R.fallback&&!window.__manual) setTimeout(()=>{ if(!window.__manual) toast('Hinweis: Dein Browser rechnet die Grafik ohne Grafikchip. Das Spiel passt sich an, bleibt aber langsamer.'); },2500);
-    placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; requestAnimationFrame(t=>{ last=t; frame(t); }); }
+    placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; G.ready=true; $('btnStart').textContent=startLabel; for(const id of lockBtns){ const b=$(id); if(b) b.disabled=false; } requestAnimationFrame(t=>{ last=t; frame(t); }); }
   catch(e){ console.error(e); $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
 })();
 

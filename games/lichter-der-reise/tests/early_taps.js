@@ -1,0 +1,9 @@
+// taps "Reise beginnen" as early and as often as possible while the game is still loading, like an impatient player
+const { chromium, devices } = require('playwright');
+(async () => { const b = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--headless=new', '--enable-unsafe-webgpu', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--enable-features=Vulkan', '--use-vulkan=native', '--use-angle=vulkan'] });
+  const ctx = await b.newContext({ viewport: { width: 640, height: 300 }, hasTouch: true, isMobile: true, userAgent: devices['Galaxy S9+'].userAgent }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push('PE ' + e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
+  const t0 = Date.now(); await p.goto('http://localhost:8777/lichter-der-reise/index.html', { waitUntil: 'commit' }); const labels = new Set(); let taps = 0, ready = null;
+  while (Date.now() - t0 < 90000) { const s = await p.evaluate(() => { const b = document.getElementById('btnStart'); return b ? { label: b.textContent, disabled: b.disabled, ready: typeof G !== 'undefined' && !!G.ready, state: typeof G !== 'undefined' ? G.state : null } : null; }).catch(() => null);
+    if (s) { labels.add(s.label); if (s.ready && ready === null) ready = Date.now() - t0; if (s.state === 'talk') break; } await p.tap('#btnStart', { timeout: 500, force: true }).then(() => taps++).catch(() => {}); await p.waitForTimeout(120); }
+  const end = await p.evaluate(() => ({ state: G.state, dlg: !UI.dialog.hidden, title: !document.getElementById('title').hidden, err: (document.getElementById('errBox') || {}).textContent || '' }));
+  console.log(JSON.stringify({ readyAfterMs: ready, taps, labels: [...labels], end, errs })); await b.close(); })();
