@@ -144,11 +144,21 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
  TRACKS:[['sky-blue','Sky Blue'],['june-2023','June 2023'],['stranger-things','Stranger Things'],['winter','Winter'],['july-2018','July 2018'],['october-2019','October 2019']],
  song:null, songI:0, songOk:true, songFail:0,
  songVol(){ return this.muted?0:Math.min(1,this.vol.master*this.vol.music*1.5); },
- playSong(step){ if(!this.songOk) return; const T=this.TRACKS;
-   if(!this.song){ const a=new Audio(); a.preload='auto'; this.songI=(Math.random()*T.length)|0; step=0;
+ // The player's own music: files picked on this device, kept in the browser's local database (IndexedDB) and never uploaded. They play before the built-in tracks.
+ own:[],
+ list(){ return this.own.map(o=>({src:o.url,name:o.name,own:true})).concat(this.TRACKS.map(t=>({src:'assets/music/'+t[0]+'.mp3',name:t[1]}))); },
+ playSong(step,at){ if(!this.songOk) return; const T=this.list();
+   if(!this.song){ const a=new Audio(); a.preload='auto'; this.songI=this.own.length?0:(Math.random()*T.length)|0; step=0;
      a.onended=()=>this.playSong(1); a.onerror=()=>{ if(++this.songFail>2){ this.songOk=false; this.song=null; } else this.playSong(1); };
-     a.onplaying=()=>{ this.songFail=0; if(typeof toast==='function') toast('♪ '+T[this.songI][1]+' · Kontext'); }; this.song=a; }
-   this.songI=(this.songI+step+T.length)%T.length; const a=this.song; a.src='assets/music/'+T[this.songI][0]+'.mp3'; a.volume=this.songVol(); const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); },
+     a.onplaying=()=>{ this.songFail=0; const c=this.list()[this.songI]; if(c&&typeof toast==='function') toast('♪ '+c.name+(c.own?'':' · Kontext')); }; this.song=a; }
+   this.songI=at!=null?at:(this.songI+step+T.length)%T.length; const a=this.song; a.src=T[this.songI].src; a.volume=this.songVol(); const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); },
+ ownDb(){ return new Promise((ok,no)=>{ const r=indexedDB.open('ldr-music',1); r.onupgradeneeded=()=>r.result.createObjectStore('f',{autoIncrement:true}); r.onsuccess=()=>ok(r.result); r.onerror=()=>no(r.error); }); },
+ ownSet(files){ for(const o of this.own) URL.revokeObjectURL(o.url); this.own=files.map(f=>({name:(f.name||'Eigenes Lied').replace(/\.[a-z0-9]+$/i,''),url:URL.createObjectURL(f.blob)})); },
+ async ownLoad(){ try{ const db=await this.ownDb(); const all=await new Promise((ok,no)=>{ const q=db.transaction('f').objectStore('f').getAll(); q.onsuccess=()=>ok(q.result); q.onerror=()=>no(q.error); }); this.ownSet(all); }catch(e){} },
+ async ownSave(fileList){ const files=[...fileList].filter(f=>/^audio\//.test(f.type)||/\.(mp3|m4a|aac|ogg|opus|wav|flac)$/i.test(f.name)).map(f=>({name:f.name,blob:f})); if(!files.length) return 0;
+   try{ const db=await this.ownDb(); await new Promise((ok,no)=>{ const tx=db.transaction('f','readwrite'), st=tx.objectStore('f'); st.clear(); for(const f of files) st.add(f); tx.oncomplete=ok; tx.onerror=()=>no(tx.error); }); }catch(e){}
+   this.ownSet(files); this.songOk=true; this.songFail=0; if(this.musicOn) this.playSong(0,0); return files.length; },
+ async ownClear(){ try{ const db=await this.ownDb(); await new Promise(ok=>{ const tx=db.transaction('f','readwrite'); tx.objectStore('f').clear(); tx.oncomplete=ok; tx.onerror=ok; }); }catch(e){} this.ownSet([]); if(this.song&&this.musicOn) this.playSong(0,0); },
  setMood(m){ this.mood=m; this.musicOn=true; if(!this.song) this.playSong(0); },
  tick(){ if(!this.ctx||!this.musicOn) return; if(this.songOk&&this.song){ if(this.song.paused&&!document.hidden&&this.song.readyState>1){ const pr=this.song.play(); if(pr&&pr.catch) pr.catch(()=>{}); } this.nextNote=this.ctx.currentTime+.1; return; } const c=this.ctx; const M=this.MOODS[this.mood]; const sp=60/M.bpm/2;
    while(this.nextNote<c.currentTime+.3){ const t=this.nextNote-c.currentTime; const chord=M.ch[(this.step>>4)%M.ch.length]; const s=this.step%16;
@@ -163,3 +173,4 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
 
 addEventListener('visibilitychange',()=>{ const a=Audio_.song; if(!a) return; if(document.hidden) a.pause(); else if(Audio_.musicOn){ const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); } });
 addEventListener('keydown',e=>{ if(e.code==='KeyN'&&Audio_.song&&Audio_.musicOn) Audio_.playSong(1); });
+Audio_.ownLoad();
