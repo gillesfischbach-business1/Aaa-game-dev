@@ -282,14 +282,17 @@ let last=0, acc=0, frames=0, adaptT=0, rafLast=0, rafMin=1, panel=1/60, tick=0, 
 function frame(now){
   { const d=(now-rafLast)/1000; rafLast=now; if(d>.003&&d<rafMin) rafMin=d; } /* shortest callback gap = refresh period of the panel */
   const cap=SET.gfx.fpsCap||0; if(cap&&panel<.6/cap&&now-last<1000/cap-panel*500){ requestAnimationFrame(frame); return; } /* 120 Hz panel, 60 fps target: draw every second refresh */
-  const dtRaw=Math.max(0,(now-last)/1000); last=now; const dt=Math.min(.05,dtRaw);
+  const dtRaw=Math.max(0,(now-last)/1000); last=now;
   const goal=Math.max(panel,cap?1/cap:1/60); if(dtRaw>goal*1.45) slowN++;
   if(window.__manual){ last=now; requestAnimationFrame(frame); return; }
-  if(G.state!=='pause'&&G.state!=='map') update(dt);
+  // The simulation always runs in real time: a slow frame is caught up in several small steps instead of slowing the game down.
+  if(G.state!=='pause'&&G.state!=='map'){ const simT=Math.min(dtRaw,.5), n=Math.max(1,Math.ceil(simT*30)); for(let i=0;i<n;i++) update(simT/n); }
   try{ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
     renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},shadowCtr(pl),window.__snapReq||null);
     window.__snapReq=null; }catch(e){ console.error(e); }
   acc+=dtRaw; frames++; adaptT+=dtRaw;
+  // Rescue ladder: clearly too slow (under ~22 pictures per second)? Cut the load step by step, quickly, until it runs.
+  if(SET.gfx.adaptive&&((frames>=5&&adaptT>1.2&&acc/frames>.045)||(frames>=2&&acc/frames>.2))&&G.state!=='pause'&&G.state!=='map'){ rescueStep(acc/frames); acc=0; frames=0; adaptT=0; slowN=0; holdW=1; }
   if(adaptT>2.5){ const avg=acc/frames; const fb=$('fpsBox'); if(fb&&!fb.hidden) fb.textContent=Math.round(1/avg)+' FPS · '+R.W+'×'+R.H; panel=clamp(rafMin,1/240,1/30); rafMin=1; const lo=R.maxScale*(SET.gfx.minScale||.5)/Math.max(.01,SET.gfx.scale), bad=slowN/frames;
     if(!SET.gfx.adaptive||holdW>0||G.state==='pause'||G.state==='map'){ holdW=Math.max(0,holdW-1); }
     else if(bad>.12&&R.scale>lo){ R.scale=Math.max(lo,R.scale*(bad>.5?.82:.9)); R.needResize=true; if(calm<6) backoff=Math.min(120,backoff*2); calm=0; holdW=1; } /* a failed probe doubles the wait before the next one */
@@ -299,6 +302,21 @@ function frame(now){
   requestAnimationFrame(frame); }
 let gpuLost=false;
 // phones often drop the GPU while the game is in the background: save, then reload by itself as soon as the page is visible again
+let rescueN=0;
+function rescueStep(avg){ const g=SET.gfx, floor=.42; let what='';
+  if(avg>.2&&(g.msaa||g.shadows>0||g.viewDist>300||R.scale>floor+.01)){ // far too slow (under 5 pictures per second): everything down at once
+    g.msaa=false; g.shadows=0; g.viewDist=Math.min(g.viewDist,300); g.traffic=Math.min(g.traffic,6); g.bloom=Math.min(g.bloom,.6); g.preset='custom'; applySettings(); R.scale=Math.min(floor,R.maxScale); R.needResize=true; saveSettings(); rescueN++;
+    toast('Grafik stark reduziert, damit das Spiel auf diesem Gerät läuft'); return; }
+  if(R.scale>floor+.01){ R.scale=Math.max(floor,R.scale*(avg>.09?.55:.72)); R.needResize=true; what='Auflösung'; }
+  else if(g.msaa){ g.msaa=false; what='Kantenglättung'; }
+  else if(g.shadows>1024){ g.shadows=1024; what='Schatten'; }
+  else if(g.viewDist>300||g.traffic>6){ g.viewDist=Math.min(g.viewDist,300); g.traffic=Math.min(g.traffic,6); what='Sichtweite'; }
+  else if(g.shadows>0){ g.shadows=0; what='Schatten'; }
+  else if(g.bloom>0||g.grain){ g.bloom=0; g.grain=false; g.vignette=false; what='Effekte'; }
+  else if(avg>.1&&R.scale>.24){ R.scale=Math.max(.24,R.scale*.7); R.needResize=true; return; } // last resort: a coarse picture beats a frozen one
+  else return;
+  rescueN++; if(what!=='Auflösung'){ g.preset='custom'; const keep=R.scale; applySettings(); R.scale=Math.min(keep,R.maxScale); R.needResize=true; saveSettings(); }
+  if(rescueN===1||what!=='Auflösung') toast('Grafik angepasst ('+what+'), damit es flüssig läuft'); }
 function onDeviceLost(info){ gpuLost=true; try{ autosave(); }catch(e){} $('errText').textContent='Die Grafik wurde zurückgesetzt ('+(info.message||info.reason)+'). Das Spiel lädt gleich neu, dein Spielstand ist gesichert.'; $('errO').hidden=false;
   const go=()=>{ if(!document.hidden) setTimeout(()=>location.reload(),1200); }; document.addEventListener('visibilitychange',go); go(); }
 

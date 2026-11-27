@@ -20,7 +20,7 @@ function loadSettings(){ let s=null; try{ s=localStorage.getItem('ldr_settings')
 function phoneClass(){ const dpr=window.devicePixelRatio||1, small=Math.min(screen.width,screen.height)<=480, mem=navigator.deviceMemory||4, cores=navigator.hardwareConcurrency||4;
   const i=(typeof R!=='undefined'&&R.adapterInfo)||{}, gpu=((i.vendor||'')+' '+(i.architecture||'')+' '+(i.description||'')).toLowerCase();
   const flagship=/adreno[- ]?[678]|valhall|5th-gen|immortalis|xclipse/.test(gpu);
-  return (small&&dpr>=2.5&&mem>=4&&cores>=8&&(flagship||!gpu.trim()))?'handy':'mittel'; }
+  return (small&&dpr>=2.5&&mem>=4&&cores>=8&&flagship)?'handy':'mittel'; } // unknown GPUs start on 'mittel'; the rescue ladder and the governor adjust from there
 function saveSettings(){ try{ localStorage.setItem('ldr_settings',JSON.stringify(SET)); }catch(e){} }
 function keyFor(action){ return SET.ctl.keys[action]; }
 function actionOfKey(k){ for(const a in SET.ctl.keys) if(SET.ctl.keys[a]===k) return a; return null; }
@@ -62,7 +62,7 @@ function toggle(id,on){ return `<label class="switch"><input type="checkbox" id=
 function select(id,opts,val){ return `<select id="${id}">${opts.map(([v,l])=>`<option value="${v}" ${String(v)===String(val)?'selected':''}>${l}</option>`).join('')}</select>`; }
 const pct=v=>Math.round(v*100)+' %';
 function renderOptions(){ document.querySelectorAll('#optTabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===optTab)); const g=SET.gfx, s=SET.snd, c=SET.ctl, gm=SET.game; let h='';
-  if(optTab==='gfx'){ h+=row('Qualitätsstufe',select('o_preset',[['niedrig','Niedrig'],['mittel','Mittel'],['handy','Handy (S21-Klasse)'],['hoch','Hoch'],['ultra','Ultra'],['custom','Benutzerdefiniert']],g.preset),'Setzt alle Werte darunter');
+  if(optTab==='gfx'){ h+=row('Grafikchip',`<span class="slot">${(R.gpuName||'unbekannt').replace(/[<>&]/g,'')}${R.fallback?' · Software-Grafik (langsam)':''} · ${R.W||0}×${R.H||0}</span>`); h+=row('Qualitätsstufe',select('o_preset',[['niedrig','Niedrig'],['mittel','Mittel'],['handy','Handy (S21-Klasse)'],['hoch','Hoch'],['ultra','Ultra'],['custom','Benutzerdefiniert']],g.preset),'Setzt alle Werte darunter');
     h+=row('Auflösung',slider('o_scale',.5,2,.05,g.scale,v=>Math.round(v*100)+' %'),'Renderauflösung relativ zum Bildschirm');
     h+=row('Automatische Auflösung',toggle('o_adaptive',g.adaptive),'Senkt die Auflösung, wenn es ruckelt');
     h+=row('Schatten',select('o_shadows',[[0,'Aus'],[1024,'Niedrig (1024)'],[2048,'Hoch (2048)'],[4096,'Ultra (4096)']],g.shadows));

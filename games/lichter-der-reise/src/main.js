@@ -24,6 +24,8 @@ function initUI(){
   document.addEventListener('visibilitychange',()=>{ if(document.hidden&&G.state==='drive') togglePause();
     try{ if(document.hidden){ Audio_.ctx&&Audio_.ctx.suspend(); } else { keepAwake(); if(G.state!=='pause') Audio_.resume(); } }catch(_){} });
   UI.dialog.addEventListener('click',()=>advance());
+  // a tap or click anywhere on the picture also continues the conversation (not only on the text box)
+  $('gfx').addEventListener('pointerup',()=>{ if(!UI.dialog.hidden&&G.state==='talk') advance(); });
   $('dlgSkip').addEventListener('click',e=>{ e.stopPropagation(); skipDialog(); });
   $('btnMute').onclick=toggleMute; $('btnOptTitle').onclick=()=>openOptions('title'); $('btnOptPause').onclick=()=>openOptions('pause'); $('optClose').onclick=()=>closeOptions();
   document.querySelectorAll('#optTabs button').forEach(b=>b.onclick=()=>{ optTab=b.dataset.tab; rebinding=null; renderOptions(); });
@@ -55,6 +57,7 @@ function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false
 (async()=>{
   try{ initUI(); await initGPU($('gfx')); loadSettings(); /* after initGPU: the adapter info is needed to choose the first-run preset */ initModels(); buildWorld({lamp:[1,.72,.42]}); genCafes(); buildMapImage();
     R.scale=SET.gfx.scale*Math.min(window.devicePixelRatio||1,SET.gfx.dprCap||1.5); applySettings();
+    if(R.fallback&&!window.__manual) setTimeout(()=>{ if(!window.__manual) toast('Hinweis: Dein Browser rechnet die Grafik ohne Grafikchip. Das Spiel passt sich an, bleibt aber langsamer.'); },2500);
     placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; requestAnimationFrame(t=>{ last=t; frame(t); }); }
   catch(e){ console.error(e); $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
 })();

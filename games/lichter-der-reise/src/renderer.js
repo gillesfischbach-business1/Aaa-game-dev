@@ -53,7 +53,7 @@ let lightsTmp=[]; function LtRaw(x,y,z,r,g,b,rad){ lightsTmp.push([x,y,z,r,g,b,r
 async function initGPU(canvas){
   if(!navigator.gpu) throw new Error('nogpu');
   const adapter=await navigator.gpu.requestAdapter({powerPreference:'high-performance'}); if(!adapter) throw new Error('noadapter');
-  R.adapterInfo=adapter.info||null;
+  R.adapterInfo=adapter.info||null; { const i=R.adapterInfo||{}; R.gpuName=[i.vendor,i.architecture,i.description].filter(Boolean).join(' ')||'unbekannt'; R.fallback=!!(adapter.isFallbackAdapter||i.isFallbackAdapter||/swiftshader|llvmpipe|software|basic render/i.test(R.gpuName)); }
   const f11=adapter.features.has('rg11b10ufloat-renderable'); R.bloomFmt=f11?'rg11b10ufloat':'rgba16float';
   const device=R.device=await adapter.requestDevice({requiredFeatures:f11?['rg11b10ufloat-renderable']:[]});
   device.lost.then(info=>{ if(info.reason!=='destroyed') onDeviceLost(info); });
