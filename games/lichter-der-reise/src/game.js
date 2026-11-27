@@ -35,7 +35,7 @@ function valPerson(x,y,z){ return [['rbox',x,y-.25,z,.5,.45,.32,MAT.STD+.8,[.85,
 function initModels(){ VAN_P=compileParts(vanPartsB(),MESHIDX); SUP_P=compileParts(supPartsB(),MESHIDX);
   const seatL=blenderParts('leo_seat'), seatM=blenderParts('mira_seat');
   if(seatL&&seatM){ const pp=(x,y,z)=>[...blenderParts('leo_seat',-.33,y,z,Math.PI),...blenderParts('mira_seat',.33,y,z,Math.PI)];
-    PEOPLE_SUP=compileParts(pp(0,.08,.25),MESHIDX); PEOPLE_VAN=compileParts(pp(0,.22,-.4),MESHIDX); VAL_SUP=compileParts(valPerson(-.32,.76,.3),MESHIDX);
+    PEOPLE_SUP=compileParts(pp(0,-.13,.3),MESHIDX); PEOPLE_VAN=compileParts(pp(0,.22,-.4),MESHIDX); VAL_SUP=compileParts(valPerson(-.32,.76,.3),MESHIDX);
     const sl=blenderParts('leo_stand',0,0,0,Math.PI), sm=blenderParts('mira_stand',0,0,0,Math.PI); LEO_STAND=compileParts(sl,MESHIDX); MIRA_STAND=compileParts(sm,MESHIDX); return; }
   PEOPLE_SUP=compileParts([...personParts('leo',-.32,.76,.3),...personParts('mira',.32,.76,.3)],MESHIDX); VAL_SUP=compileParts(valPerson(-.32,.76,.3),MESHIDX);
   LEO_STAND=standing('leo'); MIRA_STAND=standing('mira'); }

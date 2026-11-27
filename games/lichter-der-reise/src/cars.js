@@ -38,9 +38,10 @@ function wheelParts(x,y,z,r,w,kind){ // returns parts for one wheel (spin applie
     p.push(['cylX',x+side*w*0.32,y,z,0.03,r*0.5,r*0.5,MAT.STD+.3,[.6,.6,.62],1]);
   } else {
     p.push(['cylX',x-side*0.02,y,z,0.05,r*1.2,r*1.2,MAT.STD+.35,[.35,.35,.36],1]); // brake disc
-    p.push(['box',x-side*0.0,y+r*0.32,z-r*0.2,0.09,r*0.35,r*0.5,MAT.PAINT+.3,[.02,.08,.05],1]); // caliper
-    p.push(['rim',x+side*0.01,y,z,w*0.85*side,r*1.74,r*1.74,MAT.STD+.22,COL.gold,1,0,0,0,0,'spin']);
-    for(let k=0;k<10;k++) p.push(['spoke',x+side*w*0.32,y,z,1,r*1.74,r*1.74,MAT.STD+.22,COL.gold,1,k*Math.PI/5,0,0,0,'spin']);
+    const dark=kind==='black', rc=dark?[.035,.035,.04]:COL.gold;
+    p.push(['box',x-side*0.0,y+r*0.32,z-r*0.2,0.09,r*0.35,r*0.5,MAT.PAINT+.3,dark?[.7,.62,.03]:[.02,.08,.05],1]);
+    p.push(['rim',x+side*0.01,y,z,w*0.85*side,r*1.74,r*1.74,MAT.STD+.3,rc,1,0,0,0,0,'spin']);
+    for(let k=0;k<10;k++) p.push(['spoke',x+side*w*0.32,y,z,1,r*1.74,r*1.74,MAT.STD+.3,rc,1,k*Math.PI/5,0,0,0,'spin']);
     p.push(['cylX',x+side*w*0.36,y,z,0.04,r*0.3,r*0.3,MAT.STD+.3,[.08,.08,.08],1]);
   }
   return p; }
@@ -135,7 +136,7 @@ function supParts(){ const G=[.012,.1,.055], p=[];
   p.push(['quad',0,.24,-2.39,.52,.11,1,MAT.DECAL,[1,1,1],0,-0.15,Math.PI,0,1]);
   p.push(['quad',0,.48,2.4,.52,.11,1,MAT.DECAL,[1,1,1],0,0,0,0,1]);
   p.push(['box',0,.12,0,1.7,.03,4.2,MAT.STD,[.02,.02,.02],0]);
-  for(const [x,z,r,w] of [[-.86,-1.42,.36,.27],[.86,-1.42,.36,.27],[-.87,1.46,.37,.32],[.87,1.46,.37,.32]]) p.push(...wheelParts(x,r,z,r,w,'sport'));
+  for(const [x,z,r,w] of [[-.86,-1.42,.36,.27],[.86,-1.42,.36,.27],[-.87,1.46,.37,.32],[.87,1.46,.37,.32]]) p.push(...wheelParts(x,r,z,r,w,'black'));
   return p; }
 
 /* expand 'seat' helper and compile to flat arrays for fast per-frame instancing */
@@ -147,12 +148,12 @@ function compileParts(list,meshIndex){ const out=[];
   return out.flat(); }
 
 /* ---- Blender models: material name -> game material ---- */
-const BMAT={ paint_white:[MAT.PAINT+.32,[.86,.86,.83],.15], paint_green:[MAT.PAINT+.2,[.012,.1,.055],1], plastic:[MAT.STD+.75,[.035,.035,.04],0], trim:[MAT.STD+.6,[.13,.13,.14],0],
+const BMAT={ paint_white:[MAT.PAINT+.32,[.86,.86,.83],.15], paint_green:[MAT.PAINT+.2,[.008,.13,.1],1], plastic:[MAT.STD+.75,[.035,.035,.04],0], trim:[MAT.STD+.6,[.13,.13,.14],0],
  chrome:[MAT.STD+.18,[.78,.78,.8],1], steel:[MAT.STD+.35,[.45,.46,.48],1], glass:[MAT.GLASS,[.02,.03,.03],.5], light_head:[MAT.EMI,[1,.9,.72],3.2,'head'], light_led:[MAT.EMI,[.85,.92,1],6,'head'],
  light_tail:[MAT.EMI,[1,.05,.03],3,'tail'], light_ind:[MAT.EMI,[1,.45,.05],1.2], seat:[MAT.STD+.85,[.06,.05,.05],0], dash:[MAT.STD+.7,[.05,.05,.055],0], carbon:[MAT.STD+.35,[.03,.03,.035],.3],
  gold:[MAT.STD+.25,[.72,.5,.2],1], skin:[MAT.SKIN,[.78,.53,.4],0], skin2:[MAT.SKIN,[.85,.6,.47],0], hair_dark:[MAT.STD+.85,[.05,.035,.025],0], hair_brown:[MAT.STD+.8,[.22,.12,.06],0],
  denim:[MAT.STD+.85,[.08,.09,.12],0], jogger:[MAT.STD+.95,[.5,.5,.52],0], knit:[MAT.STD+.98,[.28,.18,.11],0], jeans:[MAT.STD+.85,[.12,.16,.26],0], scarf:[MAT.STD+.98,[.42,.36,.28],0],
- paint_car:[MAT.PAINT+.22,[.5,.06,.07],.7,'paint'], glass_dark:[MAT.GLASSO,[.02,.025,.03],0], plate:[MAT.STD+.5,[.85,.7,.1],0],
+ paint_car:[MAT.PAINT+.22,[.5,.06,.07],.7,'paint'], glass_dark:[MAT.GLASSO,[.02,.025,.03],0], glass_tint:[MAT.GLASS,[.012,.016,.018],.84], plate:[MAT.STD+.5,[.85,.7,.1],0],
  shoe:[MAT.STD+.6,[.85,.85,.82],0], beanie:[MAT.STD+.95,[.06,.06,.07],0], frame_pink:[MAT.STD+.3,[.85,.5,.6],0], eye:[MAT.STD+.1,[.03,.02,.015],0], eyewhite:[MAT.STD+.3,[.85,.83,.8],0], lips:[MAT.SKIN,[.6,.3,.28],0] };
 function blenderParts(model,x=0,y=0,z=0,ry=0){ const g=MODEL_GROUPS[model]; if(!g) return null;
   return g.map(({key,mat})=>{ const b=BMAT[mat]||[MAT.STD+.5,[.5,.5,.5],0]; return [key,x,y,z,1,1,1,b[0],b[1],b[2],0,ry,0,0,b[3]||'']; }); }
@@ -161,8 +162,8 @@ function vanPartsB(){ const body=blenderParts('fidele'); if(!body) return vanPar
   for(const [x,z] of [[-.74,-1.28],[.74,-1.28],[-.74,1.25],[.74,1.25]]) p.push(...wheelParts(x,.3,z,.3,.19,'steel'));
   return p; }
 function supPartsB(){ const body=blenderParts('smaragd'); if(!body) return supParts(); const p=body.slice();
-  p.push(['quad',0,.27,-2.43,.52,.11,1,MAT.DECAL,[1,1,1],0,-0.15,Math.PI,0,1],['quad',0,.48,2.41,.52,.11,1,MAT.DECAL,[1,1,1],0,0,0,0,1]);
-  for(const [x,z,r,w] of [[-.86,-1.42,.36,.27],[.86,-1.42,.36,.27],[-.87,1.46,.37,.32],[.87,1.46,.37,.32]]) p.push(...wheelParts(x,r,z,r,w,'sport'));
+  p.push(['quad',0,.185,-2.405,.46,.1,1,MAT.DECAL,[1,1,1],0,0,Math.PI,0,1],['quad',0,.44,2.405,.5,.105,1,MAT.DECAL,[1,1,1],0,0,0,0,1]);
+  for(const [x,z,r,w] of [[-.86,-1.42,.36,.27],[.86,-1.42,.36,.27],[-.87,1.46,.37,.32],[.87,1.46,.37,.32]]) p.push(...wheelParts(x,r,z,r,w,'black'));
   return p; }
 
 /* ----- everyday cars: three present-day shapes from Blender, in many paint colours. They park along the streets, drive as traffic and can be taken. ----- */

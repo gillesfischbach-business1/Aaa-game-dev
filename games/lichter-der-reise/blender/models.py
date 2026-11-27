@@ -124,7 +124,7 @@ def gy(z): return -z  # game z -> blender y
 def materials():
     return dict(
         white=mat('paint_white', (0.84, 0.84, 0.81), 0.0, 0.32),
-        green=mat('paint_green', (0.012, 0.1, 0.055), 0.6, 0.22),
+        green=mat('paint_green', (0.008, 0.13, 0.1), 0.6, 0.22),
         plastic=mat('plastic', (0.035, 0.035, 0.04), 0.0, 0.75),
         trim=mat('trim', (0.13, 0.13, 0.14), 0.0, 0.6),
         chrome=mat('chrome', (0.78, 0.78, 0.8), 1.0, 0.18),
@@ -153,6 +153,7 @@ def materials():
         carpaint=mat('paint_car', (0.5, 0.06, 0.07), 0.5, 0.25),
         gdark=mat('glass_dark', (0.015, 0.02, 0.025), 0.0, 0.06),
         plate=mat('plate', (0.85, 0.7, 0.1), 0.0, 0.5),
+        gtint=mat('glass_tint', (0.012, 0.016, 0.018), 0.0, 0.05, alpha=0.85),
     )
 
 # ---------------------------------------------------------------- van "Fidèle"
@@ -223,52 +224,71 @@ def build_van(M):
     cyl('antenna', .008, .5, (.55, gy(-.25), 2.15), M['plastic'], md, verts=8)
 
 # ---------------------------------------------------------------- hypercar "Smaragd"
+def half_cyl(name, r, depth, loc, material, model, verts=40):
+    o = cyl(name, r, depth, loc, material, model, rot=(0, math.pi / 2, 0), verts=verts)
+    bm = bmesh.new(); bm.from_mesh(o.data); bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -0.02], context='VERTS'); bm.to_mesh(o.data); bm.free(); return o
+
 def build_sup(M):
-    md = 'smaragd'
-    st = [(-2.37, .62, .17, .36, 3.2, 1), (-2.3, .80, .13, .45, 4, .92), (-2.15, .90, .11, .55, 4.4, .82), (-1.9, .96, .11, .64, 4.8, .72),
-          (-1.6, .99, .12, .71, 5, .66), (-1.3, .99, .13, .74, 5, .62), (-1.0, .97, .14, .74, 5, .64), (-0.7, .92, .15, .74, 5, .7),
-          (-0.3, .89, .15, .75, 5, .74), (0.1, .9, .15, .77, 5, .74), (0.5, .97, .15, .82, 5, .68), (0.9, 1.0, .16, .85, 5, .63),
-          (1.3, 1.0, .17, .86, 5, .62), (1.7, .98, .19, .85, 5, .66), (2.05, .93, .25, .81, 6, .74), (2.3, .87, .31, .76, 6, .8), (2.39, .83, .34, .73, 6, 1)]
-    body = loft('sup_body', st, 72, M['green'], md)
-    cuts = []
+    """Mid-engined hybrid hypercar after the owner's reference pictures: low nose with a wide slatted intake, pontoon front wings
+    carrying teardrop head lamps, a dark teardrop cabin with roof scoop, silver side panels, wide rear haunches, thin tail-light
+    strips, a big diffuser and black wheels. No badges or lettering."""
+    md = 'smaragd'; G = M['green']; C = M['carbon']
+    st = [(-2.36, .50, .22, .40, 3.5, 1), (-2.28, .72, .20, .46, 4, .95), (-2.05, .90, .18, .53, 4.5, .9), (-1.75, .97, .17, .58, 5, .86),
+          (-1.42, .99, .16, .61, 5, .84), (-1.05, .97, .16, .64, 5, .82), (-.70, .93, .16, .68, 5, .8), (-.25, .90, .16, .72, 5, .78),
+          (.25, .92, .16, .76, 5, .76), (.75, .98, .17, .82, 5, .72), (1.2, 1.0, .18, .86, 5, .7), (1.46, 1.0, .19, .87, 5, .7),
+          (1.9, .98, .22, .85, 5.5, .74), (2.22, .93, .30, .80, 6, .8), (2.36, .88, .36, .74, 6, 1)]
+    body = loft('sup_body', st, 64, G, md)
+    ARCH = ((-1.42, .405, .36), (1.46, .42, .37))   # axle z, opening radius, centre height
+    arch = lambda: [cutter(None, (x * 1.0, gy(z), cy), kind='cyl', r=r, depth=.62, rot=(0, math.pi / 2, 0)) for x in (-1, 1) for z, r, cy in ARCH]
+    boolean(body, arch() + [cutter((1.12, 1.4, .8), (0, gy(.08), .85)), cutter((1.4, .34, .15), (0, gy(-2.36), .29))])     # wheel arches, cockpit cavity under the canopy, intake mouth in the nose
+    for p in body.data.polygons: p.use_smooth = True
     for x in (-1, 1):
-        for z, r in ((-1.42, .43), (1.46, .44)):
-            cuts.append(cutter(None, (x * 1.0, gy(z), .37), kind='cyl', r=r, depth=.6, rot=(0, math.pi / 2, 0)))
-        cuts.append(cutter((.5, .95, .34), (x * 1.08, gy(.75), .5), rot=(0, 0, x * -.25)))        # side intake scoop
-        cuts.append(cutter((.36, .5, .14), (x * .62, gy(-2.25), .5), rot=(0, x * .3, 0)))         # headlight recess
-        cuts.append(cutter((.34, .4, .2), (x * .44, gy(-2.4), .34), rot=(0, x * .4, 0)))          # lower intakes
-    cuts.append(cutter((.9, .4, .14), (0, gy(-2.42), .3)))
-    cuts.append(cutter((1.3, 2.4, .6), (0, gy(.15), 1.05)))                                      # cockpit opening
-    boolean(body, cuts)
-    finish(body, bevel=.006)
-    canopy = loft('sup_canopy', [(-1.2, .46, .69, .71, 2.4, 1), (-.85, .62, .69, .96, 2.6, .72), (-.35, .67, .70, 1.12, 2.6, .62), (.15, .65, .72, 1.15, 2.6, .56),
-                                 (.65, .57, .76, 1.08, 2.6, .52), (1.15, .42, .80, .96, 2.4, 1), (1.5, .2, .83, .88, 2.2, 1)], 48, M['glass'], md)
-    spine = loft('sup_spine', [(-.15, .05, 1.08, 1.13, 3, 1), (.2, .13, 1.05, 1.2, 3, 1), (.75, .16, 1.0, 1.2, 3, 1), (1.4, .14, .86, 1.05, 3, 1), (2.0, .1, .8, .9, 3, 1)], 24, M['green'], md)
-    box('snorkel', (.16, .06, .1), (0, gy(.18), 1.17), M['carbon'], md, bevel=.01)
-    for x in (-1, 1):
-        for z, r in ((-1.42, .42), (1.46, .43)):
-            o = cyl('arch', r, .3, (x * .86, gy(z), .37), M['carbon'], md, rot=(0, math.pi / 2, 0), verts=40)
-            bm = bmesh.new(); bm.from_mesh(o.data); bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -0.02], context='VERTS'); bm.to_mesh(o.data); bm.free()
-        box('intake_back', (.06, .9, .3), (x * .86, gy(.75), .5), M['carbon'], md)
-        for k in range(4): box('intake_fin', (.16, .02, .26), (x * .9, gy(.45 + k * .2), .5), M['carbon'], md, rot=(0, 0, x * -.25))
-        box('hl_house', (.3, .22, .06), (x * .6, gy(-2.18), .5), M['carbon'], md, rot=(0, x * .3, 0))
-        box('hl_led', (.3, .03, .025), (x * .62, gy(-2.33), .53), M['led'], md, rot=(0, x * .3, 0))
-        box('hl_led2', (.03, .2, .025), (x * .76, gy(-2.2), .52), M['led'], md, rot=(0, x * .3, 0))
-        box('side_blade', (.05, 2.2, .12), (x * .95, gy(-.3), .25), M['carbon'], md, bevel=.01)
-        box('mirror', (.16, .12, .08), (x * .78, gy(-.55), .9), M['green'], md, bevel=.03)
-        box('mirror_stalk', (.12, .03, .03), (x * .7, gy(-.55), .86), M['carbon'], md)
-        cyl('exhaust', .07, .14, (x * .24, gy(1.75), .86), M['steel'], md, verts=24)
-        box('wing_pylon', (.04, .18, .22), (x * .5, gy(2.0), .95), M['carbon'], md, bevel=.01)
-    box('splitter', (1.75, .38, .04), (0, gy(-2.22), .12), M['carbon'], md, bevel=.01)
-    box('wing', (1.66, .34, .035), (0, gy(2.06), 1.07), M['green'], md, bevel=.012)
-    box('tail_bar', (1.62, .03, .035), (0, gy(2.385), .7), M['tail'], md)
-    box('diffuser', (1.5, .4, .03), (0, gy(2.3), .2), M['carbon'], md)
-    for k in range(5): box('diff_fin', (.02, .4, .16), (-.6 + k * .3, gy(2.25), .25), M['carbon'], md)
-    for x in (-.33, .33):
-        box('seat', (.48, .55, .12), (x, gy(.2), .48), M['seat'], md, bevel=.04)
-        box('seat_back', (.46, .12, .58), (x, gy(.48), .74), M['seat'], md, bevel=.05, rot=(-.35, 0, 0))
-    box('dash', (1.2, .3, .14), (0, gy(-.55), .74), M['carbon'], md, bevel=.03)
-    cyl('steer', .16, .03, (-.33, gy(-.38), .82), M['carbon'], md, rot=(1.2, 0, 0), verts=24)
+        # pontoon front wing and rear haunch, raised above the bonnet and the engine deck
+        fw = loft('sup_wing_f', [(-2.24, .15, .34, .50, 3, 1), (-2.0, .26, .34, .66, 3, 1), (-1.42, .30, .34, .825, 3.2, 1), (-.98, .28, .34, .80, 3, 1), (-.55, .18, .36, .72, 3, 1)], 28, G, md, cx=x * .70)
+        rh = loft('sup_haunch', [(.4, .13, .4, .78, 3, 1), (.9, .24, .4, .90, 3, 1), (1.46, .275, .4, .955, 3, 1), (1.95, .25, .4, .93, 3, 1), (2.32, .16, .46, .82, 3, 1)], 24, G, md, cx=x * .735)
+        for o in (fw, rh): boolean(o, [cutter(None, (x * 1.0, gy(z), cy), kind='cyl', r=r, depth=.62, rot=(0, math.pi / 2, 0)) for z, r, cy in ARCH])
+        for z, r, cy in ARCH: half_cyl('arch', r - .005, .3, (x * .86, gy(z), cy), M['plastic'], md)
+        # teardrop head lamp on the wing: dark housing, two LED projectors and a light strip
+        sphere('hl_house', 1, (x * .70, gy(-1.97), .655), C, md, scale=(.15, .27, .055)).rotation_euler = (-.5, 0, x * .12)
+        for k, z in enumerate((-2.06, -1.93)): sphere('hl_led', .033, (x * (.70 + .01 * k), gy(z), .665 + .065 * k), M['led'], md, seg=12, ring=8)
+        box('hl_drl', (.02, .2, .012), (x * .61, gy(-1.97), .685), M['head'], md, rot=(-.5, 0, x * .12))
+        # side: silver panel behind the front wheel, dark sill, big intake ahead of the rear wheel
+        box('side_silver', (.035, 1.05, .25), (x * .945, gy(-.42), .37), M['steel'], md, bevel=.012, rot=(0, x * .1, 0))
+        box('sill', (.07, 2.35, .09), (x * .95, gy(.0), .19), C, md, bevel=.02)
+        box('intake', (.05, .5, .34), (x * .965, gy(.66), .52), M['plastic'], md, bevel=.02, rot=(0, 0, x * -.14))
+        for k in range(3): box('intake_fin', (.06, .016, .28), (x * .975, gy(.5 + k * .16), .52), C, md, rot=(0, 0, x * -.14))
+        # cabin frame and mirror
+        beam('pillar_a', (x * .60, .70, -.66), (x * .33, 1.12, .0), (.05, .04), C, md)
+        beam('roof_rail', (x * .33, 1.125, .0), (x * .26, .99, 1.15), (.05, .035), C, md)
+        sphere('mirror', 1, (x * .94, gy(-.50), .9), G, md, scale=(.1, .07, .055), seg=16, ring=10)
+        beam('mirror_stalk', (x * .7, .76, -.54), (x * .9, .88, -.5), (.035, .02), C, md)
+        # tail: two thin light strips per side
+        for k, y in enumerate((.705, .655)): box('tail_strip', (.46 - .08 * k, .03, .02), (x * (.56 - .03 * k), gy(2.385), y), M['tail'], md)
+        cyl('exhaust', .065, .1, (x * .2, gy(1.72), .9), M['steel'], md, verts=20)
+        box('seat', (.48, .55, .12), (x * .33, gy(.2), .5), M['seat'], md, bevel=.04)
+        box('seat_back', (.46, .12, .58), (x * .33, gy(.48), .76), M['seat'], md, bevel=.05, rot=(-.35, 0, 0))
+    # bonnet vent, cabin, roof with scoop
+    loft('sup_vent', [(-1.3, .30, .585, .645, 3, 1), (-1.0, .42, .61, .685, 3, 1), (-.72, .47, .635, .715, 3, 1)], 20, C, md)
+    loft('sup_canopy', [(-.95, .50, .66, .70, 2.6, 1), (-.6, .62, .66, .92, 2.8, .74), (-.15, .66, .68, 1.10, 2.8, .64), (.3, .64, .70, 1.15, 2.8, .58),
+                        (.8, .55, .74, 1.08, 2.8, .55), (1.25, .40, .78, .97, 2.6, .8), (1.65, .22, .82, .89, 2.4, 1)], 48, M['gtint'], md)
+    loft('sup_roof', [(-.22, .28, 1.075, 1.11, 3, 1), (.3, .34, 1.125, 1.165, 3, 1), (.8, .3, 1.06, 1.10, 3, 1), (1.3, .23, .95, .99, 3, 1), (1.78, .15, .855, .9, 3, 1)], 20, C, md)
+    loft('sup_scoop', [(.3, .08, 1.14, 1.17, 3, 1), (.5, .12, 1.13, 1.215, 3, 1), (.95, .13, 1.07, 1.19, 3, 1), (1.5, .1, .94, 1.03, 3, 1)], 16, C, md)
+    box('scoop_mouth', (.17, .02, .045), (0, gy(.3), 1.175), M['plastic'], md, bevel=.008)
+    loft('sup_deck', [(.95, .46, .80, .875, 3, 1), (1.55, .52, .82, .89, 3, 1), (2.2, .6, .78, .845, 3, 1)], 20, C, md)
+    # nose: wide intake with body-coloured slats, splitter
+    box('grille', (1.42, .06, .17), (0, gy(-2.2), .29), M['plastic'], md)
+    for y in (.245, .29, .335): box('slat', (1.36, .12, .014), (0, gy(-2.27), y), G, md)
+    box('splitter', (1.86, .4, .035), (0, gy(-2.2), .115), C, md, bevel=.01)
+    # tail: dark panel, centre brake light, lip wing, diffuser with fins
+    box('rear_panel', (1.74, .08, .3), (0, gy(2.36), .56), C, md, bevel=.02)
+    box('brake_mid', (.3, .03, .016), (0, gy(2.39), .745), M['tail'], md)
+    box('wing', (1.72, .3, .03), (0, gy(2.2), .885), C, md, bevel=.012, rot=(.06, 0, 0))
+    box('diffuser', (1.6, .55, .04), (0, gy(2.18), .2), C, md)
+    for k in range(6): box('diff_fin', (.02, .5, .2), (-.65 + k * .26, gy(2.2), .28), C, md)
+    # interior under the glass
+    box('tub', (1.1, 1.4, .04), (0, gy(.08), .44), C, md)
+    box('dash', (1.1, .28, .14), (0, gy(-.5), .74), C, md, bevel=.03)
+    cyl('steer', .15, .03, (-.33, gy(-.36), .84), C, md, rot=(1.2, 0, 0), verts=24)
 
 # ---------------------------------------------------------------- everyday cars (generic present-day shapes, no real model)
 def beam(name, p0, p1, thick, material, model):
@@ -469,7 +489,23 @@ def place_for_render():
     bpy.ops.object.camera_add(location=(6.5, 9.0, 3.0)); cam = bpy.context.active_object; sc.camera = cam
     d = Vector((0, -1.2, 0.8)) - cam.location; cam.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler(); cam.data.lens = 32
 
+def preview_car(out):
+    reset(); M = materials(); build_sup(M)
+    for x in (-1, 1):
+        for z, r, w in ((-1.42, .36, .27), (1.46, .37, .32)):
+            bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=w, vertices=40, location=(x * .87, gy(z), r), rotation=(0, math.pi / 2, 0)); bpy.context.active_object.data.materials.append(M['plastic'])
+            bpy.ops.mesh.primitive_cylinder_add(radius=r * .62, depth=w + .02, vertices=24, location=(x * .87, gy(z), r), rotation=(0, math.pi / 2, 0)); bpy.context.active_object.data.materials.append(M['carbon'])
+    sc = bpy.context.scene; sc.render.engine = 'CYCLES'; sc.cycles.samples = 40; sc.cycles.device = 'CPU'; sc.render.resolution_x, sc.render.resolution_y = 1100, 620
+    w = bpy.data.worlds.new('w'); sc.world = w; w.use_nodes = True; bg = w.node_tree.nodes['Background']; bg.inputs[0].default_value = (0.75, 0.78, 0.82, 1); bg.inputs[1].default_value = 0.9
+    bpy.ops.mesh.primitive_plane_add(size=60); bpy.context.active_object.data.materials.append(mat('floor', (0.7, 0.7, 0.7), 0, 0.45))
+    bpy.ops.object.light_add(type='SUN', rotation=(0.8, 0.1, 0.5)); bpy.context.active_object.data.energy = 3
+    bpy.ops.object.camera_add(); cam = bpy.context.active_object; sc.camera = cam; cam.data.lens = 50
+    for name, loc in (('front', (3.6, 5.6, 1.7)), ('rear', (3.9, -5.4, 2.0)), ('side', (7.5, 0.0, 1.1))):
+        cam.location = loc; d = Vector((0, 0, .55)) - cam.location; cam.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
+        sc.render.filepath = out + '_' + name + '.png'; bpy.ops.render.render(write_still=True)
+
 def main():
+    if len(sys.argv) > 2 and sys.argv[1] == '--car': preview_car(sys.argv[2]); return
     reset(); M = materials()
     build_van(M); build_sup(M)
     for md, spec in CITY_CARS.items(): build_city_car(M, md, *spec)
