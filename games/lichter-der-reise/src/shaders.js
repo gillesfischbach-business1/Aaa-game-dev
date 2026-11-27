@@ -160,7 +160,7 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     dy=(fy-0.5)*0.0; dx=0.0; rough=0.9;
   } else if(style<1.5){ // plaster
     wall=base*(0.86+0.22*gr); wall*=mix(0.75,1.0,smoothstep(0.0,1.6,v)); rough=0.9;
-    let streak=noise2(vec2f(u*3.0,v*0.15))*smoothstep(0.0,0.6,gs+gh-fv+0.0)*0.0; wall*=1.0-streak;
+    let streak=noise2(vec2f(u*3.0,v*0.15))*smoothstep(0.9,0.0,gs-fv)*step(fv,gs)*step(abs(x),gw*0.5+0.1)*0.22*fade; wall*=1.0-streak; // rain streaks below the sills
   } else if(style<2.5){ // sandstone blocks
     let bx=u/0.9; let row=floor(v/0.45); let ox=bx+select(0.0,0.5,fract(row*0.5)>0.25);
     let fx=fract(ox); let fy=fract(v/0.45); let j=(1.0-smoothstep(0.0,0.04,min(fx,1.0-fx)))+(1.0-smoothstep(0.0,0.06,min(fy,1.0-fy)));
@@ -207,7 +207,9 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
       let lampP=vec3f(0.0,fh-0.5,dep*0.45); let ld=hp-lampP; let lamp=2.2/(1.0+dot(ld,ld)*0.9);
       let iroom=surf*lamp; let ifade=fade*smoothstep(0.03,0.2,rd.z);
       room=mix(room,tone*iroom,ifade);
-      let dayRoom=surf*(S.ambTop.rgb+S.ambBot.rgb)*0.07*(1.0-tt/(dep*2.2))*ifade;
+      let shop=step(fl,0.5); // ground floor: shop windows are lit from the street and show their goods
+      let goods=mix(1.0,0.55+0.9*hash2(vec2f(floor(hp.x*3.0)+cellU*7.0,floor(hp.y*2.2))),shop*step(hp.y,1.9)*step(tz,min(tx,ty)));
+      let dayRoom=surf*goods*(S.ambTop.rgb+S.ambBot.rgb)*mix(0.07,0.5,shop)*(1.0-tt/(dep*2.2))*ifade;
       let curt=step(0.6,hash2(vec2f(cellU,fl)+3.1)); let cpos=abs(wx)>0.55-0.2*h;
       if(curt>0.5&&cpos){ room*=vec3f(0.9,0.6,0.45)*(0.8+0.2*sin(wx*40.0)); }
       let env=skyColor(reflect(-V,N));
