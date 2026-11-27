@@ -2066,64 +2066,48 @@ const MISSIONS=[
  {title:'Der Lichtturm',text:'Bringt die Funken zum Lichtturm.',target:()=>({x:LM.licht.x,z:LM.licht.z-42}),r:18,lines:'finale',time:5.9,finale:true}
 ];
 
-/* ===== Audio: physically modelled engines, natural ambience, reverb, mixer =====
-   Engines are synthesised per sample in an AudioWorklet from crank speed, cylinder count and firing order:
-   - Fidèle: 1.8 l four-cylinder diesel (Citroën C15 D), 2 firings per revolution, injector knock, rattly idle.
-   - Smaragd: 4.0 l twin-turbo flat-plane V8 with hybrid motors (Valhalla-like), 4 firings per revolution,
-     intake howl, turbo whistle, electric whine and overrun crackle.
-   Falls back to a simpler oscillator engine where AudioWorklet is unavailable. */
-const ENGINE_WORKLET=`
-class Engine extends AudioWorkletProcessor{
-  static get parameterDescriptors(){ return [{name:'rpm',defaultValue:850},{name:'load',defaultValue:0},{name:'gain',defaultValue:0},{name:'whine',defaultValue:0},{name:'boost',defaultValue:0}]; }
-  constructor(o){ super(); const p=o.processorOptions||{}; this.type=p.type||'diesel'; this.ph=0; this.lastFire=-1; this.pulses=[]; this.seed=1;
-    this.lp=0; this.bp1={x1:0,x2:0,y1:0,y2:0}; this.bp2={x1:0,x2:0,y1:0,y2:0}; this.hp=0; this.hpx=0; this.wph=0; this.tph=0; this.jit=0; this.crack=0; this.prevLoad=0; this.cyl=0; }
-  rnd(){ this.seed=(this.seed*16807)%2147483647; return this.seed/2147483647; }
-  biquadBP(st,x,f,q){ const w=2*Math.PI*Math.min(f,sampleRate*.45)/sampleRate, al=Math.sin(w)/(2*q), cw=Math.cos(w), a0=1+al;
-    const y=(al/a0)*x-(al/a0)*st.x2-(-2*cw/a0)*st.y1-((1-al)/a0)*st.y2; st.x2=st.x1; st.x1=x; st.y2=st.y1; st.y1=y; return y; }
-  process(_,out,P){ const o=out[0][0]; const N=o.length; const diesel=this.type==='diesel';
-    const cyl=(diesel||this.type==='i4')?4:8, firesPerRev=cyl/2;
-    for(let i=0;i<N;i++){
-      const rpm=P.rpm.length>1?P.rpm[i]:P.rpm[0], load=P.load.length>1?P.load[i]:P.load[0], g=P.gain.length>1?P.gain[i]:P.gain[0];
-      const whine=P.whine[0], boost=P.boost[0];
-      const f=rpm/60; this.ph+=f/sampleRate*(1+this.jit);
-      const firePhase=this.ph*firesPerRev; const k=Math.floor(firePhase);
-      if(k!==this.lastFire){ this.lastFire=k; this.cyl=(this.cyl+1)%cyl;
-        // per-cylinder character: diesel idles unevenly, the V8 is smooth but not identical per bank
-        const v=diesel?(0.75+0.5*this.rnd())*(1-0.25*(this.cyl%2)):(0.88+0.18*Math.sin(this.cyl*2.1));
-        this.jit=diesel?(this.rnd()-.5)*0.06*Math.max(0,1-rpm/2500):(this.rnd()-.5)*0.01;
-        const amp=v*(0.35+0.65*load);
-        this.pulses.push({t:0,a:amp,f1:diesel?110+rpm*0.03:140+rpm*0.03,f2:diesel?520+this.rnd()*260:900+rpm*0.08,click:diesel?1:0.25});
-        if(this.pulses.length>24) this.pulses.shift();
-        if(!diesel&&load<0.05&&rpm>3500&&this.prevLoad>0.5&&this.rnd()<0.18) this.crack=0.06; }
-      let s=0;
-      for(const p of this.pulses){ const t=p.t; const e1=Math.exp(-t*(diesel?55:38)), e2=Math.exp(-t*(diesel?420:260));
-        s+=p.a*(e1*Math.sin(2*Math.PI*p.f1*t)*0.9 + e2*Math.sin(2*Math.PI*p.f2*t)*0.45*p.click); p.t+=1/sampleRate; }
-      this.pulses=this.pulses.filter(p=>p.t<0.12);
-      const n=this.rnd()*2-1;
-      if(diesel){ // injector knock and valvetrain clatter: band-passed noise gated by the firing pulses
-        const clat=this.biquadBP(this.bp1,n,2600,3)*0.10*(0.5+load)*Math.min(1,rpm/900); s+=clat*(this.pulses.length?1:0.4);
-        s+=this.biquadBP(this.bp2,n,180+rpm*0.04,1.2)*0.08*load;
-      } else { // intake howl, turbo whistle, hybrid whine, overrun crackle
-        s+=this.biquadBP(this.bp1,n,300+rpm*0.11,2.5)*0.18*load;
-        this.tph+=(1800+boost*4200)/sampleRate; s+=Math.sin(2*Math.PI*this.tph)*0.035*boost;
-        this.wph+=(120+whine*9000)/sampleRate; s+=Math.sin(2*Math.PI*this.wph)*0.012*Math.min(1,whine*3)*(1-load*0.5);
-        if(this.crack>0){ this.crack-=1/sampleRate; if(this.rnd()<0.02) s+=(this.rnd()*2-1)*1.4; } }
-      this.prevLoad=load;
-      // exhaust: one-pole low-pass that opens with rpm and load, plus DC block, soft saturation
-      const c=Math.min(0.95,(diesel?1500+rpm*0.12:1600+rpm*0.35)*(0.6+0.6*load)/sampleRate*6.28);
-      this.lp+=(s-this.lp)*c; const y=this.lp-this.hpx+0.995*this.hp; this.hpx=this.lp; this.hp=y;
-      o[i]=Math.tanh(y*(diesel?0.9:1.0))*g;
-    }
-    for(let ch=1;ch<out[0].length;ch++) out[0][ch].set(o);
-    return true; } }
-registerProcessor('engine',Engine);`;
-
+/* ===== Audio: loop-based engines, natural ambience, reverb, mixer =====
+   Engines work the way racing games do it: for every engine a set of seamless loops is prepared once, at fixed engine speeds,
+   each in an on-throttle and an off-throttle version. While driving the loops are only played back: their pitch follows the
+   rev counter and neighbouring loops are cross-faded by rpm and by load. Nothing is computed per sample at run time, so the
+   sound stays clean on phones.
+   The loops themselves are built from the physics of a four-stroke engine by inverse FFT (band-limited, no aliasing):
+   harmonics of the firing frequency shaped by exhaust resonances, weaker half-orders from uneven cylinders, and intake and
+   exhaust noise that pulses with the firing. All loops of one engine share the same phases and start together, so
+   cross-fades do not cancel. */
+const ENGINE_SPEC={
+ // cyl, loop rpm points, exhaust formants [Hz, gain, width], harmonic roll-off [on-load, off-load], cylinder unevenness, noise level [on, off], noise band, level
+ fidele:{cyl:4,pts:[850,1350,2000,2800,3700,4600],form:[[105,.6,55],[250,1,110],[600,.95,230],[1400,.5,520],[2600,.18,900]],roll:[.95,1.5],rough:.34,noise:[.16,.07],band:[1100,3600],clatter:.55,wobble:.014,gain:.62},
+ petrol:{cyl:4,pts:[800,1500,2400,3400,4500,5600,6400],form:[[165,.55,75],[400,1,170],[900,.9,340],[2100,.5,750],[3800,.16,1200]],roll:[.8,1.4],rough:.1,noise:[.09,.035],band:[700,4400],clatter:0,wobble:.005,gain:.52},
+ smaragd:{cyl:8,flat:true,pts:[1100,1900,2900,4000,5200,6300,7200],form:[[220,.7,105],[540,1,220],[1250,.9,460],[2800,.5,950],[4600,.18,1400]],roll:[.8,1.4],rough:.16,noise:[.1,.04],band:[900,5200],clatter:0,wobble:.004,gain:.5} };
+const LOOP_SR=22050, LOOP_N=16384;
+function fftInverse(re,im){ const n=re.length; // in-place radix-2, returns the real signal in re
+  for(let i=1,j=0;i<n;i++){ let b=n>>1; for(;j&b;b>>=1) j^=b; j^=b; if(i<j){ let t=re[i]; re[i]=re[j]; re[j]=t; t=im[i]; im[i]=im[j]; im[j]=t; } }
+  for(let len=2;len<=n;len<<=1){ const ang=2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){ let cr=1, ci=0; for(let k=0;k<len/2;k++){ const a=i+k, b=a+len/2; const xr=re[b]*cr-im[b]*ci, xi=re[b]*ci+im[b]*cr; re[b]=re[a]-xr; im[b]=im[a]-xi; re[a]+=xr; im[a]+=xi; const t=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=t; } } } }
+function engineLoop(ctx,S,rpm,load,seed){ const N=LOOP_N, re=new Float32Array(N), im=new Float32Array(N); let sd=seed>>>0; const rnd=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
+  const K=Math.max(1,Math.round(rpm/120*N/LOOP_SR)), fc=K*LOOP_SR/N; // whole engine cycles per loop -> seamless
+  const form=f=>{ let g=.05; for(const [f0,a,w] of S.form){ const d=(f-f0)/w; g+=a*Math.exp(-d*d); } return g; };
+  const put=(bin,a,ph)=>{ if(bin<1||bin>=N/2) return; const r=a*Math.cos(ph), q=a*Math.sin(ph); re[bin]+=r; im[bin]+=q; re[N-bin]+=r; im[N-bin]-=q; };
+  const roll=S.roll[load?0:1], bright=load?1:.55;
+  for(let h=1;h*fc<9000;h++){ const f=h*fc, n=h/S.cyl, firing=h%S.cyl===0; const ph=rnd()*6.283*(firing&&n<=3?.3:1); // the phase depends only on h: equal in every loop of this engine
+    let a=1/Math.pow(Math.max(n,.5),roll); if(!firing) a*=S.rough*((S.flat&&h%(S.cyl/2)===0)?2.4:1)*(load?1:1.3);
+    a*=form(f)*(f>1200?bright:1); put(h*K,a,ph); }
+  fftInverse(re,im); const tone=re.slice();
+  // noise: band-limited, pulsing with the firing (intake and exhaust), plus injector clatter for the diesel
+  re.fill(0); im.fill(0); const b0=Math.round(S.band[0]*N/LOOP_SR), b1=Math.round(S.band[1]*N/LOOP_SR);
+  for(let b=b0;b<b1;b++){ const f=b*LOOP_SR/N, sh=Math.sin(Math.PI*(b-b0)/(b1-b0)); put(b,sh*(.6+.8*rnd())/Math.sqrt(f/1000),rnd()*6.283); }
+  fftInverse(re,im); let tr=0, nr=0; for(let i=0;i<N;i++){ const ph=2*Math.PI*S.cyl*K*i/N; const m=S.clatter?Math.pow(.5+.5*Math.cos(ph),6)*S.clatter*3+.25:.55+.45*Math.cos(ph+1.1); re[i]*=m; tr+=tone[i]*tone[i]; nr+=re[i]*re[i]; }
+  tr=Math.sqrt(tr/N)||1; nr=Math.sqrt(nr/N)||1; const nl=S.noise[load?0:1]*(.6+.4*Math.min(1,rpm/4000));
+  const buf=ctx.createBuffer(1,N,LOOP_SR), d=buf.getChannelData(0); let pk=0; for(let i=0;i<N;i++){ const v=tone[i]/tr*.2*(load?1:.62)+re[i]/nr*.2*nl; d[i]=v; if(Math.abs(v)>pk) pk=Math.abs(v); }
+  if(pk>.9) for(let i=0;i<N;i++) d[i]*=.9/pk;
+  return {buf,rpm:fc*120}; }
 const PETROL={idle:800,red:6400,ratios:[3.6,2.1,1.4,1.05,.82,.66],final:3.9,wheel:.33,up:5400,down:1700};
 const GEARS={ kompakt:PETROL, limo:PETROL, suv:PETROL, petrol:PETROL, fidele:{idle:850,red:4600,ratios:[3.8,2.2,1.45,1.05,.8],final:4.1,wheel:.3,up:3800,down:1500},
               smaragd:{idle:1100,red:7200,ratios:[3.4,2.6,2.0,1.6,1.3,1.05,.85,.68],final:3.6,wheel:.36,up:6600,down:2400} };
-const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,amb:.6}, worklet:false, eng:{}, gear:1, rpm:850, shiftT:0, mood:0, musicOn:false, nextNote:0, step:0,
+const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,amb:.6}, eng:{}, gear:1, rpm:850, shiftT:0, mood:0, musicOn:false, nextNote:0, step:0,
  init(){ if(this.ctx) return; try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const c=this.ctx=new AC({latencyHint:'interactive'});
-   this.comp=c.createDynamicsCompressor(); this.comp.threshold.value=-12; this.comp.ratio.value=3; { const mk=c.createGain(); mk.gain.value=1.6; this.comp.connect(mk); mk.connect(c.destination); this.out=mk; }
+   this.comp=c.createDynamicsCompressor(); this.comp.threshold.value=-12; this.comp.ratio.value=3; { const mk=c.createGain(); mk.gain.value=1.6; const lim=c.createDynamicsCompressor(); lim.threshold.value=-2; lim.knee.value=2; lim.ratio.value=20; lim.attack.value=.002; lim.release.value=.08; this.comp.connect(mk); mk.connect(lim); lim.connect(c.destination); this.out=lim; }
    this.master=c.createGain(); this.master.connect(this.comp);
    // synthetic room impulse for natural reverb (decaying stereo noise)
    const len=c.sampleRate*2.4, ir=c.createBuffer(2,len,c.sampleRate); for(let ch=0;ch<2;ch++){ const d=ir.getChannelData(ch); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2)*(i<c.sampleRate*.01?i/(c.sampleRate*.01):1); }
@@ -2142,13 +2126,20 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    this.night=c.createGain(); this.night.gain.value=0; this.night.connect(this.bus.amb);
    this.applyVolumes(); this.initEngines(); this.nextNote=c.currentTime+.2; setInterval(()=>this.tick(),90);
  }catch(e){ console.warn('audio off',e); this.ctx=null; } },
- async initEngines(){ const c=this.ctx;
-   try{ const url=URL.createObjectURL(new Blob([ENGINE_WORKLET],{type:'application/javascript'})); await c.audioWorklet.addModule(url);
-     for(const [car,type] of [['fidele','diesel'],['smaragd','v8'],['petrol','i4']]){ const n=new AudioWorkletNode(c,'engine',{numberOfOutputs:1,outputChannelCount:[2],processorOptions:{type}}); const g=c.createGain(); g.gain.value=type==='diesel'?.55:.5; n.connect(g); g.connect(this.bus.engine); this.eng[car]=n; }
-     this.worklet=true;
-   }catch(e){ // fallback: two detuned oscillators through a filter
-     for(const car of ['fidele','smaragd','petrol']){ const o=c.createOscillator(); o.type='sawtooth'; const o2=c.createOscillator(); o2.type='square'; const f=c.createBiquadFilter(); f.type='lowpass'; const g=c.createGain(); g.gain.value=0;
-       o.connect(f); o2.connect(f); f.connect(g); g.connect(this.bus.engine); o.start(); o2.start(); this.eng[car]={fallback:true,o,o2,f,g}; } } },
+ /* Build the loops in small portions so the game never stutters: first the engine in use, the others afterwards. */
+ initEngines(){ const c=this.ctx; this.engOut=c.createGain(); this.engOut.gain.value=1; this.engOut.connect(this.bus.engine); this.engBuild=[]; this.live=null;
+   // electric whine of the hybrid hypercar: one quiet sine that climbs with speed
+   this.whine=c.createOscillator(); this.whine.type='sine'; this.whineG=c.createGain(); this.whineG.gain.value=0; this.whine.connect(this.whineG); this.whineG.connect(this.bus.engine); this.whine.start();
+   for(const key of ['fidele','petrol','smaragd']){ this.eng[key]={ready:false,loops:[]}; const S=ENGINE_SPEC[key]; S.pts.forEach((rpm,i)=>{ for(const load of [1,0]) this.engBuild.push({key,i,rpm,load}); }); }
+   const work=()=>{ if(!this.ctx) return; const want=this.wantKey||'fidele'; let j=this.engBuild.findIndex(b=>b.key===want); if(j<0) j=0; const b=this.engBuild.splice(j,1)[0]; if(!b) return;
+     const E=this.eng[b.key], L=engineLoop(c,ENGINE_SPEC[b.key],b.rpm,b.load,b.key.length*7919+1); (E.loops[b.i]||(E.loops[b.i]={rpm:L.rpm}))[b.load?'on':'off']=L.buf;
+     if(!this.engBuild.some(x=>x.key===b.key)) E.ready=true; if(this.engBuild.length) setTimeout(work,E.ready?40:4); };
+   setTimeout(work,30); },
+ /* start the loops of one engine, all at the same instant so their cycles stay in step */
+ startEngine(key){ const c=this.ctx, E=this.eng[key], S=ENGINE_SPEC[key]; this.stopEngine(); if(!E||!E.ready) return; const t0=c.currentTime+.03, out=c.createGain(); out.gain.value=0; out.connect(this.engOut);
+   const v=[]; for(const L of E.loops){ const o={rpm:L.rpm}; for(const k of ['on','off']){ const src=c.createBufferSource(); src.buffer=L[k]; src.loop=true; src.playbackRate.value=this.rpm/L.rpm; const g=c.createGain(); g.gain.value=0; src.connect(g); g.connect(out); src.start(t0); o[k]={src,g,cur:0}; } v.push(o); }
+   this.live={key,out,v,S,load:0}; },
+ stopEngine(){ const L=this.live; if(!L) return; const t=this.ctx.currentTime; L.out.gain.setTargetAtTime(0,t,.05); for(const o of L.v) for(const k of ['on','off']){ try{ o[k].src.stop(t+.4); }catch(e){} } setTimeout(()=>{ try{ L.out.disconnect(); }catch(e){} },600); this.live=null; },
  resume(){ if(this.ctx&&this.ctx.state!=='running') this.ctx.resume().catch(()=>{}); },
  applyVolumes(){ if(!this.ctx) return; const t=this.ctx.currentTime; this.master.gain.setTargetAtTime(this.muted?0:this.vol.master,t,.05);
    for(const k of ['music','engine','fx','amb']) this.bus[k].gain.setTargetAtTime(this.vol[k],t,.05); },
@@ -2167,17 +2158,23 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    if(this.shiftT>0) rpm*=car==='fidele'?.82:.9;
    rpm=Math.min(rpm,G.red); this.rpm+=(rpm-this.rpm)*Math.min(1,dt*(car==='fidele'?6:12));
    const load=this.shiftT>0?.1:clamp(thr*.9+(v>1?.1:0),0,1);
-   const ek=GEARS[car]===PETROL?'petrol':car; // the everyday cars share one four-cylinder petrol engine
-   for(const k in this.eng){ const e=this.eng[k], active=k===ek&&on;
-     if(e.fallback){ const f=GEARS[k]; e.o.frequency.setTargetAtTime(this.rpm/60*(k==='fidele'?2:4),t,.05); e.o2.frequency.setTargetAtTime(this.rpm/60,t,.05); e.f.frequency.setTargetAtTime(300+this.rpm*.4*(.5+load),t,.05); e.g.gain.setTargetAtTime(active?.06:0,t,.1); continue; }
-     e.parameters.get('rpm').setTargetAtTime(active?this.rpm:GEARS[k].idle,t,.03); e.parameters.get('load').setTargetAtTime(load,t,.03);
-     e.parameters.get('gain').setTargetAtTime(active?.7:0,t,.15); e.parameters.get('whine').setTargetAtTime(k==='smaragd'?clamp(v/80,0,1):0,t,.05);
-     e.parameters.get('boost').setTargetAtTime(k==='smaragd'?clamp((this.rpm-2500)/4000,0,1)*load:0,t,.1); }
+   const ek=GEARS[car]===PETROL?'petrol':car; this.wantKey=ek; // the everyday cars share one four-cylinder petrol engine
+   if(on&&(!this.live||this.live.key!==ek)&&this.eng[ek]&&this.eng[ek].ready) this.startEngine(ek);
+   const L=this.live;
+   if(L){ const S=L.S, wob=1+S.wobble*(Math.sin(t*5.3)+.6*Math.sin(t*12.7))*Math.max(.15,1-this.rpm/3000); const rpm=this.rpm*wob; // an engine never holds its speed perfectly, least of all at idle
+     L.load+=(load-L.load)*Math.min(1,dt*9); const v2=L.v; let i=0; while(i<v2.length-2&&rpm>v2[i+1].rpm) i++; const w=clamp((rpm-v2[i].rpm)/(v2[i+1].rpm-v2[i].rpm),0,1);
+     for(let k=0;k<v2.length;k++){ const o=v2[k], gk=k===i?1-w:k===i+1?w:0; o.on.src.playbackRate.setTargetAtTime(rpm/o.rpm,t,.025); o.off.src.playbackRate.setTargetAtTime(rpm/o.rpm,t,.025);
+       const gOn=gk*L.load, gOff=gk*(1-L.load); if(Math.abs(gOn-o.on.cur)>.004){ o.on.cur=gOn; o.on.g.gain.setTargetAtTime(gOn,t,.03); } if(Math.abs(gOff-o.off.cur)>.004){ o.off.cur=gOff; o.off.g.gain.setTargetAtTime(gOff,t,.03); } }
+     L.out.gain.setTargetAtTime(on&&L.key===ek?S.gain*(.55+.45*L.load)*(.8+.2*Math.min(1,this.rpm/4000)):0,t,.08);
+     // lift-off pops of the hypercar: a few soft cracks when the throttle closes at high revs
+     if(L.key==='smaragd'&&this.prevLoad>.6&&load<.1&&this.rpm>4300){ for(let k=0;k<3;k++) setTimeout(()=>{ if(this.ctx) this.noiseBurst(.05,'bandpass',900+Math.random()*900,.1); },90+k*130+Math.random()*60); } }
+   this.prevLoad=load;
+   this.whine.frequency.setTargetAtTime(500+v*42,t,.08); this.whineG.gain.setTargetAtTime(on&&ek==='smaragd'?clamp(v/70,0,1)*.018:0,t,.15);
    // tyres and wind grow with speed; braking adds a scrub
    const sl=on?clamp((this.slide||0)/6,0,1):0; // sliding tyres squeal: louder and higher
    this.tyre.g.gain.setTargetAtTime(on?clamp(v/30,0,1)*.22+(brk&&v>4?.08:0)+sl*.3:0,t,.06); this.tyre.f.frequency.setTargetAtTime(250+v*14+sl*900,t,.06);
    this.wind.g.gain.setTargetAtTime(on?Math.pow(clamp(v/60,0,1),2)*.35:0,t,.2); this.wind.f.frequency.setTargetAtTime(400+v*25,t,.2); },
- setEngine(speed,on,C){ if(!on&&this.ctx) for(const k in this.eng){ const e=this.eng[k]; if(e.fallback) e.g.gain.setTargetAtTime(0,this.ctx.currentTime,.2); else e.parameters.get('gain').setTargetAtTime(0,this.ctx.currentTime,.25); } },
+ setEngine(speed,on,C){ if(!on&&this.live&&this.ctx) this.live.out.gain.setTargetAtTime(0,this.ctx.currentTime,.2); },
  /* ambience: hour of day, rain 0..1, region 'city'|'motorway' */
  ambience(hour,rain,region){ if(!this.ctx) return; const t=this.ctx.currentTime; const night=hour<5.5||hour>21;
    this.rain.g.gain.setTargetAtTime(rain*.12,t,.5); this.city.g.gain.setTargetAtTime(region==='city'?(night?.05:.1):.03,t,1);
