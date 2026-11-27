@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 (async () => { const b = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--headless=new', '--enable-unsafe-webgpu', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--enable-features=Vulkan', '--use-vulkan=native', '--use-angle=vulkan'] });
   const p = await b.newPage({ viewport: { width: 640, height: 360 } }); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
-  await p.goto('http://localhost:8777/lichter-der-reise/index.html'); await p.waitForFunction(() => typeof G !== 'undefined' && G.player && cells.size > 0, null, { timeout: 180000 });
+  await p.goto('http://localhost:8777/lichter-der-reise/index.html'); await p.waitForFunction(() => typeof G !== 'undefined' && G.player && cells.size > 0 && G.ready, null, { timeout: 180000 });
   const r = await p.evaluate(() => { window.__manual = true; document.getElementById('title').hidden = true; const K = SET.ctl.keys, out = {}; SET.gfx.traffic = 0; TRAFFIC.length = 0;
     const set = (car, x, z, h) => { for (const k in keys) keys[k] = false; G.player = newCar(car, x, z, h); G.camYaw = h; G.state = 'drive'; G.camMode = 'chase'; G.mission = 6; G.event = null; G.boostT = 0; TRAFFIC.length = 0; PEDS.length = 0; };
     const run = (n, dt, f) => { for (let i = 0; i < n; i++) { if (f) f(i); update(dt); TRAFFIC.length = 0; } };

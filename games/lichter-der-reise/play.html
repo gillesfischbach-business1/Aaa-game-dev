@@ -211,9 +211,54 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
 
 .btn:disabled{opacity:.55;cursor:progress;filter:saturate(.6)}
 
+/* ---------- loading screen ---------- */
+#loadO{position:fixed;inset:0;z-index:60;overflow:hidden;background:linear-gradient(160deg,#150c26 0%,#3f1740 38%,#b9502f 78%,#ffc46a 100%);transition:opacity .7s ease;display:block}
+#loadO.done{opacity:0;pointer-events:none}
+.ld-panels{position:absolute;inset:-12% -14% 0 -14%;display:flex;gap:10px;transform:skewX(-9deg);padding:0 2%}
+.ld-p{position:relative;flex:1 1 0;overflow:hidden;background:#0b0810;border:5px solid #0b0810;box-shadow:0 20px 60px rgba(0,0,0,.6);opacity:0;animation:ldIn .8s cubic-bezier(.2,.8,.2,1) forwards}
+.ld-p:nth-child(1){animation-delay:.05s;margin-top:6%}.ld-p:nth-child(2){animation-delay:.18s;margin-top:-2%}.ld-p:nth-child(3){animation-delay:.31s;margin-top:9%}.ld-p:nth-child(4){animation-delay:.44s;margin-top:1%}.ld-p:nth-child(5){animation-delay:.57s;margin-top:7%}
+.ld-p img{position:absolute;left:-22%;top:-3%;width:144%;height:106%;object-fit:cover;object-position:50% 28%;transform:skewX(9deg) scale(1.0);animation:ldPan 14s ease-in-out infinite alternate;filter:saturate(1.15) contrast(1.05)}
+.ld-p:nth-child(even) img{animation-direction:alternate-reverse}
+.ld-p img.b{animation:ldPan 14s ease-in-out infinite alternate,ldSwap 12s ease-in-out infinite}
+.ld-p:nth-child(2) img.b{animation-delay:0s,2s}.ld-p:nth-child(3) img.b{animation-delay:0s,4s}.ld-p:nth-child(4) img.b{animation-delay:0s,1s}.ld-p:nth-child(5) img.b{animation-delay:0s,3s}
+@keyframes ldIn{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+@keyframes ldPan{from{transform:skewX(9deg) scale(1.0) translate(-2%,-1%)}to{transform:skewX(9deg) scale(1.09) translate(2%,1%)}}
+@keyframes ldSwap{0%,38%{opacity:0}50%,88%{opacity:1}100%{opacity:0}}
+.ld-shade{position:absolute;inset:0;background:linear-gradient(0deg,rgba(7,6,12,.96) 0%,rgba(7,6,12,.78) 22%,rgba(7,6,12,0) 52%),linear-gradient(90deg,rgba(7,6,12,.55),transparent 40%)}
+.ld-foot{position:absolute;left:max(5vw,env(safe-area-inset-left));right:max(5vw,env(safe-area-inset-right));bottom:max(5vh,env(safe-area-inset-bottom));display:grid;gap:8px}
+.ld-logo{font-family:var(--display);font-size:clamp(34px,7.5vw,92px);line-height:.95;color:var(--ink);text-shadow:0 4px 30px rgba(0,0,0,.7)}
+.ld-logo em{color:var(--gold);font-style:italic}
+.ld-sub{font:800 12px var(--body);letter-spacing:.34em;text-transform:uppercase;color:var(--ember)}
+.ld-bar{height:4px;border-radius:4px;background:rgba(243,237,228,.18);overflow:hidden;margin-top:10px;max-width:560px}
+.ld-bar i{display:block;height:100%;width:4%;background:linear-gradient(90deg,var(--ember),var(--gold));box-shadow:0 0 14px var(--gold);transition:width .5s ease}
+.ld-row{display:flex;justify-content:space-between;max-width:560px;font:600 13px var(--body);color:#d6ccc0;font-variant-numeric:tabular-nums}
+.ld-tip{font:400 14px/1.45 var(--body);color:#d6ccc0;max-width:60ch;min-height:2.9em}
+.ld-tip b{color:var(--gold);font-weight:800}
+@media (orientation:portrait){ .ld-panels{inset:-4% -55% 30% -55%} .ld-p:nth-child(n+4){display:none} }
+@media (max-height:460px){ .ld-tip{font-size:12.5px} .ld-foot{gap:5px} }
+@media (prefers-reduced-motion:reduce){ .ld-p,.ld-p img{animation:none!important;opacity:1} .ld-p img.b{display:none} }
+
 </style>
 </head>
 <body>
+<!-- loading screen: a collage of slanted panels with the story's own pictures, logo, progress and tips -->
+<div id="loadO" aria-live="polite">
+  <div class="ld-panels">
+    <div class="ld-p"><img class="a" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/panel_belval.jpg" alt=""><img class="b" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/glutplatz.jpg" alt=""></div>
+    <div class="ld-p"><img class="a" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/panel_bar.jpg" alt=""><img class="b" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/mira.jpg" alt=""></div>
+    <div class="ld-p"><img class="a" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/car_smaragd.jpg" alt=""><img class="b" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/panel_bruecke.jpg" alt=""></div>
+    <div class="ld-p"><img class="a" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/panel_abend.jpg" alt=""><img class="b" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/leo.jpg" alt=""></div>
+    <div class="ld-p"><img class="a" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/car_fidele.jpg" alt=""><img class="b" src="https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/monaco.jpg" alt=""></div>
+  </div>
+  <div class="ld-shade"></div>
+  <div class="ld-foot">
+    <div class="ld-logo">Lichter der <em>Reise</em></div>
+    <div class="ld-sub">Luxemburg · Eindhoven</div>
+    <div class="ld-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="ldBarWrap"><i id="ldBar"></i></div>
+    <div class="ld-row"><span id="ldStep">Wird geladen …</span><span id="ldPct">0 %</span></div>
+    <div class="ld-tip" id="ldTip"></div>
+  </div>
+</div>
 <canvas id="gfx" aria-label="Spielgrafik"></canvas>
 
 <div id="hud" hidden>
@@ -2330,6 +2375,8 @@ function update(dt){
     const [s,th,br]=readInput(); G.boostT=Math.max(0,G.boostT-dt);
     pl.hb=!!(keys['shift']||G.gpHB||(br>0&&Math.abs(s)>.5&&pl.v>13)); pl.wet=Math.max(envCur.rain||0,(envCur.wet||0)*.5);
     const px0=pl.x, pz0=pl.z; const hit=stepCar(pl,th,br,s,dt,G.boostT>0); Audio_.slide=pl.slide||0;
+    // wedged between obstacles? After four seconds of throttle or brake without moving, the car is set back on the street.
+    if((th>0||br>0)&&Math.abs(pl.v)<.35){ G.stuckT=(G.stuckT||0)+dt; if(G.stuckT>4){ G.stuckT=0; backOnRoad(pl); toast('Festgefahren: zurück auf die Straße gesetzt'); } } else G.stuckT=0;
     if(pl.slide>5&&Math.random()<dt*30){ const c2=Math.cos(pl.h), s2=Math.sin(pl.h), L2=VEH[pl.car].half[1]*.75; for(const sd of [-1,1]) G.parts.push({x:pl.x+s2*L2+c2*sd*.75,y:.12,z:pl.z+c2*L2-s2*sd*.75,vx:rr(-.4,.4),vy:rr(.3,.9),vz:rr(-.4,.4),life:.7,max:.7,s:.2,col:[.5,.5,.52],em:.06,g:-.4}); }
     { let dw=yawW(pl.x,pl.z,pl.h)-yawW(px0,pz0,pl.h); while(dw>Math.PI)dw-=2*Math.PI; while(dw<-Math.PI)dw+=2*Math.PI; pl.h-=dw; } // the road bends, the car does not: you have to steer through curves if(hit>3){ G.shake=Math.min(1,hit/14); Audio_.noiseHit(.25,900,clamp(hit/20,.1,.5)); }
     if(Math.random()<dt*2) spawnTraffic(pl.x,pl.z); updateTraffic(dt,pl); updateHumans(dt,pl);
@@ -2727,7 +2774,7 @@ function initUI(){
     soft(()=>{ Audio_.init(); Audio_.resume(); }); soft(goImmersive); graceFor(3000); };
   if(readSlot('auto')) $('btnContinue').hidden=false; $('btnPause').onclick=()=>togglePause(); $('btnResume').onclick=()=>togglePause();
   $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('lbSend').onclick=()=>lbSubmit(); $('lbName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') lbSubmit(); }); $('lbName').addEventListener('keyup',e=>e.stopPropagation()); $('btnView').onclick=()=>cycleView(); $('mapClose').onclick=()=>toggleMap();
-  $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; const p=G.player; const n=nearestRoadPoint(p.x,p.z); p.x=n.x; p.z=n.z; p.v=0; p.lat=0; toast('Zurück auf die Straße'); };
+  $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; backOnRoad(G.player); toast('Zurück auf die Straße'); };
   $('btnRestart').onclick=()=>{ $('pauseO').hidden=true; startGame(); };
   $('btnAgain').onclick=()=>{ $('endO').hidden=true; startGame(); };
   $('btnFree').onclick=()=>freeRoam();
@@ -2739,6 +2786,11 @@ function initUI(){
   const al=$('album'); [['https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/panel_belval.jpg','Belval','-3deg'],['https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/panel_bar.jpg','Le Pont Violet','2deg'],['https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/glutplatz.jpg','Glutplatz, Eindhoven','-1deg'],['https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/monaco.jpg','Monte-Carlo','2.5deg']].forEach(([src,cap,r])=>{
     const f=document.createElement('figure'); f.className='polaroid'; f.style.setProperty('--r',r); const im=document.createElement('img'); im.src=src; im.alt=cap; im.loading='lazy'; f.appendChild(im); const s=document.createElement('span'); s.textContent=cap; f.appendChild(s); al.appendChild(f); });
 }
+/* put a car back on the middle of the nearest street, pointing along it (used by the pause menu and when the car is wedged) */
+function backOnRoad(p){ let best=null,bd=1e9; for(const r of roadsList){ const qx=clamp(p.x,r.x0,r.x1), qz=clamp(p.z,r.z0,r.z1); const d=Math.hypot(qx-p.x,qz-p.z); if(d<bd){ bd=d; best=r; } } if(!best) return;
+  const alongX=(best.x1-best.x0)>(best.z1-best.z0), fx=-Math.sin(p.h), fz=-Math.cos(p.h);
+  if(alongX){ p.z=(best.z0+best.z1)/2; p.x=clamp(p.x,best.x0+3,best.x1-3); p.h=fx>=0?-Math.PI/2:Math.PI/2; } else { p.x=(best.x0+best.x1)/2; p.z=clamp(p.z,best.z0+3,best.z1-3); p.h=fz>=0?Math.PI:0; }
+  p.v=0; p.lat=0; p.steer=0; G.camYaw=p.h; }
 function nearestRoadPoint(x,z){ let best=null,bd=1e9; for(const r of roadsList){ const qx=clamp(x,r.x0+2,r.x1-2), qz=clamp(z,r.z0+2,r.z1-2); const d=Math.hypot(qx-x,qz-z); if(d<bd){ bd=d; best={x:qx,z:qz}; } } return best||{x,z}; }
 function skipDialog(){ if(dlg.cur&&dlg.cur.choices){ dlg.shown=dlg.cur.t.length; return; } const ci=dlg.queue.findIndex(l=>l.choices);
   if(ci>=0){ dlg.queue=dlg.queue.slice(ci); nextLine(); dlg.shown=dlg.cur.t.length; } else { dlg.queue=[]; nextLine(); } }
@@ -2753,13 +2805,17 @@ function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false
 
 (async()=>{
   // Nothing may be started before the world exists: the buttons stay locked and show the loading step until boot has finished.
-  const lockBtns=['btnStart','btnContinue','btnOptTitle'], startLabel=$('btnStart').textContent; const step=async t=>{ $('btnStart').textContent=t; await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); };
+  const lockBtns=['btnStart','btnContinue','btnOptTitle'], startLabel=$('btnStart').textContent; const tLoad=performance.now(); const TIPS=['<b>Driften:</b> Umschalt-Taste halten, am Handy bremsen und lenken zugleich.','<b>Auto wechseln:</b> Neben einem geparkten Wagen anhalten, dann C oder ⇄.','<b>Lichtstoß:</b> Fünf Funken sammeln, dann Leertaste oder LICHT.','<b>Kamera:</b> Mit V oder ◉ sitzt ihr im Wagen statt dahinter.','<b>Karte:</b> K zeigt beide Städte und den Weg zum Ziel.','<b>Spielstand:</b> Unter Optionen könnt ihr in die Cloud sichern und am Handy weiterspielen.'];
+  let tipN=(Math.random()*TIPS.length)|0; const showTip=()=>{ const el=$('ldTip'); if(el) el.innerHTML=TIPS[tipN++%TIPS.length]; }; showTip(); const tipT=setInterval(showTip,3800);
+  const step=async(t,pct)=>{ $('btnStart').textContent=t; const st=$('ldStep'); if(st){ st.textContent=t; $('ldBar').style.width=pct+'%'; $('ldPct').textContent=pct+' %'; $('ldBarWrap').setAttribute('aria-valuenow',pct); } await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); };
   for(const id of lockBtns){ const b=$(id); if(b) b.disabled=true; }
-  try{ initUI(); await step('Grafik wird gestartet …'); await initGPU($('gfx')); loadSettings(); /* after initGPU: the adapter info is needed to choose the first-run preset */ await step('Fahrzeuge werden geladen …'); initModels(); await step('Die Städte werden gebaut …'); buildWorld({lamp:[1,.72,.42]}); genCafes(); await step('Karte wird gezeichnet …'); buildMapImage();
+  try{ initUI(); await step('Grafik wird gestartet …',8); await initGPU($('gfx')); loadSettings(); /* after initGPU: the adapter info is needed to choose the first-run preset */ await step('Fahrzeuge werden geladen …',30); initModels(); await step('Die Städte werden gebaut …',48); buildWorld({lamp:[1,.72,.42]}); genCafes(); await step('Karte wird gezeichnet …',86); buildMapImage();
     R.scale=SET.gfx.scale*Math.min(window.devicePixelRatio||1,SET.gfx.dprCap||1.5); applySettings();
     if(R.fallback&&!window.__manual) setTimeout(()=>{ if(!window.__manual) toast('Hinweis: Dein Browser rechnet die Grafik ohne Grafikchip. Das Spiel passt sich an, bleibt aber langsamer.'); },2500);
-    placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; G.ready=true; $('btnStart').textContent=startLabel; for(const id of lockBtns){ const b=$(id); if(b) b.disabled=false; } requestAnimationFrame(t=>{ last=t; frame(t); }); }
-  catch(e){ console.error(e); $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
+    placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; await step('Bereit',100); requestAnimationFrame(t=>{ last=t; frame(t); });
+    // the loading screen stays for a moment even on fast machines, then fades into the title
+    const wait=window.__manual?0:Math.max(0,2600-(performance.now()-tLoad)); setTimeout(()=>{ G.ready=true; $('btnStart').textContent=startLabel; for(const id of lockBtns){ const b=$(id); if(b) b.disabled=false; } clearInterval(tipT); const L=$('loadO'); if(L){ L.classList.add('done'); setTimeout(()=>{ L.hidden=true; },800); } },wait); }
+  catch(e){ console.error(e); clearInterval(tipT); { const L=$('loadO'); if(L) L.hidden=true; } $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
 })();
 
 function cycleView(){ G.view=((G.view||0)+1)%3; toast(['Kamera: hinter dem Auto','Kamera: am Armaturenbrett','Kamera: Stoßstange'][G.view]); }

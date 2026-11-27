@@ -160,6 +160,8 @@ function update(dt){
     const [s,th,br]=readInput(); G.boostT=Math.max(0,G.boostT-dt);
     pl.hb=!!(keys['shift']||G.gpHB||(br>0&&Math.abs(s)>.5&&pl.v>13)); pl.wet=Math.max(envCur.rain||0,(envCur.wet||0)*.5);
     const px0=pl.x, pz0=pl.z; const hit=stepCar(pl,th,br,s,dt,G.boostT>0); Audio_.slide=pl.slide||0;
+    // wedged between obstacles? After four seconds of throttle or brake without moving, the car is set back on the street.
+    if((th>0||br>0)&&Math.abs(pl.v)<.35){ G.stuckT=(G.stuckT||0)+dt; if(G.stuckT>4){ G.stuckT=0; backOnRoad(pl); toast('Festgefahren: zurück auf die Straße gesetzt'); } } else G.stuckT=0;
     if(pl.slide>5&&Math.random()<dt*30){ const c2=Math.cos(pl.h), s2=Math.sin(pl.h), L2=VEH[pl.car].half[1]*.75; for(const sd of [-1,1]) G.parts.push({x:pl.x+s2*L2+c2*sd*.75,y:.12,z:pl.z+c2*L2-s2*sd*.75,vx:rr(-.4,.4),vy:rr(.3,.9),vz:rr(-.4,.4),life:.7,max:.7,s:.2,col:[.5,.5,.52],em:.06,g:-.4}); }
     { let dw=yawW(pl.x,pl.z,pl.h)-yawW(px0,pz0,pl.h); while(dw>Math.PI)dw-=2*Math.PI; while(dw<-Math.PI)dw+=2*Math.PI; pl.h-=dw; } // the road bends, the car does not: you have to steer through curves if(hit>3){ G.shake=Math.min(1,hit/14); Audio_.noiseHit(.25,900,clamp(hit/20,.1,.5)); }
     if(Math.random()<dt*2) spawnTraffic(pl.x,pl.z); updateTraffic(dt,pl); updateHumans(dt,pl);

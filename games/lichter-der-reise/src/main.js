@@ -34,7 +34,7 @@ function initUI(){
     soft(()=>{ Audio_.init(); Audio_.resume(); }); soft(goImmersive); graceFor(3000); };
   if(readSlot('auto')) $('btnContinue').hidden=false; $('btnPause').onclick=()=>togglePause(); $('btnResume').onclick=()=>togglePause();
   $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('lbSend').onclick=()=>lbSubmit(); $('lbName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') lbSubmit(); }); $('lbName').addEventListener('keyup',e=>e.stopPropagation()); $('btnView').onclick=()=>cycleView(); $('mapClose').onclick=()=>toggleMap();
-  $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; const p=G.player; const n=nearestRoadPoint(p.x,p.z); p.x=n.x; p.z=n.z; p.v=0; p.lat=0; toast('Zurück auf die Straße'); };
+  $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; backOnRoad(G.player); toast('Zurück auf die Straße'); };
   $('btnRestart').onclick=()=>{ $('pauseO').hidden=true; startGame(); };
   $('btnAgain').onclick=()=>{ $('endO').hidden=true; startGame(); };
   $('btnFree').onclick=()=>freeRoam();
@@ -46,6 +46,11 @@ function initUI(){
   const al=$('album'); [['assets/panel_belval.jpg','Belval','-3deg'],['assets/panel_bar.jpg','Le Pont Violet','2deg'],['assets/glutplatz.jpg','Glutplatz, Eindhoven','-1deg'],['assets/monaco.jpg','Monte-Carlo','2.5deg']].forEach(([src,cap,r])=>{
     const f=document.createElement('figure'); f.className='polaroid'; f.style.setProperty('--r',r); const im=document.createElement('img'); im.src=src; im.alt=cap; im.loading='lazy'; f.appendChild(im); const s=document.createElement('span'); s.textContent=cap; f.appendChild(s); al.appendChild(f); });
 }
+/* put a car back on the middle of the nearest street, pointing along it (used by the pause menu and when the car is wedged) */
+function backOnRoad(p){ let best=null,bd=1e9; for(const r of roadsList){ const qx=clamp(p.x,r.x0,r.x1), qz=clamp(p.z,r.z0,r.z1); const d=Math.hypot(qx-p.x,qz-p.z); if(d<bd){ bd=d; best=r; } } if(!best) return;
+  const alongX=(best.x1-best.x0)>(best.z1-best.z0), fx=-Math.sin(p.h), fz=-Math.cos(p.h);
+  if(alongX){ p.z=(best.z0+best.z1)/2; p.x=clamp(p.x,best.x0+3,best.x1-3); p.h=fx>=0?-Math.PI/2:Math.PI/2; } else { p.x=(best.x0+best.x1)/2; p.z=clamp(p.z,best.z0+3,best.z1-3); p.h=fz>=0?Math.PI:0; }
+  p.v=0; p.lat=0; p.steer=0; G.camYaw=p.h; }
 function nearestRoadPoint(x,z){ let best=null,bd=1e9; for(const r of roadsList){ const qx=clamp(x,r.x0+2,r.x1-2), qz=clamp(z,r.z0+2,r.z1-2); const d=Math.hypot(qx-x,qz-z); if(d<bd){ bd=d; best={x:qx,z:qz}; } } return best||{x,z}; }
 function skipDialog(){ if(dlg.cur&&dlg.cur.choices){ dlg.shown=dlg.cur.t.length; return; } const ci=dlg.queue.findIndex(l=>l.choices);
   if(ci>=0){ dlg.queue=dlg.queue.slice(ci); nextLine(); dlg.shown=dlg.cur.t.length; } else { dlg.queue=[]; nextLine(); } }
@@ -60,13 +65,17 @@ function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false
 
 (async()=>{
   // Nothing may be started before the world exists: the buttons stay locked and show the loading step until boot has finished.
-  const lockBtns=['btnStart','btnContinue','btnOptTitle'], startLabel=$('btnStart').textContent; const step=async t=>{ $('btnStart').textContent=t; await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); };
+  const lockBtns=['btnStart','btnContinue','btnOptTitle'], startLabel=$('btnStart').textContent; const tLoad=performance.now(); const TIPS=['<b>Driften:</b> Umschalt-Taste halten, am Handy bremsen und lenken zugleich.','<b>Auto wechseln:</b> Neben einem geparkten Wagen anhalten, dann C oder ⇄.','<b>Lichtstoß:</b> Fünf Funken sammeln, dann Leertaste oder LICHT.','<b>Kamera:</b> Mit V oder ◉ sitzt ihr im Wagen statt dahinter.','<b>Karte:</b> K zeigt beide Städte und den Weg zum Ziel.','<b>Spielstand:</b> Unter Optionen könnt ihr in die Cloud sichern und am Handy weiterspielen.'];
+  let tipN=(Math.random()*TIPS.length)|0; const showTip=()=>{ const el=$('ldTip'); if(el) el.innerHTML=TIPS[tipN++%TIPS.length]; }; showTip(); const tipT=setInterval(showTip,3800);
+  const step=async(t,pct)=>{ $('btnStart').textContent=t; const st=$('ldStep'); if(st){ st.textContent=t; $('ldBar').style.width=pct+'%'; $('ldPct').textContent=pct+' %'; $('ldBarWrap').setAttribute('aria-valuenow',pct); } await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); };
   for(const id of lockBtns){ const b=$(id); if(b) b.disabled=true; }
-  try{ initUI(); await step('Grafik wird gestartet …'); await initGPU($('gfx')); loadSettings(); /* after initGPU: the adapter info is needed to choose the first-run preset */ await step('Fahrzeuge werden geladen …'); initModels(); await step('Die Städte werden gebaut …'); buildWorld({lamp:[1,.72,.42]}); genCafes(); await step('Karte wird gezeichnet …'); buildMapImage();
+  try{ initUI(); await step('Grafik wird gestartet …',8); await initGPU($('gfx')); loadSettings(); /* after initGPU: the adapter info is needed to choose the first-run preset */ await step('Fahrzeuge werden geladen …',30); initModels(); await step('Die Städte werden gebaut …',48); buildWorld({lamp:[1,.72,.42]}); genCafes(); await step('Karte wird gezeichnet …',86); buildMapImage();
     R.scale=SET.gfx.scale*Math.min(window.devicePixelRatio||1,SET.gfx.dprCap||1.5); applySettings();
     if(R.fallback&&!window.__manual) setTimeout(()=>{ if(!window.__manual) toast('Hinweis: Dein Browser rechnet die Grafik ohne Grafikchip. Das Spiel passt sich an, bleibt aber langsamer.'); },2500);
-    placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; G.ready=true; $('btnStart').textContent=startLabel; for(const id of lockBtns){ const b=$(id); if(b) b.disabled=false; } requestAnimationFrame(t=>{ last=t; frame(t); }); }
-  catch(e){ console.error(e); $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
+    placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; await step('Bereit',100); requestAnimationFrame(t=>{ last=t; frame(t); });
+    // the loading screen stays for a moment even on fast machines, then fades into the title
+    const wait=window.__manual?0:Math.max(0,2600-(performance.now()-tLoad)); setTimeout(()=>{ G.ready=true; $('btnStart').textContent=startLabel; for(const id of lockBtns){ const b=$(id); if(b) b.disabled=false; } clearInterval(tipT); const L=$('loadO'); if(L){ L.classList.add('done'); setTimeout(()=>{ L.hidden=true; },800); } },wait); }
+  catch(e){ console.error(e); clearInterval(tipT); { const L=$('loadO'); if(L) L.hidden=true; } $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
 })();
 
 function cycleView(){ G.view=((G.view||0)+1)%3; toast(['Kamera: hinter dem Auto','Kamera: am Armaturenbrett','Kamera: Stoßstange'][G.view]); }

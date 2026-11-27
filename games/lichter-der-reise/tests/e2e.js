@@ -18,7 +18,7 @@ async function launch(viewport, mobile) {
   const p = await c.newPage();
   p.on('pageerror', e => errors.push('pageerror: ' + e.message));
   p.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text().slice(0, 300)); });
-  await p.goto(URL, { timeout: 120000 }); await p.waitForFunction(() => typeof G !== 'undefined' && G.player && typeof cells !== 'undefined' && cells.size > 0, null, { timeout: 120000 });
+  await p.goto(URL, { timeout: 120000 }); await p.waitForFunction(() => typeof G !== 'undefined' && G.player && typeof cells !== 'undefined' && cells.size > 0 && G.ready, null, { timeout: 120000 });
   await p.evaluate(() => { try { localStorage.clear(); } catch (e) {} window.__manual = true; });
   return { b, p };
 }

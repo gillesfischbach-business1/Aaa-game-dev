@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 (async () => { const b = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--headless=new', '--enable-unsafe-webgpu', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--enable-features=Vulkan', '--use-vulkan=native', '--use-angle=vulkan', '--autoplay-policy=no-user-gesture-required'] });
   const p = await b.newPage({ viewport: { width: 320, height: 180 } }); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
-  await p.goto('http://localhost:8777/lichter-der-reise/index.html'); await p.waitForFunction(() => typeof G !== 'undefined' && G.player && cells.size > 0, null, { timeout: 180000 });
+  await p.goto('http://localhost:8777/lichter-der-reise/index.html'); await p.waitForFunction(() => typeof G !== 'undefined' && G.player && cells.size > 0 && G.ready, null, { timeout: 180000 });
   const r = await p.evaluate(async () => { window.__manual = true; document.getElementById('title').hidden = true; Audio_.init(); Audio_.resume(); await new Promise(r => setTimeout(r, 1500)); const c = Audio_.ctx; if (!c) return { noCtx: true };
     const an = c.createAnalyser(); an.fftSize = 4096; Audio_.comp.connect(an); const td = new Float32Array(4096), fd = new Float32Array(2048); const K = SET.ctl.keys; SET.gfx.traffic = 0;
     const meas = async (label, secs, f) => { let peak = 0, sum = 0, n = 0, dc = 0, clip = 0, nan = 0, cent = 0, cn = 0, lo = 0, mid = 0, hi = 0; const t0 = performance.now(); let last = t0; const rpm = [], gears = new Set();
