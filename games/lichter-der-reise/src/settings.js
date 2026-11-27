@@ -48,7 +48,7 @@ function restore(s){ if(!s||s.v!==1) return false; G.playT=s.pt||0; G.light=s.li
 function writeSlot(slot){ try{ localStorage.setItem('ldr_save_'+slot,JSON.stringify(snapshot())); return true; }catch(e){ return false; } }
 function readSlot(slot){ try{ const s=localStorage.getItem('ldr_save_'+slot); return s?JSON.parse(s):null; }catch(e){ return null; } }
 function deleteSlot(slot){ try{ localStorage.removeItem('ldr_save_'+slot); }catch(e){} }
-function autosave(){ if(SET.game.autosave&&G.state==='drive'&&G.player) writeSlot('auto'); }
+function autosave(){ if(SET.game.autosave&&G.state==='drive'&&G.player){ writeSlot('auto'); if(SET.game.cloud) cloudUp(false); } }
 function slotLabel(s){ if(!s) return 'Leer'; const M=MISSIONS[s.mission]; const d=new Date(s.date); return (M?M.title:'Freie Fahrt')+' · '+s.light+' Funken · '+d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
 
 // ---------- options menu ----------
@@ -85,6 +85,9 @@ function renderOptions(){ document.querySelectorAll('#optTabs button').forEach(b
       h+=row(sl==='auto'?'Autospeicher':'Platz '+sl,`<span class="slot">${slotLabel(d)}</span>${canSave?`<button class="btn ghost sm" data-save="${sl}">Speichern</button>`:''}${d?`<button class="btn ghost sm" data-load="${sl}">Laden</button><button class="btn ghost sm" data-del="${sl}">Löschen</button>`:''}`); }
     h+=row('Spielstand-Code',`<button class="btn ghost sm" id="o_export">Code anzeigen</button><button class="btn ghost sm" id="o_import">Code laden</button>`,'Zum Übertragen auf ein anderes Gerät');
     h+=`<textarea id="o_code" rows="3" placeholder="Spielstand-Code hier einfügen" hidden></textarea>`;
+    if(LB.save){ h+=row('Cloud-Spielstand',`<code class="cloud-code" id="o_ccode">${cloudFmt(cloudCode())}</code><button class="btn ghost sm" id="o_cup">Jetzt sichern</button><button class="btn ghost sm" id="o_cdown">Laden</button>`,'Dein geheimer Übertragungscode. Wer ihn kennt, kann diesen Spielstand laden.');
+      h+=row('Anderes Gerät',`<input id="o_cin" class="cloud-in" maxlength="14" placeholder="XXXX-XXXX-XXXX" autocomplete="off" aria-label="Übertragungscode eines anderen Geräts"><button class="btn ghost sm" id="o_cuse">Code übernehmen</button>`,'Code vom anderen Gerät eintippen, dann „Laden“');
+      h+=row('Automatisch in die Cloud',toggle('o_cauto',!!gm.cloud),'Sichert bei jedem Autospeichern. Gesendet wird nur der Spielstand, kein Name.'); h+=`<div class="cloud-msg" id="o_cmsg" aria-live="polite"></div>`; }
     h+=row('',`<button class="btn ghost" id="o_resetAll">Alle Einstellungen zurücksetzen</button>`); }
   $('optBody').innerHTML=h; bindOptions(); }
 function bindOptions(){ const on=(id,ev,fn)=>{ const e=$(id); if(e) e.addEventListener(ev,fn); };
@@ -105,6 +108,9 @@ function bindOptions(){ const on=(id,ev,fn)=>{ const e=$(id); if(e) e.addEventLi
   document.querySelectorAll('[data-save]').forEach(b=>b.addEventListener('click',()=>{ writeSlot(b.dataset.save); toast('Gespeichert in Platz '+b.dataset.save); renderOptions(); }));
   document.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',()=>{ const s=readSlot(b.dataset.load); if(s){ $('optO').hidden=true; $('title').hidden=true; $('pauseO').hidden=true; $('endO').hidden=true; Audio_.init(); Audio_.resume(); restore(s); toast('Spielstand geladen'); } }));
   document.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{ deleteSlot(b.dataset.del); renderOptions(); }));
+  on('o_cup','click',()=>cloudUp(true)); on('o_cdown','click',()=>cloudDown()); on('o_cauto','change',e=>{ SET.game.cloud=e.target.checked; saveSettings(); if(SET.game.cloud) cloudUp(true); });
+  on('o_cuse','click',()=>{ const c=cloudNorm($('o_cin').value); if(!c){ cloudSay('Der Code hat 12 Zeichen (Buchstaben und Ziffern).'); return; } try{ localStorage.setItem('ldr_cloud_code',c); }catch(e){} renderOptions(); cloudSay('Code übernommen. Tippe auf „Laden“, um den Spielstand zu holen.'); });
+  const cin=$('o_cin'); if(cin){ cin.addEventListener('keydown',e=>e.stopPropagation()); cin.addEventListener('keyup',e=>e.stopPropagation()); }
   on('o_export','click',()=>{ const t=$('o_code'); t.hidden=false; t.value=btoa(unescape(encodeURIComponent(JSON.stringify(G.player?snapshot():readSlot('auto')||{})))); t.select(); try{ navigator.clipboard.writeText(t.value).then(()=>toast('Code kopiert'),()=>{}); }catch(e){} });
   on('o_import','click',()=>{ const t=$('o_code'); if(t.hidden){ t.hidden=false; t.focus(); return; } try{ const s=JSON.parse(decodeURIComponent(escape(atob(t.value.trim())))); if(s.v===1){ localStorage.setItem('ldr_save_1',JSON.stringify(s)); toast('Code in Platz 1 übernommen'); renderOptions(); } else toast('Code ungültig'); }catch(e){ toast('Code ungültig'); } });
 }

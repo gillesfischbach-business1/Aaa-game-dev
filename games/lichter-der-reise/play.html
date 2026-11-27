@@ -204,6 +204,11 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
 .lb-list li{padding-left:4px}.lb-list li b{float:right;font-weight:600;font-variant-numeric:tabular-nums;color:var(--gold)}
 .lb-note{margin-top:8px;font-size:12px;color:#b9aea3}
 
+/* cloud save */
+.cloud-code{font:700 15px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.08em;color:var(--gold);padding:8px 10px;border:1px dashed var(--line);border-radius:10px;user-select:all}
+.cloud-in{width:170px;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--ink);font:600 14px ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase}
+.cloud-msg{font-size:13px;color:#d6ccc0;min-height:18px;margin-top:4px}
+
 </style>
 </head>
 <body>
@@ -2437,7 +2442,7 @@ function restore(s){ if(!s||s.v!==1) return false; G.playT=s.pt||0; G.light=s.li
 function writeSlot(slot){ try{ localStorage.setItem('ldr_save_'+slot,JSON.stringify(snapshot())); return true; }catch(e){ return false; } }
 function readSlot(slot){ try{ const s=localStorage.getItem('ldr_save_'+slot); return s?JSON.parse(s):null; }catch(e){ return null; } }
 function deleteSlot(slot){ try{ localStorage.removeItem('ldr_save_'+slot); }catch(e){} }
-function autosave(){ if(SET.game.autosave&&G.state==='drive'&&G.player) writeSlot('auto'); }
+function autosave(){ if(SET.game.autosave&&G.state==='drive'&&G.player){ writeSlot('auto'); if(SET.game.cloud) cloudUp(false); } }
 function slotLabel(s){ if(!s) return 'Leer'; const M=MISSIONS[s.mission]; const d=new Date(s.date); return (M?M.title:'Freie Fahrt')+' · '+s.light+' Funken · '+d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
 
 // ---------- options menu ----------
@@ -2474,6 +2479,9 @@ function renderOptions(){ document.querySelectorAll('#optTabs button').forEach(b
       h+=row(sl==='auto'?'Autospeicher':'Platz '+sl,`<span class="slot">${slotLabel(d)}</span>${canSave?`<button class="btn ghost sm" data-save="${sl}">Speichern</button>`:''}${d?`<button class="btn ghost sm" data-load="${sl}">Laden</button><button class="btn ghost sm" data-del="${sl}">Löschen</button>`:''}`); }
     h+=row('Spielstand-Code',`<button class="btn ghost sm" id="o_export">Code anzeigen</button><button class="btn ghost sm" id="o_import">Code laden</button>`,'Zum Übertragen auf ein anderes Gerät');
     h+=`<textarea id="o_code" rows="3" placeholder="Spielstand-Code hier einfügen" hidden></textarea>`;
+    if(LB.save){ h+=row('Cloud-Spielstand',`<code class="cloud-code" id="o_ccode">${cloudFmt(cloudCode())}</code><button class="btn ghost sm" id="o_cup">Jetzt sichern</button><button class="btn ghost sm" id="o_cdown">Laden</button>`,'Dein geheimer Übertragungscode. Wer ihn kennt, kann diesen Spielstand laden.');
+      h+=row('Anderes Gerät',`<input id="o_cin" class="cloud-in" maxlength="14" placeholder="XXXX-XXXX-XXXX" autocomplete="off" aria-label="Übertragungscode eines anderen Geräts"><button class="btn ghost sm" id="o_cuse">Code übernehmen</button>`,'Code vom anderen Gerät eintippen, dann „Laden“');
+      h+=row('Automatisch in die Cloud',toggle('o_cauto',!!gm.cloud),'Sichert bei jedem Autospeichern. Gesendet wird nur der Spielstand, kein Name.'); h+=`<div class="cloud-msg" id="o_cmsg" aria-live="polite"></div>`; }
     h+=row('',`<button class="btn ghost" id="o_resetAll">Alle Einstellungen zurücksetzen</button>`); }
   $('optBody').innerHTML=h; bindOptions(); }
 function bindOptions(){ const on=(id,ev,fn)=>{ const e=$(id); if(e) e.addEventListener(ev,fn); };
@@ -2494,6 +2502,9 @@ function bindOptions(){ const on=(id,ev,fn)=>{ const e=$(id); if(e) e.addEventLi
   document.querySelectorAll('[data-save]').forEach(b=>b.addEventListener('click',()=>{ writeSlot(b.dataset.save); toast('Gespeichert in Platz '+b.dataset.save); renderOptions(); }));
   document.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',()=>{ const s=readSlot(b.dataset.load); if(s){ $('optO').hidden=true; $('title').hidden=true; $('pauseO').hidden=true; $('endO').hidden=true; Audio_.init(); Audio_.resume(); restore(s); toast('Spielstand geladen'); } }));
   document.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{ deleteSlot(b.dataset.del); renderOptions(); }));
+  on('o_cup','click',()=>cloudUp(true)); on('o_cdown','click',()=>cloudDown()); on('o_cauto','change',e=>{ SET.game.cloud=e.target.checked; saveSettings(); if(SET.game.cloud) cloudUp(true); });
+  on('o_cuse','click',()=>{ const c=cloudNorm($('o_cin').value); if(!c){ cloudSay('Der Code hat 12 Zeichen (Buchstaben und Ziffern).'); return; } try{ localStorage.setItem('ldr_cloud_code',c); }catch(e){} renderOptions(); cloudSay('Code übernommen. Tippe auf „Laden“, um den Spielstand zu holen.'); });
+  const cin=$('o_cin'); if(cin){ cin.addEventListener('keydown',e=>e.stopPropagation()); cin.addEventListener('keyup',e=>e.stopPropagation()); }
   on('o_export','click',()=>{ const t=$('o_code'); t.hidden=false; t.value=btoa(unescape(encodeURIComponent(JSON.stringify(G.player?snapshot():readSlot('auto')||{})))); t.select(); try{ navigator.clipboard.writeText(t.value).then(()=>toast('Code kopiert'),()=>{}); }catch(e){} });
   on('o_import','click',()=>{ const t=$('o_code'); if(t.hidden){ t.hidden=false; t.focus(); return; } try{ const s=JSON.parse(decodeURIComponent(escape(atob(t.value.trim())))); if(s.v===1){ localStorage.setItem('ldr_save_1',JSON.stringify(s)); toast('Code in Platz 1 übernommen'); renderOptions(); } else toast('Code ungültig'); }catch(e){ toast('Code ungültig'); } });
 }
@@ -2502,7 +2513,7 @@ function handleRebind(k){ if(!rebinding) return false; if(k!=='escape'){ const o
 
 /* ===== Online leaderboard (optional). The game works without it; nothing is sent unless the player presses "Eintragen". =====
    Only the chosen nickname and the result are transmitted: no account, no e-mail, no device identifiers. */
-const LB={ url:'https://lichter-der-reise-bestenliste.lovable.app/api/public/leaderboard', page:'https://lichter-der-reise-bestenliste.lovable.app/' }; // set in build: the leaderboard service and its public page
+const LB={ url:'https://lichter-der-reise-bestenliste.lovable.app/api/public/leaderboard', page:'https://lichter-der-reise-bestenliste.lovable.app/', save:'https://lichter-der-reise-bestenliste.lovable.app/api/public/save' }; // set in build: the leaderboard service and its public page
 let lbSent=false;
 function lbFmt(t){ t=Math.max(0,Math.round(t)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); }
 function lbShow(good){ const w=$('lbWrap'); if(!w) return; if(!LB.url){ w.hidden=true; return; } w.hidden=false; lbSent=false;
@@ -2519,6 +2530,23 @@ async function lbSubmit(){ if(lbSent||!LB.url) return; const name=($('lbName').v
     const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||('Fehler '+r.status));
     lbSent=true; try{ localStorage.setItem('ldr_nick',name); }catch(e){} msg.textContent='Eingetragen! Du stehst auf Platz '+d.rank+'.'; lbLoad(); }
   catch(e){ msg.textContent='Das hat nicht geklappt: '+(e.message||'keine Verbindung')+'.'; $('lbSend').disabled=false; } }
+
+/* ===== Cloud save without an account =====
+   Each device makes a random 12-character transfer code. The server keeps the save under a hash of that code, so the code works like a key:
+   type it into another device to continue there. No name, no e-mail. */
+const CLOUD_ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let cloudBusy=false, cloudLast=0;
+function cloudNorm(v){ const c=String(v||'').toUpperCase().replace(/[\s-]/g,''); return c.length===12&&[...c].every(ch=>CLOUD_ABC.includes(ch))?c:null; }
+function cloudFmt(c){ return c.slice(0,4)+'-'+c.slice(4,8)+'-'+c.slice(8); }
+function cloudCode(){ let c=null; try{ c=cloudNorm(localStorage.getItem('ldr_cloud_code')); }catch(e){} if(!c){ const r=new Uint8Array(12); crypto.getRandomValues(r); c=[...r].map(b=>CLOUD_ABC[b&31]).join(''); try{ localStorage.setItem('ldr_cloud_code',c); }catch(e){} } return c; }
+function cloudSay(t){ const m=$('o_cmsg'); if(m) m.textContent=t; }
+async function cloudUp(manual){ if(!LB.save||cloudBusy) return; if(!manual&&performance.now()-cloudLast<45000) return; const data=G.player&&(G.state==='drive'||G.state==='pause')?snapshot():readSlot('auto');
+  if(!data){ if(manual) cloudSay('Es gibt noch keinen Spielstand zum Sichern.'); return; } cloudBusy=true; if(manual) cloudSay('Wird gesichert …');
+  try{ const r=await fetch(LB.save,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({code:cloudCode(),data})}); const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||('Fehler '+r.status)); cloudLast=performance.now(); if(manual) cloudSay('In der Cloud gesichert.'); }
+  catch(e){ if(manual) cloudSay('Sichern hat nicht geklappt: '+(e.message||'keine Verbindung')+'.'); } cloudBusy=false; }
+async function cloudDown(){ if(!LB.save||cloudBusy) return; cloudBusy=true; cloudSay('Wird geladen …');
+  try{ const r=await fetch(LB.save+'?code='+cloudCode(),{headers:{accept:'application/json'}}); const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||('Fehler '+r.status));
+    if(!d.data||d.data.v!==1) throw new Error('Spielstand unlesbar'); localStorage.setItem('ldr_save_auto',JSON.stringify(d.data)); cloudBusy=false; renderOptions(); cloudSay('Geladen und als Autospeicher abgelegt. Tippe dort auf „Laden“ oder im Titel auf „Weiterspielen“.'); return; }
+  catch(e){ cloudSay('Laden hat nicht geklappt: '+(e.message||'keine Verbindung')+'.'); } cloudBusy=false; }
 
 /* ===== Boot, UI wiring, input ===== */
 function initUI(){
