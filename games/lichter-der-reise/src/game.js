@@ -220,6 +220,17 @@ function drawStatic(o,t,lampK,lights,lod){ let y=o.y; if(o.bob!==undefined) y+=M
   if(o.turbine){ const a=t*1.2+o.turbine.ph; for(let k=0;k<3;k++) P(MESHIDX.box,o.turbine.x,o.turbine.y,o.turbine.z,0,.9,22,.25,MAT.STD+.4,.92,.92,.94,.3,0,a+k*2.094); }
   Praw(lod&&o.m===MESHIDX.sph&&o.sx<14?MESHIDX.sphMd:o.m,o.x,y,o.z,o.ry,o.sx,o.sy,o.sz,o.mat,o.r,o.g,o.b,p,o.rx,o.rz,o.slot,o.bend|0,o.bend?o.cx:o.x,o.bend?o.cz:o.z);
   if(lights&&o.L){ const k=(o.mat===MAT.EMI&&o.bob===undefined)?lampK:1; if(k>.05) LtRaw(o.L.x,o.L.y+(y-o.y),o.L.z,o.L.r*k,o.L.g*k,o.L.b*k,o.L.rad); } }
+/* instance blocks of one cell for a level of detail: 0 near, 1 near with simpler tree crowns, 2 far (large pieces only). Built on first use. */
+function cellBlocks(c,mode){ const all=c.blk||(c.blk=[]); if(all[mode]) return all[mode]; const near=mode<2, lod=mode>0, groups=new Map(), dyn=[];
+  for(const o of c){ if(near?o.farOnly:o.small) continue;
+    if(o.L||o.bob!==undefined||o.blink||o.turbine||o===LM.lichtTop||(o.mat>=6&&o.mat<7)){ dyn.push(o); continue; }
+    const m=lod&&o.m===MESHIDX.sph&&o.sx<14?MESHIDX.sphMd:o.m, dec=o.mat>=9&&o.mat<10, cast=!dec&&!(o.bend&&o.sy<=.3)&&m!==MESHIDX.quad&&m!==MESHIDX.sphLo;
+    const key=m*4+(dec?2:cast?1:0); let g=groups.get(key); if(!g){ g=[]; groups.set(key,g); } g.push(o); }
+  const blocks=[]; for(const [key,g] of groups){ const d=new Float32Array(g.length*16); g.forEach((o,i)=>{ const q=i*16; d[q]=o.x;d[q+1]=o.y;d[q+2]=o.z;d[q+3]=o.ry;d[q+4]=o.sx;d[q+5]=o.sy;d[q+6]=o.sz;d[q+7]=o.mat;d[q+8]=o.r;d[q+9]=o.g;d[q+10]=o.b;d[q+11]=o.p;d[q+12]=o.rx;d[q+13]=o.rz;d[q+14]=o.slot;d[q+15]=o.bend|0; });
+    blocks.push({m:key>>2,kind:key&3,data:d,n:g.length}); }
+  return all[mode]={blocks,dyn,d:0,c:null,sh:false}; }
+function bulkAdd(k,asShadow){ const L=lists[k.m]; if(k.kind===2){ const c=L.ct||(L.ct=new Float32Array(1500*16)), n0=L.nct|0, n=Math.min(k.n,1500-n0); if(n>0){ c.set(n===k.n?k.data:k.data.subarray(0,n*16),n0*16); L.nct=n0+n; } return; }
+  const n=Math.min(k.n,L.cap-L.nop); if(n<=0) return; L.op.set(n===k.n?k.data:k.data.subarray(0,n*16),L.nop*16); if(asShadow&&L.nsh===L.nop) L.nsh+=n; L.nop+=n; }
 function buildFrame(){
   const t=G.time, E=envCur, pl=G.player; if(!pl) return;
   // camera first, so culling uses this frame's camera
@@ -241,18 +252,25 @@ function buildFrame(){
     if(G.camMode==='ignite'){ const k=smooth(clamp(G.endT/6,0,1)); cam.pos=[f.x+lerp(4,10,k),lerp(1.8,9,k),f.z+lerp(11,32,k)]; cam.tgt=[lerp(f.x-1,L.x,k),lerp(1.4,40,k),lerp(f.z+2,L.z,k)]; cam.fov=lerp(48,62,k); }
     else { const b=G.endT*.03; cam.pos=[f.x+4+Math.sin(b),1.8,f.z+11]; cam.tgt=[f.x-1,1.4,f.z+2]; cam.fov=48; } }
   WARP(cam.pos[0],cam.pos[2]); const ccx=WP.x, ccz=WP.z; WARP(cam.tgt[0],cam.tgt[2]); const wtx=WP.x, wtz=WP.z; // the static world is stored bent, so cull it with the bent camera
-  const RAD=SET.gfx.viewDist, RS=Math.min(230,RAD*.45), gx=Math.floor(ccx/CELL), gz=Math.floor(ccz/CELL), nR=Math.ceil(RAD/CELL);
+  const RAD=SET.gfx.viewDist, RS=Math.min(125,RAD*.4), gx=Math.floor(ccx/CELL), gz=Math.floor(ccz/CELL), nR=Math.ceil(RAD/CELL);
   const fx=wtx-ccx, fz=wtz-ccz, fl=Math.hypot(fx,fz)||1; const lampK=E.lamps;
   /* cull with the camera the renderer will really get: the bent-world one (ccx/ccz, wtx/wtz) that buildFrame hands over at its end */
   setCull({pos:[ccx,cam.pos[1],ccz],tgt:typeof wtx==='undefined'?cam.tgt:[wtx,cam.tgt[1],wtz],fov:cam.fov},(typeof shadowCtr==='function')?shadowCtr(pl):[pl.x-Math.sin(G.camYaw)*14,0,pl.z-Math.cos(G.camYaw)*14],E);
-  for(const o of globalStatics) drawStatic(o,t,lampK,false);
+  // ---- static world ----
+  // Each cell keeps its plain statics as ready-made instance blocks (per mesh), so a frame copies memory instead of touching every object.
+  // Only statics that change per frame (lamps, blinking or bobbing things, glass) still go through drawStatic.
   if(!buildFrame.ord||buildFrame.ordN!==nR){ const a=[]; for(let i=-nR;i<=nR;i++) for(let j=-nR;j<=nR;j++) a.push([i,j]); a.sort((p,q)=>p[0]*p[0]+p[1]*p[1]-q[0]*q[0]-q[1]*q[1]); buildFrame.ord=a; buildFrame.ordN=nR; }
+  const vis=buildFrame.vis||(buildFrame.vis=[]); vis.length=0; const C=CULL, shOn=C.on&&C.sr>0;
   for(const [i,j] of buildFrame.ord){ const c=cells.get((gx+i)+','+(gz+j)); if(!c) continue; /* near cells first: front-to-back helps early-Z */
-    const ox=(gx+i+.5)*CELL-ccx, oz=(gz+j+.5)*CELL-ccz; const d=Math.hypot(ox,oz); if(d>RAD+CELL) continue;
+    const wx=(gx+i+.5)*CELL, wz=(gz+j+.5)*CELL, ox=wx-ccx, oz=wz-ccz; const d=Math.hypot(ox,oz); if(d>RAD+CELL) continue;
     if(d>110&&(ox*fx+oz*fz)/(d*fl)<-.35) continue;
-    const near=d<RS+CELL;
-    for(const o of c){ if(o.small&&!near) continue; drawStatic(o,t,lampK,d<220,d>120); }
-    if(c.sparks) for(const s of c.sparks){ if(!s.alive) continue; const y=s.y+Math.sin(t*3+s.ph)*.18; P(MESHIDX.sph,s.x,y,s.z,0,.36,.36,.36,MAT.EMI,1,.78,.35,14); if(d<120) Lt(s.x,y,s.z,5,3.4,1.2,6); } }
+    if(C.on&&d>100){ const f=ox*C.fx+oz*C.fz; if(Math.abs(ox*C.rx+oz*C.rz)-f*C.tx>95*C.k) continue; } // whole cell outside the view cone
+    const near=d<RS+CELL, mode=near?(d>120?1:0):2; const B=cellBlocks(c,mode); B.d=d; B.c=c; B.sh=shOn&&Math.hypot(wx-C.sx,wz-C.sz)<C.sr+70; vis.push(B); }
+  if(shOn) for(const B of vis) if(B.sh) for(const k of B.blocks) if(k.kind===1) bulkAdd(k,true);   // shadow casters first: they must sit at the front of each list
+  for(const B of vis) for(const k of B.blocks) if(!(B.sh&&k.kind===1)) bulkAdd(k,false);
+  for(const o of globalStatics) drawStatic(o,t,lampK,false);
+  for(const B of vis){ const d=B.d; for(const o of B.dyn) drawStatic(o,t,lampK,d<220,d>120);
+    const c=B.c; if(c.sparks) for(const s of c.sparks){ if(!s.alive) continue; const y=s.y+Math.sin(t*3+s.ph)*.18; P(MESHIDX.sph,s.x,y,s.z,0,.36,.36,.36,MAT.EMI,1,.78,.35,14); if(d<120) Lt(s.x,y,s.z,5,3.4,1.2,6); } }
   const lightsOn=E.lamps>.3;
   drawCar(pl,PEOPLE_SUP,lightsOn);
   if(G.parked) drawCar(G.parked,G.state==='drive'?null:VAL_SUP,false);

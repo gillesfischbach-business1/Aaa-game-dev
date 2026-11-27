@@ -32,8 +32,14 @@ function bakeWarp(list){ const out=[]; const fac=Math.floor(MAT.FACADE);
       const q=rel(o.x,o.z); o.x=q[0]; o.z=q[1]; o.ry+=g.th; out.push(o); continue; }
     const id=Math.floor(o.mat), big=Math.max(o.sx,o.sz), sm=Math.min(o.sx,o.sz), plain=!o.L&&!o.turbine&&!o.blink&&o.bob===undefined&&id!==fac;
     const lying=o.sy<=.25&&o.y<.6&&!o.rz&&(!o.rx||Math.abs(o.rx+Math.PI/2)<.01); // slabs, paint, manholes, decals on the road
-    if(plain&&o.m===MESHIDX.box&&o.ry===0&&!o.rx&&!o.rz&&big>16&&id!==1&&id!==2&&!o.keep){ const T=sm>30?12:9; const nx=Math.ceil(o.sx/T), nz=Math.ceil(o.sz/T), px=o.sx/nx, pz=o.sz/nz;
-      for(let i=0;i<nx;i++) for(let j=0;j<nz;j++){ const t={...o,x:o.x-o.sx/2+px*(i+.5),z:o.z-o.sz/2+pz*(j+.5),sx:px,sz:pz}; t.ext=Math.max(px,pz)*.6; bent(t); } continue; }
+    if(plain&&o.m===MESHIDX.box&&o.ry===0&&!o.rx&&!o.rz&&big>16&&id!==1&&id!==2&&!o.keep){
+      // two levels of detail: from afar one coarse bent chunk (up to 60 m), close up fine tiles that make the curve smooth
+      const cxn=Math.ceil(o.sx/60), czn=Math.ceil(o.sz/60), cw=o.sx/cxn, cd=o.sz/czn, T=sm>30?12:9, thin=sm<.6&&o.sy<.3;
+      for(let a=0;a<cxn;a++) for(let b=0;b<czn;b++){ const C={...o,x:o.x-o.sx/2+cw*(a+.5),z:o.z-o.sz/2+cd*(b+.5),sx:cw,sz:cd}; C.ext=Math.max(cw,cd)*.6; WARP(C.x,C.z); const bk=[WP.x,WP.z];
+        if(!thin){ C.farOnly=true; C.bk=bk; bent(C); } // thin lines and kerbs are simply not drawn far away
+        const nx=Math.ceil(cw/T), nz=Math.ceil(cd/T), px=cw/nx, pz=cd/nz;
+        for(let i=0;i<nx;i++) for(let j=0;j<nz;j++){ const t={...o,x:C.x-cw/2+px*(i+.5),z:C.z-cd/2+pz*(j+.5),sx:px,sz:pz,nearOnly:true,bk}; t.ext=Math.max(px,pz)*.6; bent(t); } }
+      continue; }
     if(plain&&(lying||o.keep)){ bent(o); continue; }
     place(o); }
   return out; }
@@ -339,7 +345,8 @@ function genSparks(){ sparksAll=[]; for(const r of roadsList){ const len=Math.ma
 function buildWorld(env){ seed=4242; statics=[]; globalStatics=[]; colliders=new Map(); cells=new Map(); roadsList=[]; mapItems=[]; graph={nodes:new Map(),edges:[]};
   genGround(); genCity('lux',env); genValley(env); genMotorway(env); genCity('ehv',env); genCanal(); genSparks();
   statics=bakeWarp(statics);
-  for(const o of statics){ o.small=Math.max(o.sx,o.sy,o.sz)<3.2&&!o.L; if(o.ext>CELL*.9){ globalStatics.push(o); continue; } const k=Math.floor((o.bend?o.cx:o.x)/CELL)+','+Math.floor((o.bend?o.cz:o.z)/CELL); let a=cells.get(k); if(!a){ a=[]; cells.set(k,a); } a.push(o); }
+  // tiles are bucketed into the cell of their coarse chunk, so the two levels of detail switch together
+  for(const o of statics){ o.small=!!o.nearOnly||(Math.max(o.sx,o.sy,o.sz)<3.2&&!o.L); if(o.ext>CELL*.9){ globalStatics.push(o); continue; } const k=Math.floor((o.bk?o.bk[0]:o.bend?o.cx:o.x)/CELL)+','+Math.floor((o.bk?o.bk[1]:o.bend?o.cz:o.z)/CELL); let a=cells.get(k); if(!a){ a=[]; cells.set(k,a); } a.push(o); }
   statics=[];
   for(const s of sparksAll){ const k=Math.floor(s.x/CELL)+','+Math.floor(s.z/CELL); let c=cells.get(k); if(!c){ c=[]; cells.set(k,c); } (c.sparks||(c.sparks=[])).push(s); }
 }
