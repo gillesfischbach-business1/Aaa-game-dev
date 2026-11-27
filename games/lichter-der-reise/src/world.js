@@ -21,7 +21,17 @@ function lamp(x,z,col,style='modern'){ const s=Math.sign(x)||1;
     S('box',x-s*.65,3.62,z,.3,.42,.3,MAT.GLASSO,[.03,.03,.03],0); const o=S('box',x-s*.65,3.6,z,.24,.34,.24,MAT.EMI,col,7); lightAt(o,x-s*.65,3.4,z,col,30,16); return; }
   S('cylY',x,3.1,z,.14,6.2,.14,MAT.STD+.45,[.32,.33,.35],.9); S('box',x-s*.9,6.15,z,1.8,.08,.1,MAT.STD+.45,[.32,.33,.35],.9);
   S('box',x-s*1.7,6.08,z,.6,.12,.28,MAT.STD+.4,[.2,.2,.22],.8); const o=S('box',x-s*1.7,6.0,z,.5,.03,.22,MAT.EMI,col,14); lightAt(o,x-s*1.7,5.7,z,col,55,20); }
-function tree(x,z,h=rr(5,8),col=[.09,.17,.06]){ S('cylY',x,h*.3,z,.25,h*.6,.25,MAT.STD+.9,[.16,.11,.07]); for(let k=0;k<5;k++){ const r=rr(1.2,2.0); S('sph',x+rr(-1,1),h*.62+rr(-.4,1.4),z+rr(-1,1),r*1.6,r*1.3,r*1.6,MAT.FOLIAGE,col); } }
+// kind: 'plane' (broad city tree), 'poplar' (tall column), 'pollard' (short, canal)
+function tree(x,z,h=rr(5,8),col=[.09,.17,.06],kind='plane'){ const bark=[.13,.095,.06], v=()=>rr(.8,1.25), C=k=>[col[0]*k,col[1]*k,col[2]*k];
+  S('cone',x,.18,z,h*.16,.36,h*.16,MAT.STD+.9,bark);
+  if(kind==='poplar'){ S('cylY',x,h*.25,z,h*.035,h*.5,h*.035,MAT.STD+.9,bark); for(let k=0;k<4;k++){ const t=k/3; S('sph',x+rr(-.2,.2),h*(.42+t*.5),z+rr(-.2,.2),h*.26*(1-t*.45),h*.34,h*.26*(1-t*.45),MAT.FOLIAGE,C(v()*(.9+t*.3))); } return; }
+  if(kind==='pollard'){ S('cylY',x,h*.3,z,h*.07,h*.6,h*.07,MAT.STD+.9,bark); for(let k=0;k<4;k++){ const a=k*1.57+rr(-.3,.3); S('sph',x+Math.cos(a)*h*.14,h*.62+rr(0,.5),z+Math.sin(a)*h*.14,h*.32,h*.26,h*.32,MAT.FOLIAGE,C(v())); } return; }
+  const th=h*.45; S('cylY',x,th/2,z,h*.055,th,h*.055,MAT.STD+.9,bark);
+  const a0=rr(0,6.28); for(let k=0;k<3;k++){ const a=a0+k*2.09+rr(-.4,.4), t=rr(.6,.9), l=h*.34, dx=Math.sin(t)*Math.sin(a), dy=Math.cos(t), dz=Math.sin(t)*Math.cos(a);
+    const o=S('cylY',x+dx*l/2,th*.85+dy*l/2,z+dz*l/2,h*.03,l,h*.03,MAT.STD+.9,bark,0,a,t); o.ext=.5;
+    const r=h*rr(.2,.27); S('sph',x+dx*l,th*.85+dy*l+r*.2,z+dz*l,r*2,r*1.5,r*2,MAT.FOLIAGE,C(v())); }
+  S('sph',x,h*.9,z,h*.5,h*.36,h*.5,MAT.FOLIAGE,C(1.25*v()));
+  for(let k=0;k<2;k++){ const a=a0+1+k*3.1; S('sph',x+Math.cos(a)*h*.14,h*.68,z+Math.sin(a)*h*.14,h*.42,h*.3,h*.42,MAT.FOLIAGE,C(.85*v())); } }
 function palm(x,z){ const h=rr(7,9.5); for(let k=0;k<6;k++) S('cylY',x+k*.05,(k+.5)*h/6,z,.36-k*.025,h/6+.05,.36-k*.025,MAT.STD+.95,[.33,.26,.18]);
   for(let k=0;k<9;k++){ const a=k/9*Math.PI*2+rr(-.2,.2); S('sph',x+.3+Math.cos(a)*1.7,h+.1,z+Math.sin(a)*1.7,3.6,.12,.75,MAT.FOLIAGE,[.12,.22,.07],0,-a,0,-.35); } }
 function planter(x,z){ S('rbox',x,.45,z,2.2,.9,1.2,MAT.STONE,[.75,.73,.7]); for(let k=0;k<3;k++) S('sph',x-.6+k*.6,1.1+rr(0,.3),z+rr(-.2,.2),1.1,1.1,1.0,MAT.FOLIAGE,[.08,.16,.06]); }

@@ -404,20 +404,36 @@ fn rot(v:vec3f,it:Inst)->vec3f{
   let cy=cos(it.a.w); let sy=sin(it.a.w); return vec3f(p.x*cy+p.z*sy,p.y,-p.x*sy+p.z*cy);
 }
 @vertex fn vs(@location(0) p:vec3f,@location(1) n:vec3f,@location(2) uv:vec2f,@builtin(instance_index) ii:u32)->VO{
-  let it=I[ii]; let s=it.b.xyz; let lp=p*s; let wp=rot(lp,it)+it.a.xyz;
+  let it=I[ii]; let s=it.b.xyz; let lp=p*s; var wp=rot(lp,it)+it.a.xyz;
+  if(floor(it.b.w)==11.0){ wp=leafDisp(wp,rot(p,it),s); }
   var o:VO; o.pos=S.viewProj*vec4f(wp,1.0); o.wp=wp; o.n=rot(normalize(n/max(s,vec3f(1e-4))),it); o.lp=lp; o.on=n; o.col=it.c;
   o.mat=vec4f(floor(it.b.w),fract(it.b.w),fract(it.a.x*0.137+it.a.z*0.0713+it.a.y*0.31),it.d.z); o.uv=uv; o.sc=vec4f(s,it.d.w);
   return o;
 }
+// lumpy tree crowns: push sphere vertices in and out with 3D noise
+fn leafDisp(wp:vec3f,dir:vec3f,s:vec3f)->vec3f{
+  let r=min(s.x,min(s.y,s.z)); if(r<0.5){ return wp; }
+  let n=noise3(wp*(1.6/sqrt(r))+vec3f(3.1))*0.65+noise3(wp*(3.7/sqrt(r)))*0.35;
+  return wp+normalize(dir)*(n-0.5)*r*0.42;
+}
 @vertex fn vsShadow(@location(0) p:vec3f,@builtin(instance_index) ii:u32)->@builtin(position) vec4f{
-  let it=I[ii]; let wp=rot(p*it.b.xyz,it)+it.a.xyz; return S.lightVP*vec4f(wp,1.0);
+  let it=I[ii]; var wp=rot(p*it.b.xyz,it)+it.a.xyz; if(floor(it.b.w)==11.0){ wp=leafDisp(wp,rot(p,it),it.b.xyz); } return S.lightVP*vec4f(wp,1.0);
+}
+// analytic exponential height fog with forward scattering toward the sun
+fn applyFog(col:vec3f,P:vec3f,V:vec3f,dist:f32,a:f32)->vec3f{
+  let b=0.028; let cy=max(S.camPos.y,-40.0); let py=max(P.y,-40.0); let dy=py-cy;
+  var k=exp(-b*cy); if(abs(dy)>0.01){ k=(exp(-b*cy)-exp(-b*py))/(b*dy); }
+  let f=clamp(1.0-exp(-dist*S.skyHor.w*1.15*k),0.0,0.985);
+  let mu=max(dot(-V,S.sunDir.xyz),0.0);
+  let ins=skyColor(-V)*0.92+S.sunCol.rgb*S.sunDir.w*(0.05*pow(mu,6.0)+0.02*pow(mu,2.0));
+  return mix(col,ins*a,f);
 }
 fn shadowAt(P:vec3f,N:vec3f)->f32{
   if(S.sunDir.w<=0.001){ return 1.0; }
   let q=S.lightVP*vec4f(P+N*0.06,1.0); let uv=vec2f(q.x*0.5+0.5,0.5-q.y*0.5);
   if(any(uv<vec2f(0.001)) || any(uv>vec2f(0.999)) || q.z>1.0){ return 1.0; }
   let t=S.misc.z; var s=0.0;
-  for(var y=-1;y<=1;y++){ for(var x=-1;x<=1;x++){ s+=textureSampleCompareLevel(shadowTex,shadowSmp,uv+vec2f(f32(x),f32(y))*t*1.2,q.z-0.0015); } }
+  for(var y=-1;y<=1;y++){ for(var x=-1;x<=1;x++){ s+=textureSampleCompareLevel(shadowTex,shadowSmp,uv+vec2f(f32(x),f32(y))*t*1.2,q.z-0.0005); } }
   s/=9.0;
   let edge=smoothstep(0.85,1.0,max(abs(q.x),abs(q.y)));
   return mix(1.0,mix(1.0,s,S.sunDir.w),1.0-edge);
@@ -525,14 +541,30 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
       let lit=step(1.0-0.62*S.ambTop.w,h);
       // interior: warm room, ceiling lamp falloff, curtain
       let wx=(x/(gw*0.5)); let wy=(fv-gs)/gh;
-      var room=mix(vec3f(1.0,0.62,0.3),vec3f(0.8,0.85,1.0),step(0.82,h));
-      room*=mix(0.35,1.0,wy)*(1.0-0.5*wx*wx);
+      let tone=mix(mix(vec3f(1.0,0.62,0.28),vec3f(0.9,0.8,0.6),step(0.45,h)),vec3f(0.45,0.6,0.9),step(0.86,h));
+      var room=tone*mix(0.35,1.0,wy)*(1.0-0.5*wx*wx);
+      // interior mapping: trace the view ray into a box room behind the pane
+      let Tw=normalize(cross(vec3f(0.0,1.0,0.0),N)); let rd=vec3f(-dot(V,Tw),-V.y,max(dot(V,N),0.02));
+      let dep=3.4+2.0*hash2(vec2f(cellU,fl)+7.7);
+      let tx=(select(-sp*0.5,sp*0.5,rd.x>0.0)-x)/(rd.x+sign(rd.x)*1e-4+1e-5);
+      let ty=(select(0.0,fh,rd.y>0.0)-fv)/(rd.y+sign(rd.y)*1e-4+1e-5);
+      let tz=dep/rd.z; let tt=min(tx,min(ty,tz)); let hp=vec3f(x,fv,0.0)+rd*tt;
+      var surf=vec3f(0.62,0.56,0.5);
+      if(tz<=tx&&tz<=ty){ surf=mix(vec3f(0.7,0.62,0.52),vec3f(0.5,0.58,0.6),step(0.5,hash2(vec2f(cellU,fl)+1.9)));
+        if(hp.y<0.95&&abs(hp.x+0.3*(h-0.5)*sp)<sp*0.28){ surf*=0.35; } // furniture silhouette
+        if(abs(hp.y-1.75)<0.28&&abs(hp.x-0.25*sp*(h-0.5))<0.36){ surf=vec3f(0.25,0.3,0.4)+0.4*vec3f(h,fract(h*7.0),fract(h*13.0)); } }
+      else if(ty<tx){ surf=select(vec3f(0.32,0.22,0.14),vec3f(0.85,0.83,0.8),rd.y>0.0); }
+      else { surf*=0.8; }
+      let lampP=vec3f(0.0,fh-0.5,dep*0.45); let ld=hp-lampP; let lamp=2.2/(1.0+dot(ld,ld)*0.9);
+      let iroom=surf*lamp; let ifade=fade*smoothstep(0.03,0.2,rd.z);
+      room=mix(room,tone*iroom,ifade);
+      let dayRoom=surf*(S.ambTop.rgb+S.ambBot.rgb)*0.07*(1.0-tt/(dep*2.2))*ifade;
       let curt=step(0.6,hash2(vec2f(cellU,fl)+3.1)); let cpos=abs(wx)>0.55-0.2*h;
       if(curt>0.5&&cpos){ room*=vec3f(0.9,0.6,0.45)*(0.8+0.2*sin(wx*40.0)); }
       let env=skyColor(reflect(-V,N));
       let fres=0.05+0.95*pow(1.0-max(dot(N,V),0.0),5.0);
       s.alb=vec3f(0.02); s.rough=0.08;
-      s.em=room*lit*1.5*S.ambTop.w*(0.6+0.5*hash2(vec2f(cellU*1.7,fl*3.1))) + env*fres*0.6;
+      s.em=room*lit*1.5*S.ambTop.w*(0.6+0.5*hash2(vec2f(cellU*1.7,fl*3.1))) + dayRoom*(1.0-fres) + env*fres*0.6;
       s.ao=0.6;
       let top=gs+gh-fv; if(top<0.25){ s.em*=mix(0.4,1.0,top/0.25); }
       if(style>2.5&&style<3.5){ let mull=abs(fract((x/gw)*2.0+0.5)-0.5)<0.02; if(mull){ s.alb=base*0.5; s.em=vec3f(0.0); s.metal=0.6; s.rough=0.4; } }
@@ -540,6 +572,7 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     // sill below window
   } else if(fv<gs&&fv>gs-0.12&&abs(x)<gw*0.5+0.08&&style<2.5){ s.alb=vec3f(0.75,0.73,0.7); dy=0.7; s.rough=0.6; }
   else if(fv<gs&&fv>gs-0.5&&abs(x)<gw*0.5&&style<2.5){ s.ao=0.85; }
+  s.ao*=mix(0.5,1.0,smoothstep(0.0,1.8,v)); // grounding: walls darken toward the pavement
   s.n=bump(N,dx*fade,dy*fade);
   return s;
 }
@@ -619,8 +652,12 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     s.alb=vec3f(0.035)*(1.0-0.5*clamp(groove,0.0,1.0)); s.rough=0.85;
   }
   else if(mat<11.5){ // foliage
-    let g=noise3(i.wp*2.2); s.alb=i.col.rgb*(0.6+0.8*g); s.rough=0.7; s.wrap=0.6;
-    let back=pow(max(dot(-V,S.sunDir.xyz),0.0),4.0); s.em=i.col.rgb*S.sunCol.rgb*back*0.25*shadowAt(i.wp,N);
+    let g=noise3(i.wp*2.2); let g2=noise3(i.wp*7.0); let hgt=clamp(i.lp.y/max(i.sc.y,0.01)+0.5,0.0,1.0);
+    let clump=smoothstep(0.2,0.6,g2)*0.35+0.65; let fd=clamp(1.0-fwW*3.0,0.0,1.0);
+    s.alb=i.col.rgb*(0.55+0.9*g)*mix(0.5,1.35,hgt)*mix(1.0,clump,fd); s.alb=mix(s.alb,s.alb*vec3f(1.25,1.15,0.6),smoothstep(0.6,0.9,g)*0.5);
+    s.rough=0.65; s.wrap=0.6; s.ao=mix(0.4,1.0,hgt);
+    s.n=normalize(N+(vec3f(g2,noise3(i.wp*7.0+vec3f(5.0)),noise3(i.wp*7.0+vec3f(9.0)))-0.5)*0.9*fd);
+    let back=pow(max(dot(-V,S.sunDir.xyz),0.0),4.0); s.em=i.col.rgb*vec3f(1.6,1.9,0.5)*S.sunCol.rgb*back*0.22*shadowAt(i.wp,N);
   }
   else if(mat<12.5){ // opaque glass (car windows, shop glass)
     let R=reflect(-V,N); let fres=0.04+0.96*pow(1.0-max(dot(N,V),0.0),5.0);
@@ -640,15 +677,17 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
   }
   else { // grass / fields
     let q=i.wp.xz; let f=fbm2(q*0.05); let f2=noise2(q*0.7); let fade=clamp(1.0-fwW*3.0,0.0,1.0);
-    s.alb=i.col.rgb*(0.7+0.5*f)*(0.85+0.3*f2*fade); s.rough=0.95; s.wrap=0.2;
+    let big=fbm2(q*0.012+vec2f(7.0)); let blade=noise2(q*vec2f(9.0,2.5))*noise2(q*vec2f(2.5,9.0));
+    var gcol=mix(i.col.rgb*vec3f(0.8,0.95,0.7),i.col.rgb*vec3f(1.6,1.35,0.75),smoothstep(0.35,0.7,big)); // dry and lush patches
+    gcol=mix(gcol,gcol*vec3f(1.5,1.3,0.5),smoothstep(0.6,0.8,noise2(q*0.09+vec2f(3.0)))*0.5); // clover / flower drifts
+    let mow=mix(1.0,0.88,step(0.5,fract((q.x+q.y)*0.09))*clamp(1.0-fwW*0.6,0.0,1.0));
+    s.alb=gcol*(0.7+0.5*f)*(0.8+0.4*f2*fade)*(0.75+0.6*blade*fade)*mow; s.rough=0.95; s.wrap=0.35;
     if(i.col.a>0.5){ let row=fract(q.x*0.5); s.alb*=mix(1.0,0.72,step(0.5,row)*fade); }
   }
   if(direct){ let sh=shadowAt(i.wp,N); col=shade(i.wp,V,s,sh); }
   // atmosphere: distance + height fog tinted by sky in view direction
   let fogD=S.skyHor.w;
-  let hz=exp(-max(i.wp.y,0.0)*0.045);
-  let f=1.0-exp(-dist*fogD*mix(0.55,1.0,hz));
-  col=mix(col,skyColor(-V)*0.92,clamp(f,0.0,0.985));
+  col=applyFog(col,i.wp,V,dist,1.0);
   return vec4f(col,1.0);
 }
 @fragment fn fsGlass(i:VO,@builtin(front_facing) ff:bool)->@location(0) vec4f{
@@ -662,7 +701,7 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     let Hp=normalize(Lp+V); refl+=lc.rgb*0.04*Dggx(max(dot(N,Hp),0.0),0.01)*max(dot(N,Lp),0.0)/(d*d+0.6); }
   let a=clamp(mix(i.col.a,1.0,fres),0.0,1.0);
   var col=i.col.rgb*hemi(N)*a+refl;
-  let f=1.0-exp(-dist*S.skyHor.w); col=mix(col,skyColor(-V)*0.92*a,clamp(f,0.0,0.985));
+  col=applyFog(col,i.wp,V,dist,a);
   return vec4f(col,a);
 }`;
 
@@ -680,9 +719,10 @@ struct VO{ @builtin(position) pos:vec4f, @location(0) ndc:vec2f };
     let cov=smoothstep(0.5-S.skyTop.w*0.18,0.85,cl*0.75+cl2*0.35)*S.skyTop.w*smoothstep(-0.02,0.2,d.y);
     let lit=S.skyHor.rgb*0.7+S.sunCol.rgb*(0.25+pow(max(mu,0.0),3.0)*0.9)*(0.6+0.6*cl2);
     c=mix(c,lit*0.8+S.skyTop.rgb*0.25,cov*0.9);
-    let g=floor(d*480.0); let h=hash3(g);
-    let st=step(0.9972,h)*S.sunCol.w*smoothstep(0.02,0.3,d.y)*(1.0-cov)*(0.55+0.45*sin(t*2.0+h*90.0));
-    c+=vec3f(st*2.4)*vec3f(0.9,0.95,1.0);
+    let g=floor(d*820.0); let h=hash3(g);
+    let st=step(0.9988,h)*S.sunCol.w*smoothstep(0.02,0.3,d.y)*(1.0-cov)*(0.55+0.45*sin(t*2.0+h*90.0));
+    c+=vec3f(st*3.2)*mix(vec3f(0.75,0.85,1.0),vec3f(1.0,0.95,0.85),fract(h*777.0));
+    c+=S.sunCol.rgb*cov*pow(max(mu,0.0),10.0)*0.35*(1.0-cov*0.6); // silver lining
   }
   return vec4f(c,1.0);
 }`;
@@ -1128,7 +1168,17 @@ function lamp(x,z,col,style='modern'){ const s=Math.sign(x)||1;
     S('box',x-s*.65,3.62,z,.3,.42,.3,MAT.GLASSO,[.03,.03,.03],0); const o=S('box',x-s*.65,3.6,z,.24,.34,.24,MAT.EMI,col,7); lightAt(o,x-s*.65,3.4,z,col,30,16); return; }
   S('cylY',x,3.1,z,.14,6.2,.14,MAT.STD+.45,[.32,.33,.35],.9); S('box',x-s*.9,6.15,z,1.8,.08,.1,MAT.STD+.45,[.32,.33,.35],.9);
   S('box',x-s*1.7,6.08,z,.6,.12,.28,MAT.STD+.4,[.2,.2,.22],.8); const o=S('box',x-s*1.7,6.0,z,.5,.03,.22,MAT.EMI,col,14); lightAt(o,x-s*1.7,5.7,z,col,55,20); }
-function tree(x,z,h=rr(5,8),col=[.09,.17,.06]){ S('cylY',x,h*.3,z,.25,h*.6,.25,MAT.STD+.9,[.16,.11,.07]); for(let k=0;k<5;k++){ const r=rr(1.2,2.0); S('sph',x+rr(-1,1),h*.62+rr(-.4,1.4),z+rr(-1,1),r*1.6,r*1.3,r*1.6,MAT.FOLIAGE,col); } }
+// kind: 'plane' (broad city tree), 'poplar' (tall column), 'pollard' (short, canal)
+function tree(x,z,h=rr(5,8),col=[.09,.17,.06],kind='plane'){ const bark=[.13,.095,.06], v=()=>rr(.8,1.25), C=k=>[col[0]*k,col[1]*k,col[2]*k];
+  S('cone',x,.18,z,h*.16,.36,h*.16,MAT.STD+.9,bark);
+  if(kind==='poplar'){ S('cylY',x,h*.25,z,h*.035,h*.5,h*.035,MAT.STD+.9,bark); for(let k=0;k<4;k++){ const t=k/3; S('sph',x+rr(-.2,.2),h*(.42+t*.5),z+rr(-.2,.2),h*.26*(1-t*.45),h*.34,h*.26*(1-t*.45),MAT.FOLIAGE,C(v()*(.9+t*.3))); } return; }
+  if(kind==='pollard'){ S('cylY',x,h*.3,z,h*.07,h*.6,h*.07,MAT.STD+.9,bark); for(let k=0;k<4;k++){ const a=k*1.57+rr(-.3,.3); S('sph',x+Math.cos(a)*h*.14,h*.62+rr(0,.5),z+Math.sin(a)*h*.14,h*.32,h*.26,h*.32,MAT.FOLIAGE,C(v())); } return; }
+  const th=h*.45; S('cylY',x,th/2,z,h*.055,th,h*.055,MAT.STD+.9,bark);
+  const a0=rr(0,6.28); for(let k=0;k<3;k++){ const a=a0+k*2.09+rr(-.4,.4), t=rr(.6,.9), l=h*.34, dx=Math.sin(t)*Math.sin(a), dy=Math.cos(t), dz=Math.sin(t)*Math.cos(a);
+    const o=S('cylY',x+dx*l/2,th*.85+dy*l/2,z+dz*l/2,h*.03,l,h*.03,MAT.STD+.9,bark,0,a,t); o.ext=.5;
+    const r=h*rr(.2,.27); S('sph',x+dx*l,th*.85+dy*l+r*.2,z+dz*l,r*2,r*1.5,r*2,MAT.FOLIAGE,C(v())); }
+  S('sph',x,h*.9,z,h*.5,h*.36,h*.5,MAT.FOLIAGE,C(1.25*v()));
+  for(let k=0;k<2;k++){ const a=a0+1+k*3.1; S('sph',x+Math.cos(a)*h*.14,h*.68,z+Math.sin(a)*h*.14,h*.42,h*.3,h*.42,MAT.FOLIAGE,C(.85*v())); } }
 function palm(x,z){ const h=rr(7,9.5); for(let k=0;k<6;k++) S('cylY',x+k*.05,(k+.5)*h/6,z,.36-k*.025,h/6+.05,.36-k*.025,MAT.STD+.95,[.33,.26,.18]);
   for(let k=0;k<9;k++){ const a=k/9*Math.PI*2+rr(-.2,.2); S('sph',x+.3+Math.cos(a)*1.7,h+.1,z+Math.sin(a)*1.7,3.6,.12,.75,MAT.FOLIAGE,[.12,.22,.07],0,-a,0,-.35); } }
 function planter(x,z){ S('rbox',x,.45,z,2.2,.9,1.2,MAT.STONE,[.75,.73,.7]); for(let k=0;k<3;k++) S('sph',x-.6+k*.6,1.1+rr(0,.3),z+rr(-.2,.2),1.1,1.1,1.0,MAT.FOLIAGE,[.08,.16,.06]); }
@@ -1301,6 +1351,7 @@ function ehvDistrict(i,j){ if(j===1) return 'canal'; if(i===0&&j===-2) return 'g
 
 function fillBlock(x0,z0,x1,z1,st,env){
   S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.42,.4,.38]); mapRect('block',x0,z0,x1,z1);
+  for(const zz of [z0+.14,z1-.14]) S('box',(x0+x1)/2,.09,zz,x1-x0,.2,.28,MAT.STONE,[.5,.49,.47]); for(const xx of [x0+.14,x1-.14]) S('box',xx,.09,(z0+z1)/2,.28,.2,z1-z0,MAT.STONE,[.5,.49,.47]);
   const s=3, D=rr(st.d[0],st.d[1]);
   const rows=[ // [axis along x?, fixed coordinate of facade, inward direction, start, end]
     {ax:true,fz:z0+s,dir:1,a:x0+s,b:x1-s,ry:0},{ax:true,fz:z1-s,dir:-1,a:x0+s,b:x1-s,ry:Math.PI},
@@ -1308,6 +1359,17 @@ function fillBlock(x0,z0,x1,z1,st,env){
   for(const r of rows){ let t=r.a; while(t<r.b-3){ let w=Math.min(rr(st.w[0],st.w[1]),r.b-t); if(r.b-t-w<st.w[0]*.6) w=r.b-t; const h=rr(st.h[0],st.h[1]); const col=pick(st.cols); const mid=t+w/2; const cIn=r.fz+r.dir*D/2;
       const x=r.ax?mid:cIn, z=r.ax?cIn:mid, sx=r.ax?w-.15:D, sz=r.ax?D:w-.15;
       S('box',x,h/2+.1,z,sx,h,sz,MAT.FACADE+.6,col,st.fac); addCol(x-sx/2,z-sz/2,x+sx/2,z+sz/2);
+      { // facade depth kit: plinth, shop-floor band, cornice, pilaster, recessed entrance, bay
+        const F=(al,y,len,hg,dp,mat,c,par=0)=>{ const cc=r.fz-r.dir*(dp/2-.02); return S('box',r.ax?al:cc,y,r.ax?cc:al,r.ax?len:dp,hg,r.ax?dp:len,mat,c,par); };
+        const dk=[col[0]*.5,col[1]*.5,col[2]*.5], lt=[Math.min(1,col[0]*1.12),Math.min(1,col[1]*1.12),Math.min(1,col[2]*1.12)];
+        if(st.fac!==3){ F(mid,.5,w-.15,.9,.22,MAT.STONE,dk); F(mid,3.75,w-.15,.28,.3,MAT.STONE,st.fac===5||st.fac===0?[.62,.6,.56]:lt);
+          F(mid,h-.12,w+.1,.42,.55,MAT.STONE,st.fac===5||st.fac===0?[.5,.48,.45]:lt); F(t+.2,h/2+.1,.36,h,.16,MAT.STONE,[col[0]*.85,col[1]*.85,col[2]*.85]);
+          const dx=mid+(rnd()<.5?-1:1)*w*.25; F(dx,1.45,1.3,2.5,.12,MAT.STD+.5,[.05,.04,.04],.2); F(dx,2.85,1.7,.2,.3,MAT.STONE,lt);
+          if(st.gable&&st.fac!==5&&h>10&&rnd()<.3){ const bh=h-7; F(mid-(dx>mid?1:-1)*w*.2,3.9+bh/2,2.6,bh,.9,MAT.FACADE+.6,col,st.fac); F(mid-(dx>mid?1:-1)*w*.2,3.9+bh+.12,2.9,.24,1.1,MAT.STONE,lt); }
+          if(st.fac===5&&rnd()<.4) F(mid,h+.75,w-.3,1.5,.3,MAT.FACADE+.6,col,st.fac);
+        } else { F(mid,2.2,w-.15,4.2,.25,MAT.STD+.3,[.07,.08,.09],.6); F(mid,4.5,w+.1,.3,.8,MAT.STD+.4,[.6,.62,.64],.7);
+          if(h>40){ S('box',x,h+1.6,z,sx*.5,2.4,sz*.5,MAT.STD+.5,[.3,.32,.35],.5); S('cylY',x,h+8,z,.25,11,.25,MAT.STD+.4,[.6,.6,.62],.8); S('sph',x,h+13.6,z,.5,.5,.5,MAT.EMI,[1,.05,.03],6); } }
+      }
       if(st.gable) S('gable',x,h+.1,z,r.ax?D*1.02:w*.98,Math.min(w,D)*.42,r.ax?w*.98:D*1.02,MAT.STONE,st.roof,0,r.ax?Math.PI/2:0);
       else if(st===STYLE.strijp){ const n=Math.max(2,Math.round((r.ax?sx:sz)/7)); for(let q=0;q<n;q++){ const o=-((r.ax?sx:sz)/2)+((r.ax?sx:sz)/n)*(q+.5); S('gable',r.ax?x+o:x,h+.1,r.ax?z:z+o,r.ax?(sx/n)*.98:sx*.98,3.2,r.ax?sz*.98:(sz/n)*.98,MAT.GLASSO,[.12,.14,.16],0,r.ax?0:Math.PI/2); } }
       else S('box',x,h+.4,z,sx*.96,.6,sz*.96,MAT.STONE,st.roof);
@@ -1416,7 +1478,7 @@ function genMotorway(env){ const M=MOTORWAY, cx=(M.x0+M.x1)/2, L=M.x1-M.x0;
   for(let x=M.x0+40;x<M.x1;x+=rr(90,140)) for(const sd of [-1,1]){ // fields, farms, trees, wind turbines
     const z=sd*rr(60,180); S('box',x,.02,z,rr(70,110),.04,rr(60,110),MAT.GRASS,pick([[.35,.3,.12],[.15,.25,.08],[.28,.3,.1],[.4,.33,.18]]),1);
     if(rnd()<.35){ const fz=sd*rr(40,60); S('box',x+20,4,fz,14,8,10,MAT.FACADE+.6,[.45,.2,.14],5); S('gable',x+20,8,fz,14.2,6,10.2,MAT.STONE,[.12,.1,.1],0,Math.PI/2); addCol(x+13,fz-5,x+27,fz+5); }
-    for(let k=0;k<4;k++) tree(x+rr(-40,40),sd*rr(22,40),rr(6,10));
+    for(let k=0;k<4;k++) tree(x+rr(-40,40),sd*rr(22,40),rr(6,10)); for(let k=0;k<5;k++) tree(x-30+k*15,sd*17.5,rr(11,14),[.08,.16,.06],'poplar');
     if(rnd()<.5){ const tx=x+rr(-30,30), tz=sd*rr(200,320); S('cylY',tx,30,tz,2.4,60,2.4,MAT.STD+.4,[.9,.9,.92],.3); S('box',tx,60,tz+1.5,2.4,2.4,5,MAT.STD+.4,[.9,.9,.92],.3); const t=S('box',tx,60,tz-1.2,1.2,1.2,1.2,MAT.STD,[.9,.9,.92]); t.turbine={x:tx,y:60,z:tz-1.4,ph:rnd()*6};
       const red=S('sph',tx,61.5,tz+2,.4,.4,.4,MAT.EMI,[1,.05,.03],6); red.blink=true; } }
   node(M.x0,0); node(M.x1,0); edge(node(M.x0,0),node(M.x1,0),2);
@@ -1870,9 +1932,9 @@ const ENV_K={
  night:{sunCol:[.16,.2,.32],shadow:.55,skyTop:[.006,.009,.03],skyHor:[.045,.042,.09],skyGround:[.01,.01,.015],ambTop:[.028,.032,.06],ambBot:[.012,.01,.016],fog:.0016,stars:1,clouds:.35,sunSize:.0008,windows:1.0,wet:.45,exposure:1.55,sat:1.08,tint:[.97,.98,1.04],lamps:1},
  blue:{sunCol:[.5,.3,.35],shadow:.3,skyTop:[.02,.04,.12],skyHor:[.3,.18,.25],skyGround:[.03,.03,.05],ambTop:[.06,.07,.13],ambBot:[.03,.025,.035],fog:.0017,stars:.6,clouds:.4,sunSize:0,windows:1.0,wet:.3,exposure:1.35,sat:1.1,tint:[1,.98,1.02],lamps:1},
  dawn:{sunCol:[2.6,1.3,.7],shadow:.8,skyTop:[.08,.14,.32],skyHor:[.95,.55,.42],skyGround:[.06,.05,.05],ambTop:[.15,.17,.26],ambBot:[.08,.06,.06],fog:.0018,stars:.15,clouds:.5,sunSize:.004,windows:.6,wet:.3,exposure:1.0,sat:1.06,tint:[1.02,.99,.97],lamps:.7},
- morning:{sunCol:[4.8,4.1,3.3],shadow:.85,skyTop:[.05,.18,.58],skyHor:[.48,.62,.86],skyGround:[.1,.1,.1],ambTop:[.48,.6,.86],ambBot:[.3,.26,.2],fog:.0009,stars:0,clouds:.45,sunSize:.003,windows:.05,wet:.05,exposure:.95,sat:1.04,tint:[1,1,1],lamps:0},
- noon:{sunCol:[5.4,5.0,4.4],shadow:.7,skyTop:[.04,.17,.6],skyHor:[.45,.62,.88],skyGround:[.1,.1,.1],ambTop:[.55,.68,.95],ambBot:[.32,.28,.22],fog:.0008,stars:0,clouds:.5,sunSize:.003,windows:.03,wet:.03,exposure:1.0,sat:1.04,tint:[1,1,1],lamps:0},
- afternoon:{sunCol:[4.8,3.7,2.6],shadow:.85,skyTop:[.06,.18,.52],skyHor:[.7,.64,.62],skyGround:[.1,.09,.09],ambTop:[.46,.52,.74],ambBot:[.3,.23,.16],fog:.001,stars:0,clouds:.5,sunSize:.0035,windows:.1,wet:.05,exposure:.95,sat:1.05,tint:[1.02,1,.97],lamps:0},
+ morning:{sunCol:[4.8,4.1,3.3],shadow:.85,skyTop:[.035,.16,.62],skyHor:[.5,.66,.9],skyGround:[.1,.1,.1],ambTop:[.48,.6,.86],ambBot:[.3,.26,.2],fog:.0009,stars:0,clouds:.3,sunSize:.003,windows:.05,wet:.05,exposure:.95,sat:1.04,tint:[1,1,1],lamps:0},
+ noon:{sunCol:[5.4,5.0,4.4],shadow:.7,skyTop:[.03,.15,.66],skyHor:[.46,.66,.94],skyGround:[.1,.1,.1],ambTop:[.55,.68,.95],ambBot:[.32,.28,.22],fog:.0008,stars:0,clouds:.3,sunSize:.003,windows:.03,wet:.03,exposure:1.0,sat:1.04,tint:[1,1,1],lamps:0},
+ afternoon:{sunCol:[4.8,3.7,2.6],shadow:.85,skyTop:[.06,.18,.52],skyHor:[.7,.64,.62],skyGround:[.1,.09,.09],ambTop:[.46,.52,.74],ambBot:[.3,.23,.16],fog:.001,stars:0,clouds:.36,sunSize:.0035,windows:.1,wet:.05,exposure:.95,sat:1.05,tint:[1.02,1,.97],lamps:0},
  dusk:{sunCol:[3.4,1.65,.8],shadow:.9,skyTop:[.07,.13,.32],skyHor:[1.0,.5,.28],skyGround:[.06,.05,.05],ambTop:[.2,.22,.32],ambBot:[.09,.065,.05],fog:.0018,stars:.15,clouds:.55,sunSize:.004,windows:.75,wet:.1,exposure:.95,sat:1.05,tint:[1.02,.99,.96],lamps:.8}
 };
 const KEYS=[[0,'night'],[5.0,'night'],[6.1,'dawn'],[8,'morning'],[12.5,'noon'],[16.5,'afternoon'],[18.7,'dusk'],[19.9,'blue'],[21,'night'],[24,'night']];

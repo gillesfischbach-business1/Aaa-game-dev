@@ -44,20 +44,36 @@ fn rot(v:vec3f,it:Inst)->vec3f{
   let cy=cos(it.a.w); let sy=sin(it.a.w); return vec3f(p.x*cy+p.z*sy,p.y,-p.x*sy+p.z*cy);
 }
 @vertex fn vs(@location(0) p:vec3f,@location(1) n:vec3f,@location(2) uv:vec2f,@builtin(instance_index) ii:u32)->VO{
-  let it=I[ii]; let s=it.b.xyz; let lp=p*s; let wp=rot(lp,it)+it.a.xyz;
+  let it=I[ii]; let s=it.b.xyz; let lp=p*s; var wp=rot(lp,it)+it.a.xyz;
+  if(floor(it.b.w)==11.0){ wp=leafDisp(wp,rot(p,it),s); }
   var o:VO; o.pos=S.viewProj*vec4f(wp,1.0); o.wp=wp; o.n=rot(normalize(n/max(s,vec3f(1e-4))),it); o.lp=lp; o.on=n; o.col=it.c;
   o.mat=vec4f(floor(it.b.w),fract(it.b.w),fract(it.a.x*0.137+it.a.z*0.0713+it.a.y*0.31),it.d.z); o.uv=uv; o.sc=vec4f(s,it.d.w);
   return o;
 }
+// lumpy tree crowns: push sphere vertices in and out with 3D noise
+fn leafDisp(wp:vec3f,dir:vec3f,s:vec3f)->vec3f{
+  let r=min(s.x,min(s.y,s.z)); if(r<0.5){ return wp; }
+  let n=noise3(wp*(1.6/sqrt(r))+vec3f(3.1))*0.65+noise3(wp*(3.7/sqrt(r)))*0.35;
+  return wp+normalize(dir)*(n-0.5)*r*0.42;
+}
 @vertex fn vsShadow(@location(0) p:vec3f,@builtin(instance_index) ii:u32)->@builtin(position) vec4f{
-  let it=I[ii]; let wp=rot(p*it.b.xyz,it)+it.a.xyz; return S.lightVP*vec4f(wp,1.0);
+  let it=I[ii]; var wp=rot(p*it.b.xyz,it)+it.a.xyz; if(floor(it.b.w)==11.0){ wp=leafDisp(wp,rot(p,it),it.b.xyz); } return S.lightVP*vec4f(wp,1.0);
+}
+// analytic exponential height fog with forward scattering toward the sun
+fn applyFog(col:vec3f,P:vec3f,V:vec3f,dist:f32,a:f32)->vec3f{
+  let b=0.028; let cy=max(S.camPos.y,-40.0); let py=max(P.y,-40.0); let dy=py-cy;
+  var k=exp(-b*cy); if(abs(dy)>0.01){ k=(exp(-b*cy)-exp(-b*py))/(b*dy); }
+  let f=clamp(1.0-exp(-dist*S.skyHor.w*1.15*k),0.0,0.985);
+  let mu=max(dot(-V,S.sunDir.xyz),0.0);
+  let ins=skyColor(-V)*0.92+S.sunCol.rgb*S.sunDir.w*(0.05*pow(mu,6.0)+0.02*pow(mu,2.0));
+  return mix(col,ins*a,f);
 }
 fn shadowAt(P:vec3f,N:vec3f)->f32{
   if(S.sunDir.w<=0.001){ return 1.0; }
   let q=S.lightVP*vec4f(P+N*0.06,1.0); let uv=vec2f(q.x*0.5+0.5,0.5-q.y*0.5);
   if(any(uv<vec2f(0.001)) || any(uv>vec2f(0.999)) || q.z>1.0){ return 1.0; }
   let t=S.misc.z; var s=0.0;
-  for(var y=-1;y<=1;y++){ for(var x=-1;x<=1;x++){ s+=textureSampleCompareLevel(shadowTex,shadowSmp,uv+vec2f(f32(x),f32(y))*t*1.2,q.z-0.0015); } }
+  for(var y=-1;y<=1;y++){ for(var x=-1;x<=1;x++){ s+=textureSampleCompareLevel(shadowTex,shadowSmp,uv+vec2f(f32(x),f32(y))*t*1.2,q.z-0.0005); } }
   s/=9.0;
   let edge=smoothstep(0.85,1.0,max(abs(q.x),abs(q.y)));
   return mix(1.0,mix(1.0,s,S.sunDir.w),1.0-edge);
@@ -165,14 +181,30 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
       let lit=step(1.0-0.62*S.ambTop.w,h);
       // interior: warm room, ceiling lamp falloff, curtain
       let wx=(x/(gw*0.5)); let wy=(fv-gs)/gh;
-      var room=mix(vec3f(1.0,0.62,0.3),vec3f(0.8,0.85,1.0),step(0.82,h));
-      room*=mix(0.35,1.0,wy)*(1.0-0.5*wx*wx);
+      let tone=mix(mix(vec3f(1.0,0.62,0.28),vec3f(0.9,0.8,0.6),step(0.45,h)),vec3f(0.45,0.6,0.9),step(0.86,h));
+      var room=tone*mix(0.35,1.0,wy)*(1.0-0.5*wx*wx);
+      // interior mapping: trace the view ray into a box room behind the pane
+      let Tw=normalize(cross(vec3f(0.0,1.0,0.0),N)); let rd=vec3f(-dot(V,Tw),-V.y,max(dot(V,N),0.02));
+      let dep=3.4+2.0*hash2(vec2f(cellU,fl)+7.7);
+      let tx=(select(-sp*0.5,sp*0.5,rd.x>0.0)-x)/(rd.x+sign(rd.x)*1e-4+1e-5);
+      let ty=(select(0.0,fh,rd.y>0.0)-fv)/(rd.y+sign(rd.y)*1e-4+1e-5);
+      let tz=dep/rd.z; let tt=min(tx,min(ty,tz)); let hp=vec3f(x,fv,0.0)+rd*tt;
+      var surf=vec3f(0.62,0.56,0.5);
+      if(tz<=tx&&tz<=ty){ surf=mix(vec3f(0.7,0.62,0.52),vec3f(0.5,0.58,0.6),step(0.5,hash2(vec2f(cellU,fl)+1.9)));
+        if(hp.y<0.95&&abs(hp.x+0.3*(h-0.5)*sp)<sp*0.28){ surf*=0.35; } // furniture silhouette
+        if(abs(hp.y-1.75)<0.28&&abs(hp.x-0.25*sp*(h-0.5))<0.36){ surf=vec3f(0.25,0.3,0.4)+0.4*vec3f(h,fract(h*7.0),fract(h*13.0)); } }
+      else if(ty<tx){ surf=select(vec3f(0.32,0.22,0.14),vec3f(0.85,0.83,0.8),rd.y>0.0); }
+      else { surf*=0.8; }
+      let lampP=vec3f(0.0,fh-0.5,dep*0.45); let ld=hp-lampP; let lamp=2.2/(1.0+dot(ld,ld)*0.9);
+      let iroom=surf*lamp; let ifade=fade*smoothstep(0.03,0.2,rd.z);
+      room=mix(room,tone*iroom,ifade);
+      let dayRoom=surf*(S.ambTop.rgb+S.ambBot.rgb)*0.07*(1.0-tt/(dep*2.2))*ifade;
       let curt=step(0.6,hash2(vec2f(cellU,fl)+3.1)); let cpos=abs(wx)>0.55-0.2*h;
       if(curt>0.5&&cpos){ room*=vec3f(0.9,0.6,0.45)*(0.8+0.2*sin(wx*40.0)); }
       let env=skyColor(reflect(-V,N));
       let fres=0.05+0.95*pow(1.0-max(dot(N,V),0.0),5.0);
       s.alb=vec3f(0.02); s.rough=0.08;
-      s.em=room*lit*1.5*S.ambTop.w*(0.6+0.5*hash2(vec2f(cellU*1.7,fl*3.1))) + env*fres*0.6;
+      s.em=room*lit*1.5*S.ambTop.w*(0.6+0.5*hash2(vec2f(cellU*1.7,fl*3.1))) + dayRoom*(1.0-fres) + env*fres*0.6;
       s.ao=0.6;
       let top=gs+gh-fv; if(top<0.25){ s.em*=mix(0.4,1.0,top/0.25); }
       if(style>2.5&&style<3.5){ let mull=abs(fract((x/gw)*2.0+0.5)-0.5)<0.02; if(mull){ s.alb=base*0.5; s.em=vec3f(0.0); s.metal=0.6; s.rough=0.4; } }
@@ -180,6 +212,7 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     // sill below window
   } else if(fv<gs&&fv>gs-0.12&&abs(x)<gw*0.5+0.08&&style<2.5){ s.alb=vec3f(0.75,0.73,0.7); dy=0.7; s.rough=0.6; }
   else if(fv<gs&&fv>gs-0.5&&abs(x)<gw*0.5&&style<2.5){ s.ao=0.85; }
+  s.ao*=mix(0.5,1.0,smoothstep(0.0,1.8,v)); // grounding: walls darken toward the pavement
   s.n=bump(N,dx*fade,dy*fade);
   return s;
 }
@@ -259,8 +292,12 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     s.alb=vec3f(0.035)*(1.0-0.5*clamp(groove,0.0,1.0)); s.rough=0.85;
   }
   else if(mat<11.5){ // foliage
-    let g=noise3(i.wp*2.2); s.alb=i.col.rgb*(0.6+0.8*g); s.rough=0.7; s.wrap=0.6;
-    let back=pow(max(dot(-V,S.sunDir.xyz),0.0),4.0); s.em=i.col.rgb*S.sunCol.rgb*back*0.25*shadowAt(i.wp,N);
+    let g=noise3(i.wp*2.2); let g2=noise3(i.wp*7.0); let hgt=clamp(i.lp.y/max(i.sc.y,0.01)+0.5,0.0,1.0);
+    let clump=smoothstep(0.2,0.6,g2)*0.35+0.65; let fd=clamp(1.0-fwW*3.0,0.0,1.0);
+    s.alb=i.col.rgb*(0.55+0.9*g)*mix(0.5,1.35,hgt)*mix(1.0,clump,fd); s.alb=mix(s.alb,s.alb*vec3f(1.25,1.15,0.6),smoothstep(0.6,0.9,g)*0.5);
+    s.rough=0.65; s.wrap=0.6; s.ao=mix(0.4,1.0,hgt);
+    s.n=normalize(N+(vec3f(g2,noise3(i.wp*7.0+vec3f(5.0)),noise3(i.wp*7.0+vec3f(9.0)))-0.5)*0.9*fd);
+    let back=pow(max(dot(-V,S.sunDir.xyz),0.0),4.0); s.em=i.col.rgb*vec3f(1.6,1.9,0.5)*S.sunCol.rgb*back*0.22*shadowAt(i.wp,N);
   }
   else if(mat<12.5){ // opaque glass (car windows, shop glass)
     let R=reflect(-V,N); let fres=0.04+0.96*pow(1.0-max(dot(N,V),0.0),5.0);
@@ -280,15 +317,17 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
   }
   else { // grass / fields
     let q=i.wp.xz; let f=fbm2(q*0.05); let f2=noise2(q*0.7); let fade=clamp(1.0-fwW*3.0,0.0,1.0);
-    s.alb=i.col.rgb*(0.7+0.5*f)*(0.85+0.3*f2*fade); s.rough=0.95; s.wrap=0.2;
+    let big=fbm2(q*0.012+vec2f(7.0)); let blade=noise2(q*vec2f(9.0,2.5))*noise2(q*vec2f(2.5,9.0));
+    var gcol=mix(i.col.rgb*vec3f(0.8,0.95,0.7),i.col.rgb*vec3f(1.6,1.35,0.75),smoothstep(0.35,0.7,big)); // dry and lush patches
+    gcol=mix(gcol,gcol*vec3f(1.5,1.3,0.5),smoothstep(0.6,0.8,noise2(q*0.09+vec2f(3.0)))*0.5); // clover / flower drifts
+    let mow=mix(1.0,0.88,step(0.5,fract((q.x+q.y)*0.09))*clamp(1.0-fwW*0.6,0.0,1.0));
+    s.alb=gcol*(0.7+0.5*f)*(0.8+0.4*f2*fade)*(0.75+0.6*blade*fade)*mow; s.rough=0.95; s.wrap=0.35;
     if(i.col.a>0.5){ let row=fract(q.x*0.5); s.alb*=mix(1.0,0.72,step(0.5,row)*fade); }
   }
   if(direct){ let sh=shadowAt(i.wp,N); col=shade(i.wp,V,s,sh); }
   // atmosphere: distance + height fog tinted by sky in view direction
   let fogD=S.skyHor.w;
-  let hz=exp(-max(i.wp.y,0.0)*0.045);
-  let f=1.0-exp(-dist*fogD*mix(0.55,1.0,hz));
-  col=mix(col,skyColor(-V)*0.92,clamp(f,0.0,0.985));
+  col=applyFog(col,i.wp,V,dist,1.0);
   return vec4f(col,1.0);
 }
 @fragment fn fsGlass(i:VO,@builtin(front_facing) ff:bool)->@location(0) vec4f{
@@ -302,7 +341,7 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     let Hp=normalize(Lp+V); refl+=lc.rgb*0.04*Dggx(max(dot(N,Hp),0.0),0.01)*max(dot(N,Lp),0.0)/(d*d+0.6); }
   let a=clamp(mix(i.col.a,1.0,fres),0.0,1.0);
   var col=i.col.rgb*hemi(N)*a+refl;
-  let f=1.0-exp(-dist*S.skyHor.w); col=mix(col,skyColor(-V)*0.92*a,clamp(f,0.0,0.985));
+  col=applyFog(col,i.wp,V,dist,a);
   return vec4f(col,a);
 }`;
 
@@ -320,9 +359,10 @@ struct VO{ @builtin(position) pos:vec4f, @location(0) ndc:vec2f };
     let cov=smoothstep(0.5-S.skyTop.w*0.18,0.85,cl*0.75+cl2*0.35)*S.skyTop.w*smoothstep(-0.02,0.2,d.y);
     let lit=S.skyHor.rgb*0.7+S.sunCol.rgb*(0.25+pow(max(mu,0.0),3.0)*0.9)*(0.6+0.6*cl2);
     c=mix(c,lit*0.8+S.skyTop.rgb*0.25,cov*0.9);
-    let g=floor(d*480.0); let h=hash3(g);
-    let st=step(0.9972,h)*S.sunCol.w*smoothstep(0.02,0.3,d.y)*(1.0-cov)*(0.55+0.45*sin(t*2.0+h*90.0));
-    c+=vec3f(st*2.4)*vec3f(0.9,0.95,1.0);
+    let g=floor(d*820.0); let h=hash3(g);
+    let st=step(0.9988,h)*S.sunCol.w*smoothstep(0.02,0.3,d.y)*(1.0-cov)*(0.55+0.45*sin(t*2.0+h*90.0));
+    c+=vec3f(st*3.2)*mix(vec3f(0.75,0.85,1.0),vec3f(1.0,0.95,0.85),fract(h*777.0));
+    c+=S.sunCol.rgb*cov*pow(max(mu,0.0),10.0)*0.35*(1.0-cov*0.6); // silver lining
   }
   return vec4f(c,1.0);
 }`;

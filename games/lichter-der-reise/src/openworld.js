@@ -52,6 +52,7 @@ function ehvDistrict(i,j){ if(j===1) return 'canal'; if(i===0&&j===-2) return 'g
 
 function fillBlock(x0,z0,x1,z1,st,env){
   S('box',(x0+x1)/2,.06,(z0+z1)/2,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.42,.4,.38]); mapRect('block',x0,z0,x1,z1);
+  for(const zz of [z0+.14,z1-.14]) S('box',(x0+x1)/2,.09,zz,x1-x0,.2,.28,MAT.STONE,[.5,.49,.47]); for(const xx of [x0+.14,x1-.14]) S('box',xx,.09,(z0+z1)/2,.28,.2,z1-z0,MAT.STONE,[.5,.49,.47]);
   const s=3, D=rr(st.d[0],st.d[1]);
   const rows=[ // [axis along x?, fixed coordinate of facade, inward direction, start, end]
     {ax:true,fz:z0+s,dir:1,a:x0+s,b:x1-s,ry:0},{ax:true,fz:z1-s,dir:-1,a:x0+s,b:x1-s,ry:Math.PI},
@@ -59,6 +60,17 @@ function fillBlock(x0,z0,x1,z1,st,env){
   for(const r of rows){ let t=r.a; while(t<r.b-3){ let w=Math.min(rr(st.w[0],st.w[1]),r.b-t); if(r.b-t-w<st.w[0]*.6) w=r.b-t; const h=rr(st.h[0],st.h[1]); const col=pick(st.cols); const mid=t+w/2; const cIn=r.fz+r.dir*D/2;
       const x=r.ax?mid:cIn, z=r.ax?cIn:mid, sx=r.ax?w-.15:D, sz=r.ax?D:w-.15;
       S('box',x,h/2+.1,z,sx,h,sz,MAT.FACADE+.6,col,st.fac); addCol(x-sx/2,z-sz/2,x+sx/2,z+sz/2);
+      { // facade depth kit: plinth, shop-floor band, cornice, pilaster, recessed entrance, bay
+        const F=(al,y,len,hg,dp,mat,c,par=0)=>{ const cc=r.fz-r.dir*(dp/2-.02); return S('box',r.ax?al:cc,y,r.ax?cc:al,r.ax?len:dp,hg,r.ax?dp:len,mat,c,par); };
+        const dk=[col[0]*.5,col[1]*.5,col[2]*.5], lt=[Math.min(1,col[0]*1.12),Math.min(1,col[1]*1.12),Math.min(1,col[2]*1.12)];
+        if(st.fac!==3){ F(mid,.5,w-.15,.9,.22,MAT.STONE,dk); F(mid,3.75,w-.15,.28,.3,MAT.STONE,st.fac===5||st.fac===0?[.62,.6,.56]:lt);
+          F(mid,h-.12,w+.1,.42,.55,MAT.STONE,st.fac===5||st.fac===0?[.5,.48,.45]:lt); F(t+.2,h/2+.1,.36,h,.16,MAT.STONE,[col[0]*.85,col[1]*.85,col[2]*.85]);
+          const dx=mid+(rnd()<.5?-1:1)*w*.25; F(dx,1.45,1.3,2.5,.12,MAT.STD+.5,[.05,.04,.04],.2); F(dx,2.85,1.7,.2,.3,MAT.STONE,lt);
+          if(st.gable&&st.fac!==5&&h>10&&rnd()<.3){ const bh=h-7; F(mid-(dx>mid?1:-1)*w*.2,3.9+bh/2,2.6,bh,.9,MAT.FACADE+.6,col,st.fac); F(mid-(dx>mid?1:-1)*w*.2,3.9+bh+.12,2.9,.24,1.1,MAT.STONE,lt); }
+          if(st.fac===5&&rnd()<.4) F(mid,h+.75,w-.3,1.5,.3,MAT.FACADE+.6,col,st.fac);
+        } else { F(mid,2.2,w-.15,4.2,.25,MAT.STD+.3,[.07,.08,.09],.6); F(mid,4.5,w+.1,.3,.8,MAT.STD+.4,[.6,.62,.64],.7);
+          if(h>40){ S('box',x,h+1.6,z,sx*.5,2.4,sz*.5,MAT.STD+.5,[.3,.32,.35],.5); S('cylY',x,h+8,z,.25,11,.25,MAT.STD+.4,[.6,.6,.62],.8); S('sph',x,h+13.6,z,.5,.5,.5,MAT.EMI,[1,.05,.03],6); } }
+      }
       if(st.gable) S('gable',x,h+.1,z,r.ax?D*1.02:w*.98,Math.min(w,D)*.42,r.ax?w*.98:D*1.02,MAT.STONE,st.roof,0,r.ax?Math.PI/2:0);
       else if(st===STYLE.strijp){ const n=Math.max(2,Math.round((r.ax?sx:sz)/7)); for(let q=0;q<n;q++){ const o=-((r.ax?sx:sz)/2)+((r.ax?sx:sz)/n)*(q+.5); S('gable',r.ax?x+o:x,h+.1,r.ax?z:z+o,r.ax?(sx/n)*.98:sx*.98,3.2,r.ax?sz*.98:(sz/n)*.98,MAT.GLASSO,[.12,.14,.16],0,r.ax?0:Math.PI/2); } }
       else S('box',x,h+.4,z,sx*.96,.6,sz*.96,MAT.STONE,st.roof);
@@ -167,7 +179,7 @@ function genMotorway(env){ const M=MOTORWAY, cx=(M.x0+M.x1)/2, L=M.x1-M.x0;
   for(let x=M.x0+40;x<M.x1;x+=rr(90,140)) for(const sd of [-1,1]){ // fields, farms, trees, wind turbines
     const z=sd*rr(60,180); S('box',x,.02,z,rr(70,110),.04,rr(60,110),MAT.GRASS,pick([[.35,.3,.12],[.15,.25,.08],[.28,.3,.1],[.4,.33,.18]]),1);
     if(rnd()<.35){ const fz=sd*rr(40,60); S('box',x+20,4,fz,14,8,10,MAT.FACADE+.6,[.45,.2,.14],5); S('gable',x+20,8,fz,14.2,6,10.2,MAT.STONE,[.12,.1,.1],0,Math.PI/2); addCol(x+13,fz-5,x+27,fz+5); }
-    for(let k=0;k<4;k++) tree(x+rr(-40,40),sd*rr(22,40),rr(6,10));
+    for(let k=0;k<4;k++) tree(x+rr(-40,40),sd*rr(22,40),rr(6,10)); for(let k=0;k<5;k++) tree(x-30+k*15,sd*17.5,rr(11,14),[.08,.16,.06],'poplar');
     if(rnd()<.5){ const tx=x+rr(-30,30), tz=sd*rr(200,320); S('cylY',tx,30,tz,2.4,60,2.4,MAT.STD+.4,[.9,.9,.92],.3); S('box',tx,60,tz+1.5,2.4,2.4,5,MAT.STD+.4,[.9,.9,.92],.3); const t=S('box',tx,60,tz-1.2,1.2,1.2,1.2,MAT.STD,[.9,.9,.92]); t.turbine={x:tx,y:60,z:tz-1.4,ph:rnd()*6};
       const red=S('sph',tx,61.5,tz+2,.4,.4,.4,MAT.EMI,[1,.05,.03],6); red.blink=true; } }
   node(M.x0,0); node(M.x1,0); edge(node(M.x0,0),node(M.x1,0),2);
