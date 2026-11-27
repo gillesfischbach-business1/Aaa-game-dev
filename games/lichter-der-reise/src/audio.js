@@ -15,15 +15,16 @@ const ENGINE_SPEC={
  // ord = level in dB of each half engine order (the firing order is the 8th entry, the strong 4th entry is the flat-plane bank pulse),
  // env = tone balance in dB over frequency: nearly all energy sits below 600 Hz, the exhaust is muted above, turbo noise fills the top
  smaragd:{cyl:8,flat:true,pts:[1100,1900,2800,3800,4800,5800,6500,7000],
-  ord:[-28,-16.4,-28,-6,-28,-21,-28,0,-28,-13.7,-28,-11.9,-28,-16.5,-28,-8.2,-28,-25.5],ordTail:-24,
-  env:[[40,-8],[90,-2],[160,0],[320,0],[450,-5],[640,-10],[1280,-14],[2560,-19],[5120,-24],[9000,-36]],
+  ord:[-28,-16.4,-28,-6,-28,-21,-28,0,-28,-13.7,-28,-11.9,-28,-16.5,-28,-4,-28,-25.5,-28,-22,-28,-22,-28,-8,-28,-24,-28,-24,-28,-24,-28,-12],ordTail:-17,scream:11,
+  env:[[40,-8],[90,-2],[160,0],[320,0],[450,-3],[640,-4],[1280,-4],[2560,-7],[5120,-13],[9000,-26]],
+  // scream = the orders above the firing line are this many dB quieter at idle and reach full level by 4500 rpm: deep at low revs, a high-pitched howl at the top,
   // ordHi = how much the half orders and the bank pulse fade towards 4500 rpm under load (dB; at the top of a rev only the firing line stands out),
   // ordOff = levels of the half orders with the throttle shut above 3800 rpm, fading in from 2800 rpm (right after lifting off the bank pulse is as strong as the firing line, the orders above it calm down),
   // life (optional, currently off) = random drift of level and pitch [slow level drift, fast level flutter, extra slow drift on the overrun, pitch drift in cents, fast pitch jitter in cents, extra fast flutter under full load]. Switched off after listening tests with neural audio models: every recording with it was judged less like the real car and more synthetic than every recording without it,
   // lp = low-pass over the whole engine [throttle shut, throttle open] in Hz, roar = level of the broadband intake and exhaust roar under load,
   // rumble = level of the low irregular rumble for a good second after lifting off at high revs (the recording shows a broad 50-110 Hz cluster there),
   // res = fixed resonances of the exhaust [Hz, dB, Q]: the level surges whenever a strong order sweeps through one, as in the recording
-  ordHi:-8,ordOff:[-28,-12,-28,-5,-28,-18,-28,0,-28,-20,-28,-18,-28,-22],lp:[1500,5200],roar:.34,rumble:.45,res:[[188,6,4],[290,5,4]],
+  ordHi:-8,ordOff:[-28,-12,-28,-5,-28,-18,-28,0,-28,-20,-28,-18,-28,-22],lp:[2000,8500],roar:.34,rumble:.45,res:[[188,6,4],[290,5,4]],
   form:[],roll:[1,1],rough:.2,noise:[.1,.05],band:[450,3800],clatter:0,wobble:.006,gain:.44} };
 const LOOP_SR=22050, LOOP_N=16384;
 function fftInverse(re,im){ const n=re.length; // in-place radix-2, returns the real signal in re
@@ -36,7 +37,7 @@ function engineLoop(ctx,S,rpm,load,seed){ const N=LOOP_N, re=new Float32Array(N)
   const put=(bin,a,ph)=>{ if(bin<1||bin>=N/2) return; const r=a*Math.cos(ph), q=a*Math.sin(ph); re[bin]+=r; im[bin]+=q; re[N-bin]+=r; im[N-bin]-=q; };
   const roll=S.roll[load?0:1], bright=load?1:.55;
   for(let h=1;h*fc<9000;h++){ const f=h*fc, n=h/S.cyl, firing=h%S.cyl===0; const ph=rnd()*6.283*(firing&&n<=3?.3:1); // the phase depends only on h: equal in every loop of this engine
-    let a=1/Math.pow(Math.max(n,.5),roll); if(S.ord) { let o=h<=S.ord.length?S.ord[h-1]:S.ordTail; if(!firing&&load) o+=(S.ordHi||0)*Math.min(1,Math.max(0,(rpm-1900)/2600)); else if(!load&&S.ordOff&&h<=S.ordOff.length) o+=(S.ordOff[h-1]-o)*Math.min(1,Math.max(0,(rpm-2800)/1000)); a=Math.pow(10,o/20)*(firing||load?1:1.3)*(h>S.cyl&&!load?.7:1); } else if(!firing) a*=S.rough*((S.flat&&h%(S.cyl/2)===0)?(S.flatGain||2.4):1)*(load?1:1.3);
+    let a=1/Math.pow(Math.max(n,.5),roll); if(S.ord) { let o=h<=S.ord.length?S.ord[h-1]:S.ordTail; if(S.scream&&h>S.cyl) o-=S.scream*(1-Math.min(1,Math.max(0,(rpm-1500)/3000))); if(!firing&&load) o+=(S.ordHi||0)*Math.min(1,Math.max(0,(rpm-1900)/2600)); else if(!load&&S.ordOff&&h<=S.ordOff.length) o+=(S.ordOff[h-1]-o)*Math.min(1,Math.max(0,(rpm-2800)/1000)); a=Math.pow(10,o/20)*(firing||load?1:1.3)*(h>S.cyl&&!load?.7:1); } else if(!firing) a*=S.rough*((S.flat&&h%(S.cyl/2)===0)?(S.flatGain||2.4):1)*(load?1:1.3);
     a*=form(f)*(f>1200?bright:1); put(h*K,a,ph); }
   fftInverse(re,im); const tone=re.slice();
   // noise: band-limited, pulsing with the firing (intake and exhaust), plus injector clatter for the diesel
@@ -105,8 +106,8 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    const wheelRpm=v/(2*Math.PI*G.wheel)*60; let rpm=Math.max(G.idle,wheelRpm*G.ratios[this.gear-1]*G.final);
    if(this.shiftT>0){ this.shiftT-=dt; }
    else if(rpm>(thr>.5?G.up:G.up*.72)&&this.gear<G.ratios.length){ this.gear++; this.shiftT=car==='fidele'?.35:.12;
-     if(car==='smaragd'&&thr>.5&&rpm>4200&&Math.random()<.6) this.spit(1+((Math.random()*2)|0),.9); } // full-throttle upshift: the ignition cut spits unburnt fuel into the exhaust
-   else if(rpm<G.down&&this.gear>1){ this.gear--; this.shiftT=.2; if(car==='smaragd'&&v>12&&Math.random()<.45) this.spit(2+((Math.random()*3)|0),.7); }
+     if(car==='smaragd'&&thr>.5&&rpm>3800&&Math.random()<.9) this.spit(2+((Math.random()*2)|0),.75+.25*clamp((rpm-3800)/2800,0,1)); } // full-throttle upshift: the ignition cut spits unburnt fuel into the exhaust
+   else if(rpm<G.down&&this.gear>1){ this.gear--; this.shiftT=.2; if(car==='smaragd'&&v>8&&Math.random()<.85) this.spit(3+((Math.random()*3)|0),.7); }
    rpm=Math.max(G.idle,wheelRpm*G.ratios[this.gear-1]*G.final);
    if(v<1.2) rpm=G.idle+thr*(G.red-G.idle)*.35;
    if(this.shiftT>0) rpm*=car==='fidele'?.82:.9;
@@ -150,9 +151,9 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    const f=c.createBiquadFilter(); f.type=type; f.frequency.setValueAtTime(freq,t); if(sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo,t+dur); const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
    s.connect(f); f.connect(g); g.connect(dest||this.bus.fx); s.start(t,Math.random()*2); s.stop(t+dur+.05); },
  /* exhaust spit: n short cracks, each a band of noise with a low thump; the game adds the flame */
- spit(n,vol){ if(!this.ctx) return; for(let k=0;k<n;k++) setTimeout(()=>{ if(!this.ctx) return; this.noiseBurst(.04+Math.random()*.03,'bandpass',500+Math.random()*700,.75*vol); this.noiseBurst(.012,'highpass',1800,.4*vol); this.thump(110+Math.random()*40,.06,.55*vol); this.spitFlag=(this.spitFlag||0)+1; },k*(70+Math.random()*60)); },
+ spit(n,vol){ if(!this.ctx) return; for(let k=0;k<n;k++) setTimeout(()=>{ if(!this.ctx) return; this.noiseBurst(.04+Math.random()*.03,'bandpass',500+Math.random()*700,.75*vol); this.noiseBurst(.012,'highpass',1800,.4*vol); this.thump(110+Math.random()*40,.06,.55*vol); this.spitFlag=(this.spitFlag||0)+vol; },k*(70+Math.random()*60)); },
  /* overrun burble: one soft irregular crack from the exhaust */
- crackle(vol){ this.noiseBurst(.025+Math.random()*.03,'bandpass',350+Math.random()*900,.1*vol,this.bus.engine); if(Math.random()<.4) this.thump(90+Math.random()*50,.04,.08*vol); },
+ crackle(vol){ this.crackFlag=(this.crackFlag||0)+vol; this.noiseBurst(.025+Math.random()*.03,'bandpass',350+Math.random()*900,.1*vol,this.bus.engine); if(Math.random()<.4) this.thump(90+Math.random()*50,.04,.08*vol); },
  thump(freq,dur,vol){ const c=this.ctx; if(!c) return; const t=c.currentTime; const o=c.createOscillator(); o.frequency.setValueAtTime(freq,t); o.frequency.exponentialRampToValueAtTime(freq*.45,t+dur); const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur); o.connect(g); g.connect(this.bus.fx); o.start(t); o.stop(t+dur+.05); },
  pickup(i){ const s=[0,2,4,7,9,12][((i%6)+6)%6]; this.bell(1046*Math.pow(2,s/12),.05); },
  noiseHit(dur,freq,vol){ this.noiseBurst(dur*.8,'lowpass',freq*1.5,vol*.9,null,90); this.thump(70,dur*.7,vol*.8); this.noiseBurst(.06,'highpass',3000,vol*.25); },

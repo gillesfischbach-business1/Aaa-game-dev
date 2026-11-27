@@ -160,7 +160,11 @@ function update(dt){
     const [s,th,br]=readInput(); G.boostT=Math.max(0,G.boostT-dt);
     pl.hb=!!(keys['shift']||G.gpHB||(br>0&&Math.abs(s)>.5&&pl.v>13)); pl.wet=Math.max(envCur.rain||0,(envCur.wet||0)*.5);
     const px0=pl.x, pz0=pl.z; const hit=stepCar(pl,th,br,s,dt,G.boostT>0); Audio_.slide=pl.slide||0;
-    if(Audio_.spitFlag){ Audio_.spitFlag=0; if(pl.car==='smaragd'){ G.spitT=.14; const c2=Math.cos(pl.h), s2=Math.sin(pl.h); for(const sd of [-.2,.2]) for(let k=0;k<5;k++){ const lz=1.74; G.parts.push({x:pl.x+sd*c2+lz*s2,y:.93,z:pl.z-sd*s2+lz*c2,vx:s2*rr(1,4)+rr(-.5,.5),vy:rr(1.5,4),vz:c2*rr(1,4)+rr(-.5,.5),life:.16,max:.16,s:rr(.07,.16),col:k<2?[.5,.7,1]:[1,.55,.15],em:16,g:2}); } } }
+    // exhaust flames follow the engine: a shift pop throws a flame whose size grows with the bang and the revs, the overrun crackle only flickers small and blue
+    if(Audio_.spitFlag||Audio_.crackFlag){ const pw=Audio_.spitFlag||0, ck=Audio_.crackFlag||0; Audio_.spitFlag=0; Audio_.crackFlag=0;
+      if(pl.car==='smaragd'){ const rv=clamp((Audio_.rpm-2000)/5000,0,1), big=pw>0, k0=big?clamp(pw*(.6+.8*rv),.4,2.2):.3*Math.min(1,ck), c2=Math.cos(pl.h), s2=Math.sin(pl.h), n=big?Math.round(3+5*k0):2, lz=1.74;
+        if(big){ G.spitT=.1+.06*k0; G.spitP=k0; } else if(!(G.spitT>0)){ G.spitT=.05; G.spitP=.25; }
+        for(const sd of [-.2,.2]) for(let k=0;k<n;k++){ const hot=big&&k>=n*.35, sp=big?k0:.5, lf=big?.1+.07*k0:.07; G.parts.push({x:pl.x+sd*c2+lz*s2,y:.93,z:pl.z-sd*s2+lz*c2,vx:s2*rr(1,4)*sp+rr(-.5,.5)-pl.v*s2*.15,vy:rr(1.5,4)*sp,vz:c2*rr(1,4)*sp+rr(-.5,.5)-pl.v*c2*.15,life:lf,max:lf,s:rr(.06,.13)*(big?.7+.5*k0:.6),col:hot?[1,.5+.2*Math.random(),.12]:[.45,.65,1],em:big?12+6*k0:9,g:2}); } } }
     // wedged between obstacles? After four seconds of throttle or brake without moving, the car is set back on the street.
     if((th>0||br>0)&&Math.abs(pl.v)<.35){ G.stuckT=(G.stuckT||0)+dt; if(G.stuckT>4){ G.stuckT=0; backOnRoad(pl); toast('Festgefahren: zurück auf die Straße gesetzt'); } } else G.stuckT=0;
     if(pl.slide>5&&Math.random()<dt*30){ const c2=Math.cos(pl.h), s2=Math.sin(pl.h), L2=VEH[pl.car].half[1]*.75; for(const sd of [-1,1]) G.parts.push({x:pl.x+s2*L2+c2*sd*.75,y:.12,z:pl.z+c2*L2-s2*sd*.75,vx:rr(-.4,.4),vy:rr(.3,.9),vz:rr(-.4,.4),life:.7,max:.7,s:.2,col:[.5,.5,.52],em:.06,g:-.4}); }
@@ -287,7 +291,7 @@ function buildFrame(){
     const c=B.c; if(c.sparks) for(const s of c.sparks){ if(!s.alive) continue; const y=s.y+Math.sin(t*3+s.ph)*.18; P(MESHIDX.sph,s.x,y,s.z,0,.36,.36,.36,MAT.EMI,1,.78,.35,14); if(d<120) Lt(s.x,y,s.z,5,3.4,1.2,6); } }
   const lightsOn=E.lamps>.3;
   drawCar(pl,PEOPLE_SUP,lightsOn);
-  if(G.spitT>0){ G.spitT-=1/60; const c2=Math.cos(pl.h), s2=Math.sin(pl.h); Lt(pl.x+1.9*s2,1.2,pl.z+1.9*c2,60,26,6,7); }
+  if(G.spitT>0){ G.spitT-=1/60; const c2=Math.cos(pl.h), s2=Math.sin(pl.h); const lp=G.spitP||1; Lt(pl.x+1.9*s2,1.2,pl.z+1.9*c2,60*lp,26*lp,6*lp,5+2*lp); }
   if(G.parked) drawCar(G.parked,G.state==='drive'?null:VAL_SUP,false);
   { let near=null, nd=6.5; for(const k of PARKCARS){ const d=Math.hypot(k.x-pl.x,k.z-pl.z); if(d>170) continue; if(d<nd){ nd=d; near=k; } drawParts(carParts(k,d>42),k.x,0,k.z,k.h,{headOn:false}); }
     // a soft glow under the car you could take, and a one-time hint
