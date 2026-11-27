@@ -78,7 +78,7 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
       if (st !== last) { log.push(st); last = st; if (/m[0-5]\/\/(orbit|standing|finale)/.test(st)) await shot(p, '07_story_' + String(log.length).padStart(2, '0')); }
       const endV = await p.evaluate(() => ({ h: document.getElementById('endO').hidden, st: G.state })); if (process.env.DEBUG) console.log('dbg', frames, st, JSON.stringify(endV)); if (!endV.h && endV.st === 'ending') break; }
     await shot(p, '08_end');
-    const end = await p.evaluate(() => ({ title: document.getElementById('endTitle').textContent, light: G.light, total: G.total, stuck: __bot.stuckTotal, st1: (window.__endStack || '').slice(0, 400), st2: (window.__endStack2 || '').slice(0, 600) }));
+    const end = await p.evaluate(() => ({ title: document.getElementById('endTitle').textContent, light: G.light, total: G.total, stuck: __bot.stuckTotal, st1: (window.__endStack || '').slice(0, 400), st2: (window.__endStack2 || '').slice(0, 600), pos: [Math.round(G.player.x), Math.round(G.player.z), +G.player.h.toFixed(2)], spots: (__bot.spots || []).slice(-12) }));
     if (!/leuchten/.test(end.title)) throw new Error('story did not finish: ' + JSON.stringify({ end, log }));
     return { minutes: +(frames / 3600).toFixed(1), ...end, states: log.length }; });
   await test('free_roam_stuck_scan', async () => { // drive between random road nodes and count how often the car gets stuck

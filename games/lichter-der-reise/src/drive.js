@@ -35,7 +35,10 @@ function stepCar(c,thr,brk,steerIn,dt,boost){ const V=VEH[c.car];
         else { dx/=d; dz/=d; }
         const pen=r-d; c.x+=dx*pen; c.z+=dz*pen;
         const vx=fx*c.v+rx*c.lat, vz=fz*c.v+rz*c.lat; const vn=vx*dx+vz*dz;
-        if(vn<0){ const nvx=vx-dx*vn*1.35, nvz=vz-dz*vn*1.35; c.v=(nvx*fx+nvz*fz)*.82; c.lat=(nvx*rx+nvz*rz)*.6; hit=Math.max(hit,-vn); } } } }
+        if(vn<0){ const nvx=vx-dx*vn*1.35, nvz=vz-dz*vn*1.35; const keep=1-clamp(-vn*.04,.004,.18); // glancing scrapes cost little speed, head-on hits a lot
+          c.v=(nvx*fx+nvz*fz)*keep; c.lat=(nvx*rx+nvz*rz)*.6; hit=Math.max(hit,-vn);
+          const fn=fx*dx+fz*dz; if(fn<0&&fn>-.75&&Math.abs(c.v)>1.5){ // shallow angle: ease the nose along the wall instead of grinding into it
+            const tx=fx-dx*fn, tz=fz-dz*fn; let dh=Math.atan2(-tx,-tz)-c.h; while(dh>Math.PI)dh-=2*Math.PI; while(dh<-Math.PI)dh+=2*Math.PI; c.h+=dh*Math.min(1,dt*3); } } } } }
   c.bump=hit; return hit; }
 
 // ---------- traffic ----------
