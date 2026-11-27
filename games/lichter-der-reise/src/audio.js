@@ -13,7 +13,7 @@ class Engine extends AudioWorkletProcessor{
   biquadBP(st,x,f,q){ const w=2*Math.PI*Math.min(f,sampleRate*.45)/sampleRate, al=Math.sin(w)/(2*q), cw=Math.cos(w), a0=1+al;
     const y=(al/a0)*x-(al/a0)*st.x2-(-2*cw/a0)*st.y1-((1-al)/a0)*st.y2; st.x2=st.x1; st.x1=x; st.y2=st.y1; st.y1=y; return y; }
   process(_,out,P){ const o=out[0][0]; const N=o.length; const diesel=this.type==='diesel';
-    const cyl=diesel?4:8, firesPerRev=cyl/2;
+    const cyl=(diesel||this.type==='i4')?4:8, firesPerRev=cyl/2;
     for(let i=0;i<N;i++){
       const rpm=P.rpm.length>1?P.rpm[i]:P.rpm[0], load=P.load.length>1?P.load[i]:P.load[0], g=P.gain.length>1?P.gain[i]:P.gain[0];
       const whine=P.whine[0], boost=P.boost[0];
@@ -24,7 +24,7 @@ class Engine extends AudioWorkletProcessor{
         const v=diesel?(0.75+0.5*this.rnd())*(1-0.25*(this.cyl%2)):(0.88+0.18*Math.sin(this.cyl*2.1));
         this.jit=diesel?(this.rnd()-.5)*0.06*Math.max(0,1-rpm/2500):(this.rnd()-.5)*0.01;
         const amp=v*(0.35+0.65*load);
-        this.pulses.push({t:0,a:amp,f1:diesel?95+rpm*0.02:140+rpm*0.03,f2:diesel?520+this.rnd()*260:900+rpm*0.08,click:diesel?1:0.25});
+        this.pulses.push({t:0,a:amp,f1:diesel?110+rpm*0.03:140+rpm*0.03,f2:diesel?520+this.rnd()*260:900+rpm*0.08,click:diesel?1:0.25});
         if(this.pulses.length>24) this.pulses.shift();
         if(!diesel&&load<0.05&&rpm>3500&&this.prevLoad>0.5&&this.rnd()<0.18) this.crack=0.06; }
       let s=0;
@@ -42,7 +42,7 @@ class Engine extends AudioWorkletProcessor{
         if(this.crack>0){ this.crack-=1/sampleRate; if(this.rnd()<0.02) s+=(this.rnd()*2-1)*1.4; } }
       this.prevLoad=load;
       // exhaust: one-pole low-pass that opens with rpm and load, plus DC block, soft saturation
-      const c=Math.min(0.95,(diesel?900:1600+rpm*0.35)*(0.6+0.6*load)/sampleRate*6.28);
+      const c=Math.min(0.95,(diesel?1500+rpm*0.12:1600+rpm*0.35)*(0.6+0.6*load)/sampleRate*6.28);
       this.lp+=(s-this.lp)*c; const y=this.lp-this.hpx+0.995*this.hp; this.hpx=this.lp; this.hp=y;
       o[i]=Math.tanh(y*(diesel?0.9:1.0))*g;
     }
@@ -51,11 +51,11 @@ class Engine extends AudioWorkletProcessor{
 registerProcessor('engine',Engine);`;
 
 const PETROL={idle:800,red:6400,ratios:[3.6,2.1,1.4,1.05,.82,.66],final:3.9,wheel:.33,up:5400,down:1700};
-const GEARS={ kompakt:PETROL, limo:PETROL, suv:PETROL, fidele:{idle:850,red:4600,ratios:[3.8,2.2,1.45,1.05,.8],final:4.1,wheel:.3,up:3800,down:1500},
+const GEARS={ kompakt:PETROL, limo:PETROL, suv:PETROL, petrol:PETROL, fidele:{idle:850,red:4600,ratios:[3.8,2.2,1.45,1.05,.8],final:4.1,wheel:.3,up:3800,down:1500},
               smaragd:{idle:1100,red:7200,ratios:[3.4,2.6,2.0,1.6,1.3,1.05,.85,.68],final:3.6,wheel:.36,up:6600,down:2400} };
 const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,amb:.6}, worklet:false, eng:{}, gear:1, rpm:850, shiftT:0, mood:0, musicOn:false, nextNote:0, step:0,
  init(){ if(this.ctx) return; try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const c=this.ctx=new AC({latencyHint:'interactive'});
-   this.comp=c.createDynamicsCompressor(); this.comp.threshold.value=-12; this.comp.ratio.value=3; this.comp.connect(c.destination);
+   this.comp=c.createDynamicsCompressor(); this.comp.threshold.value=-12; this.comp.ratio.value=3; { const mk=c.createGain(); mk.gain.value=1.6; this.comp.connect(mk); mk.connect(c.destination); this.out=mk; }
    this.master=c.createGain(); this.master.connect(this.comp);
    // synthetic room impulse for natural reverb (decaying stereo noise)
    const len=c.sampleRate*2.4, ir=c.createBuffer(2,len,c.sampleRate); for(let ch=0;ch<2;ch++){ const d=ir.getChannelData(ch); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2)*(i<c.sampleRate*.01?i/(c.sampleRate*.01):1); }
@@ -69,17 +69,17 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    // tyres, wind, rain, city hum, night crickets
    this.tyre=this.loopNoise(this.pink,'bandpass',420,.9); this.tyre.g.connect(this.bus.fx);
    this.wind=this.loopNoise(this.pink,'lowpass',700); this.wind.g.connect(this.bus.amb);
-   this.rain=this.loopNoise(this.white,'highpass',3500); this.rain.g.connect(this.bus.amb);
+   this.rain=this.loopNoise(this.white,'bandpass',2400,.5); this.rain.g.connect(this.bus.amb);
    this.city=this.loopNoise(this.pink,'lowpass',260); this.city.g.connect(this.bus.amb);
    this.night=c.createGain(); this.night.gain.value=0; this.night.connect(this.bus.amb);
    this.applyVolumes(); this.initEngines(); this.nextNote=c.currentTime+.2; setInterval(()=>this.tick(),90);
  }catch(e){ console.warn('audio off',e); this.ctx=null; } },
  async initEngines(){ const c=this.ctx;
    try{ const url=URL.createObjectURL(new Blob([ENGINE_WORKLET],{type:'application/javascript'})); await c.audioWorklet.addModule(url);
-     for(const [car,type] of [['fidele','diesel'],['smaragd','v8']]){ const n=new AudioWorkletNode(c,'engine',{numberOfOutputs:1,outputChannelCount:[2],processorOptions:{type}}); const g=c.createGain(); g.gain.value=type==='diesel'?.55:.5; n.connect(g); g.connect(this.bus.engine); this.eng[car]=n; }
+     for(const [car,type] of [['fidele','diesel'],['smaragd','v8'],['petrol','i4']]){ const n=new AudioWorkletNode(c,'engine',{numberOfOutputs:1,outputChannelCount:[2],processorOptions:{type}}); const g=c.createGain(); g.gain.value=type==='diesel'?.55:.5; n.connect(g); g.connect(this.bus.engine); this.eng[car]=n; }
      this.worklet=true;
    }catch(e){ // fallback: two detuned oscillators through a filter
-     for(const car of ['fidele','smaragd']){ const o=c.createOscillator(); o.type='sawtooth'; const o2=c.createOscillator(); o2.type='square'; const f=c.createBiquadFilter(); f.type='lowpass'; const g=c.createGain(); g.gain.value=0;
+     for(const car of ['fidele','smaragd','petrol']){ const o=c.createOscillator(); o.type='sawtooth'; const o2=c.createOscillator(); o2.type='square'; const f=c.createBiquadFilter(); f.type='lowpass'; const g=c.createGain(); g.gain.value=0;
        o.connect(f); o2.connect(f); f.connect(g); g.connect(this.bus.engine); o.start(); o2.start(); this.eng[car]={fallback:true,o,o2,f,g}; } } },
  resume(){ if(this.ctx&&this.ctx.state!=='running') this.ctx.resume().catch(()=>{}); },
  applyVolumes(){ if(!this.ctx) return; const t=this.ctx.currentTime; this.master.gain.setTargetAtTime(this.muted?0:this.vol.master,t,.05);
@@ -99,13 +99,15 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    if(this.shiftT>0) rpm*=car==='fidele'?.82:.9;
    rpm=Math.min(rpm,G.red); this.rpm+=(rpm-this.rpm)*Math.min(1,dt*(car==='fidele'?6:12));
    const load=this.shiftT>0?.1:clamp(thr*.9+(v>1?.1:0),0,1);
-   for(const k in this.eng){ const e=this.eng[k], active=k===car&&on;
+   const ek=GEARS[car]===PETROL?'petrol':car; // the everyday cars share one four-cylinder petrol engine
+   for(const k in this.eng){ const e=this.eng[k], active=k===ek&&on;
      if(e.fallback){ const f=GEARS[k]; e.o.frequency.setTargetAtTime(this.rpm/60*(k==='fidele'?2:4),t,.05); e.o2.frequency.setTargetAtTime(this.rpm/60,t,.05); e.f.frequency.setTargetAtTime(300+this.rpm*.4*(.5+load),t,.05); e.g.gain.setTargetAtTime(active?.06:0,t,.1); continue; }
      e.parameters.get('rpm').setTargetAtTime(active?this.rpm:GEARS[k].idle,t,.03); e.parameters.get('load').setTargetAtTime(load,t,.03);
      e.parameters.get('gain').setTargetAtTime(active?.7:0,t,.15); e.parameters.get('whine').setTargetAtTime(k==='smaragd'?clamp(v/80,0,1):0,t,.05);
      e.parameters.get('boost').setTargetAtTime(k==='smaragd'?clamp((this.rpm-2500)/4000,0,1)*load:0,t,.1); }
    // tyres and wind grow with speed; braking adds a scrub
-   this.tyre.g.gain.setTargetAtTime(on?clamp(v/30,0,1)*.22+(brk&&v>4?.08:0):0,t,.1); this.tyre.f.frequency.setTargetAtTime(250+v*14,t,.1);
+   const sl=on?clamp((this.slide||0)/6,0,1):0; // sliding tyres squeal: louder and higher
+   this.tyre.g.gain.setTargetAtTime(on?clamp(v/30,0,1)*.22+(brk&&v>4?.08:0)+sl*.3:0,t,.06); this.tyre.f.frequency.setTargetAtTime(250+v*14+sl*900,t,.06);
    this.wind.g.gain.setTargetAtTime(on?Math.pow(clamp(v/60,0,1),2)*.35:0,t,.2); this.wind.f.frequency.setTargetAtTime(400+v*25,t,.2); },
  setEngine(speed,on,C){ if(!on&&this.ctx) for(const k in this.eng){ const e=this.eng[k]; if(e.fallback) e.g.gain.setTargetAtTime(0,this.ctx.currentTime,.2); else e.parameters.get('gain').setTargetAtTime(0,this.ctx.currentTime,.25); } },
  /* ambience: hour of day, rain 0..1, region 'city'|'motorway' */

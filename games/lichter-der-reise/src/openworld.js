@@ -161,7 +161,7 @@ function lane(x0,z0,x1,z1,alongX,env){ const cx=(x0+x1)/2, cz=(z0+z1)/2, L=along
   S('box',cx,.06,cz,x1-x0,.12,z1-z0,MAT.PAVER+.5,[.5,.46,.4]); mapRect('block',x0,z0,x1,z1);
   for(const e of [0,1]){ const t=e?L/2-.5:-L/2+.5; for(let q=-4.5;q<=4.5;q+=1.8) bollard(alongX?cx+t:cx+q,alongX?cz+q:cz+t); if(alongX) addCol(cx+t-.2,z0,cx+t+.2,z1); else addCol(x0,cz+t-.2,x1,cz+t+.2); }
   for(let t=-L/2+9;t<L/2-6;t+=12){ const k=Math.round(t/12); const px=alongX?cx+t:cx, pz=alongX?cz:cz+t;
-    if(k%2===0){ tree(px,pz,rr(5.5,7.5)); S('cylY',px,.14,pz,2.2,.06,2.2,MAT.STD+.5,[.12,.1,.09],.3); }
+    if(k%2===0){ const sd=(k%4===0?1:-1)*2.6, tx=alongX?px:px+sd, tz=alongX?pz+sd:pz; tree(tx,tz,rr(5.5,7.5)); S('cylY',tx,.14,tz,2.2,.06,2.2,MAT.STD+.5,[.12,.1,.09],.3); }
     else { bench(alongX?px:px+1.6,alongX?pz+1.6:pz,alongX?0:Math.PI/2); const o=S('cylY',px,1.6,pz,.1,3.2,.1,MAT.STD+.5,[.05,.05,.06],.8); const l=S('sph',px,3.35,pz,.36,.36,.36,MAT.EMI,env.lamp,6); lightAt(l,px,3.2,pz,env.lamp,22,13); }
     // string lights sagging between the facades
     for(let q=-5;q<=5;q+=1.25){ const sag=4.9-(1-(q/5.4)**2)*.7; S('sphLo',alongX?px+3:px+q,sag,alongX?pz+q:pz+3,.22,.22,.22,MAT.EMI,pick([[1,.75,.4],[1,.55,.3],[1,.85,.6]]),9); } }

@@ -38,7 +38,7 @@ const BOT = `globalThis.__bot={stuck:0,rev:0,stuckTotal:0}; globalThis.botStep=f
   const want=Math.atan2(-(t.x-pl.x),-(t.z-pl.z)); let d=want-pl.h; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI; const K=SET.ctl.keys;
   if(B.rev>0){ B.rev-=dt; keys[K.down]=true; keys[K.up]=false; keys[K.left]=d<0; keys[K.right]=d>0; return; }
   let turnAhead=false; { const T=globalThis.__target||currentTarget(); const r=globalThis.__target&&T?findRoute(pl.x,pl.z,T.x,T.z):(G.route||[]); if(r.length>1){ const n0=r[0], n1=r[1]; const a0=Math.atan2(n0.x-pl.x,n0.z-pl.z), a1=Math.atan2(n1.x-n0.x,n1.z-n0.z); let da=Math.abs(a1-a0); if(da>Math.PI) da=2*Math.PI-da; turnAhead=da>.5&&Math.hypot(n0.x-pl.x,n0.z-pl.z)<28; } }
-  keys[K.left]=d>0.06; keys[K.right]=d<-0.06; const sharp=Math.abs(d)>0.6; const slow=(sharp||turnAhead)&&Math.abs(pl.v)>(turnAhead?8:9); keys[K.up]=!slow; keys[K.down]=slow&&Math.abs(pl.v)>11;
+  keys[K.left]=d>0.06; keys[K.right]=d<-0.06; const sharp=Math.abs(d)>0.6; const slow=(sharp||turnAhead)&&Math.abs(pl.v)>(turnAhead?8:9); keys[K.up]=!slow&&pl.v<(globalThis.__target?20:60); keys[K.down]=slow&&Math.abs(pl.v)>11;
   if(Math.abs(pl.v)<1.2){ B.stuck+=dt; if(B.stuck>2.5){ B.rev=1.4; B.stuck=0; B.stuckTotal++; (B.spots||(B.spots=[])).push([Math.round(pl.x),Math.round(pl.z),G.mission]); } } else B.stuck=0; }`;
 
 (async () => {

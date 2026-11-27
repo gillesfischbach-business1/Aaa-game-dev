@@ -91,6 +91,7 @@ function startGame(){ G.playT=0; G.light=0; G.total=0; G.boosts=0; G.hits=0; for
 function nextMission(){ G.mission++; setTimeout(autosave,500); G.state='drive'; G.camMode='chase'; UI.hud.hidden=false; UI.touch.classList.toggle('on',isTouch);
   const M=MISSIONS[G.mission];
   if(M){ UI.objTitle.textContent=M.title; UI.objText.textContent=M.text; toast('Neues Ziel: '+M.title); }
+  if(G.mission===0&&!G.tipDone){ G.tipDone=true; setTimeout(()=>{ if(G.state==='drive') toast(isTouch?'Tipp: Bremsen und Lenken zugleich = Driften':'Tipp: Umschalt-Taste = Handbremse zum Driften'); },9000); setTimeout(()=>{ if(G.state==='drive') toast(isTouch?'Tipp: Neben einem geparkten Auto anhalten und ⇄ antippen':'Tipp: Neben einem geparkten Auto anhalten, dann C'); },22000); }
   else { UI.objTitle.textContent='Freie Fahrt'; UI.objText.textContent='Erkundet beide Städte und sammelt alle Funken.'; } }
 function reachMission(){ const M=MISSIONS[G.mission]; G.state='talk'; G.camMode='orbit'; Audio_.chime();
   if(M.time!==undefined) G.hour=M.time;
@@ -141,7 +142,7 @@ const isTouch=(typeof matchMedia!=='undefined'&&matchMedia('(pointer:coarse)').m
 function readInput(){ const K=SET.ctl.keys; let s=0,th=0,br=0; if(keys['arrowleft']||keys[K.left]||touchL) s-=1; if(keys['arrowright']||keys[K.right]||touchR) s+=1;
   if(keys['arrowup']||keys[K.up]||touchUp) th=1; if(keys['arrowdown']||keys[K.down]||touchDn) br=1;
   const gps=navigator.getGamepads?navigator.getGamepads():[]; for(const gp of gps){ if(gp&&gp.connected){ if(Math.abs(gp.axes[0])>SET.ctl.deadzone) s=gp.axes[0]; const rt=gp.buttons[7]?gp.buttons[7].value:0, lt=gp.buttons[6]?gp.buttons[6].value:0; if(rt>.05) th=rt; if(lt>.05) br=lt;
-    const a=gp.buttons[0]&&gp.buttons[0].pressed; if(a&&!gpA) tryBoost(); gpA=a; } }
+    const a=gp.buttons[0]&&gp.buttons[0].pressed; if(a&&!gpA) tryBoost(); gpA=a; G.gpHB=!!(gp.buttons[1]&&gp.buttons[1].pressed)||!!(gp.buttons[5]&&gp.buttons[5].pressed); } }
   return [clamp(s*SET.ctl.steer,-1,1),th,br]; }
 
 // ---------- update ----------
@@ -157,7 +158,9 @@ function update(dt){
   const pl=G.player; if(!pl) return;
   if(G.state==='drive'){
     const [s,th,br]=readInput(); G.boostT=Math.max(0,G.boostT-dt);
-    const px0=pl.x, pz0=pl.z; const hit=stepCar(pl,th,br,s,dt,G.boostT>0);
+    pl.hb=!!(keys['shift']||G.gpHB||(br>0&&Math.abs(s)>.5&&pl.v>13)); pl.wet=Math.max(envCur.rain||0,(envCur.wet||0)*.5);
+    const px0=pl.x, pz0=pl.z; const hit=stepCar(pl,th,br,s,dt,G.boostT>0); Audio_.slide=pl.slide||0;
+    if(pl.slide>5&&Math.random()<dt*30){ const c2=Math.cos(pl.h), s2=Math.sin(pl.h), L2=VEH[pl.car].half[1]*.75; for(const sd of [-1,1]) G.parts.push({x:pl.x+s2*L2+c2*sd*.75,y:.12,z:pl.z+c2*L2-s2*sd*.75,vx:rr(-.4,.4),vy:rr(.3,.9),vz:rr(-.4,.4),life:.7,max:.7,s:.2,col:[.5,.5,.52],em:.06,g:-.4}); }
     { let dw=yawW(pl.x,pl.z,pl.h)-yawW(px0,pz0,pl.h); while(dw>Math.PI)dw-=2*Math.PI; while(dw<-Math.PI)dw+=2*Math.PI; pl.h-=dw; } // the road bends, the car does not: you have to steer through curves if(hit>3){ G.shake=Math.min(1,hit/14); Audio_.noiseHit(.25,900,clamp(hit/20,.1,.5)); }
     if(Math.random()<dt*2) spawnTraffic(pl.x,pl.z); updateTraffic(dt,pl); updateHumans(dt,pl);
     const cx=Math.floor(pl.x/CELL), cz=Math.floor(pl.z/CELL), mag=pl.car==='fidele'?2.6:1.8;
@@ -316,7 +319,7 @@ function frame(now){
   const goal=Math.max(panel,cap?1/cap:1/60); if(dtRaw>goal*1.45) slowN++;
   if(window.__manual){ last=now; requestAnimationFrame(frame); return; }
   // The simulation always runs in real time: a slow frame is caught up in several small steps instead of slowing the game down.
-  if(G.state!=='pause'&&G.state!=='map'){ const simT=Math.min(dtRaw,.5), n=Math.max(1,Math.ceil(simT*30)); try{ for(let i=0;i<n;i++) update(simT/n); }catch(e){ console.error(e); if(typeof showErr==='function') showErr(e); } }
+  if(G.state!=='pause'&&G.state!=='map'){ const simT=Math.min(dtRaw,.5), n=Math.min(16,Math.max(1,Math.ceil(simT*30),Math.ceil(simT*Math.abs(G.player?G.player.v:0)/1.0))); try{ for(let i=0;i<n;i++) update(simT/n); }catch(e){ console.error(e); if(typeof showErr==='function') showErr(e); } }
   try{ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
     renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},shadowCtr(pl),window.__snapReq||null);
     window.__snapReq=null; }catch(e){ console.error(e); if(typeof showErr==='function') showErr(e); }

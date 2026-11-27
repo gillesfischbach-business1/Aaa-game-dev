@@ -1,10 +1,10 @@
 /* ===== Free driving: arcade vehicle physics, collisions, traffic ===== */
 const VEH={
- fidele:{max:33,rev:9,accel:7.5,brake:16,grip:5.5,steer:.62,wb:2.55,half:[.86,2.1],cam:[4.0,11.5],eng:[34,1.4],mass:1.4},
- smaragd:{max:64,rev:12,accel:17,brake:26,grip:9,steer:.55,wb:2.85,half:[1.0,2.35],cam:[3.2,10.5],eng:[50,1.25],mass:1},
- kompakt:{max:44,rev:10,accel:9,brake:20,grip:7.5,steer:.6,wb:2.54,half:[.9,2.03],cam:[3.3,9.6],eng:[38,1.3],mass:1.1},
- limo:{max:54,rev:11,accel:11.5,brake:22,grip:8,steer:.56,wb:2.86,half:[.93,2.36],cam:[3.3,10.2],eng:[44,1.3],mass:1.2},
- suv:{max:47,rev:10,accel:9.5,brake:20,grip:6.5,steer:.58,wb:2.7,half:[.95,2.23],cam:[3.8,10.6],eng:[40,1.35],mass:1.4}
+ fidele:{gripA:9,max:33,rev:9,accel:7.5,brake:16,grip:5.5,steer:.62,wb:2.55,half:[.86,2.1],cam:[4.0,11.5],eng:[34,1.4],mass:1.4},
+ smaragd:{gripA:14,max:64,rev:12,accel:17,brake:26,grip:9,steer:.55,wb:2.85,half:[1.0,2.35],cam:[3.2,10.5],eng:[50,1.25],mass:1},
+ kompakt:{gripA:10.5,max:44,rev:10,accel:9,brake:20,grip:7.5,steer:.6,wb:2.54,half:[.9,2.03],cam:[3.3,9.6],eng:[38,1.3],mass:1.1},
+ limo:{gripA:11.5,max:54,rev:11,accel:11.5,brake:22,grip:8,steer:.56,wb:2.86,half:[.93,2.36],cam:[3.3,10.2],eng:[44,1.3],mass:1.2},
+ suv:{gripA:9.5,max:47,rev:10,accel:9.5,brake:20,grip:6.5,steer:.58,wb:2.7,half:[.95,2.23],cam:[3.8,10.6],eng:[40,1.35],mass:1.4}
 };
 function newCar(car,x,z,h,col=0){ if(!VEH[car]) car='fidele'; return {car,col,x,z,h,v:0,lat:0,steer:0,yawRate:0,roll:0,pitch:0,spin:0,brake:false,bump:0}; }
 const _cols=[];
@@ -12,16 +12,22 @@ function stepCar(c,thr,brk,steerIn,dt,boost){ const V=VEH[c.car];
   // longitudinal
   const max=V.max*(boost?1.3:1);
   if(thr>0){ const a=V.accel*(boost?1.8:1)*thr*(1-Math.max(0,c.v)/max); c.v+=a*dt; }
-  if(brk>0){ if(c.v>0.6) c.v-=V.brake*brk*dt; else c.v=Math.max(-V.rev,c.v-V.accel*.6*brk*dt); }
+  const hb=!!c.hb&&c.v>6; // handbrake / brake-and-steer: the tail steps out instead of the car just stopping
+  if(brk>0){ if(c.v>0.6) c.v-=V.brake*brk*(hb?.3:1)*dt; else c.v=Math.max(-V.rev,c.v-V.accel*.6*brk*dt); }
   if(thr<=0&&brk<=0) c.v-=Math.sign(c.v)*Math.min(Math.abs(c.v),(1.2+Math.abs(c.v)*.03)*dt);
   c.v-=c.v*Math.abs(c.v)*0.0009*dt;
   // steering: bicycle model with speed-dependent lock
   const lock=V.steer*lerp(1,.28,clamp(Math.abs(c.v)/V.max,0,1));
   c.steer+=(steerIn*lock-c.steer)*Math.min(1,dt*7);
-  const yawRate=c.v/V.wb*Math.tan(c.steer); c.yawRate=yawRate;
+  let yawRate=c.v/V.wb*Math.tan(c.steer);
+  // Tyres only hold so much: beyond the grip limit the car pushes wide (understeer). With the handbrake the rear lets go and the car rotates (drift).
+  const aMax=V.gripA*(1-.22*(c.wet||0)), lim=aMax/Math.max(Math.abs(c.v),3.5); let slide=0;
+  if(Math.abs(yawRate)>lim){ slide=(Math.abs(yawRate)-lim)*Math.abs(c.v); yawRate=Math.sign(yawRate)*(lim+(Math.abs(yawRate)-lim)*(hb?.55:.1)); }
+  if(hb){ slide=Math.max(slide,Math.abs(yawRate*c.v)*.6); c.v-=c.v*.35*dt; }
+  c.slide=lerp(c.slide||0,slide,Math.min(1,dt*10)); c.yawRate=yawRate;
   c.h-=yawRate*dt;
   // lateral slip (a little drift at speed)
-  const targetLat=-yawRate*c.v*0.035; c.lat+=(targetLat-c.lat)*Math.min(1,dt*V.grip);
+  const targetLat=-yawRate*c.v*(hb?0.11:0.035); c.lat+=(targetLat-c.lat)*Math.min(1,dt*V.grip);
   const fx=-Math.sin(c.h), fz=-Math.cos(c.h), rx=Math.cos(c.h), rz=-Math.sin(c.h);
   const ps=c.v;
   c.x+=(fx*c.v+rx*c.lat)*dt; c.z+=(fz*c.v+rz*c.lat)*dt;
