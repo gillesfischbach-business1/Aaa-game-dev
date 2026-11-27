@@ -6,7 +6,7 @@
     {
       "name": "boot",
       "ok": true,
-      "ms": 15966,
+      "ms": 15811,
       "info": {
         "title": "Lichter der Reise",
         "webgpu": true,
@@ -34,7 +34,7 @@
     {
       "name": "rendering",
       "ok": true,
-      "ms": 6981,
+      "ms": 6912,
       "info": {
         "mean": 73.9,
         "std": 46.9
@@ -44,7 +44,7 @@
     {
       "name": "options_menu",
       "ok": true,
-      "ms": 31407,
+      "ms": 30563,
       "info": {
         "low": {
           "ms": 1,
@@ -58,7 +58,7 @@
     {
       "name": "prologue_and_controls",
       "ok": true,
-      "ms": 17421,
+      "ms": 17606,
       "info": {
         "moved": 35,
         "turned": 1.03,
@@ -71,7 +71,7 @@
     {
       "name": "save_load",
       "ok": true,
-      "ms": 2,
+      "ms": 3,
       "info": {
         "ok": true,
         "back": true,
@@ -82,15 +82,15 @@
     {
       "name": "story_playthrough",
       "ok": true,
-      "ms": 3711,
+      "ms": 7060,
       "info": {
-        "minutes": 10,
+        "minutes": 9.8,
         "title": "Beide Städte leuchten.",
-        "light": 14,
-        "total": 38,
-        "stuck": 9,
-        "st1": "Error\n    at window.showEnd (eval at evaluate (:311:30), <anonymous>:1:80)\n    at http://localhost:8777/lichter-der-reise/index.html:2347:137 | state=ending m5",
-        "st2": "Error\n    at HTMLDivElement.set (eval at evaluate (:311:30), <anonymous>:1:392)\n    at showEnd (http://localhost:8777/lichter-der-reise/index.html:2349:41)\n    at window.showEnd (eval at evaluate (:311:30), <anonymous>:1:149)\n    at http://localhost:8777/lichter-der-reise/index.html:2347:137",
+        "light": 25,
+        "total": 37,
+        "stuck": 10,
+        "st1": "Error\n    at window.showEnd (eval at evaluate (:311:30), <anonymous>:1:80)\n    at http://localhost:8777/lichter-der-reise/index.html:2384:137 | state=ending m5",
+        "st2": "Error\n    at HTMLDivElement.set (eval at evaluate (:311:30), <anonymous>:1:392)\n    at showEnd (http://localhost:8777/lichter-der-reise/index.html:2386:41)\n    at window.showEnd (eval at evaluate (:311:30), <anonymous>:1:149)\n    at http://localhost:8777/lichter-der-reise/index.html:2384:137",
         "pos": [
           1863,
           -20,
@@ -98,78 +98,83 @@
         ],
         "spots": [
           [
-            -254,
-            231,
+            -160,
+            252,
             0
           ],
           [
-            -243,
-            83,
-            0
-          ],
-          [
-            -153,
+            -154,
             78,
             2
           ],
           [
-            -161,
-            -122,
+            -166,
+            21,
+            2
+          ],
+          [
+            -171,
+            -121,
             3
           ],
           [
-            -164,
-            -104,
-            3
-          ],
-          [
-            1584,
-            0,
+            1726,
+            2,
             4
           ],
           [
-            1587,
-            0,
+            1787,
+            1,
             4
           ],
           [
-            1914,
-            -176,
+            1808,
+            1,
             4
           ],
           [
-            1944,
-            -116,
+            1817,
+            1,
+            4
+          ],
+          [
+            1975,
+            -95,
+            4
+          ],
+          [
+            1908,
+            -109,
             4
           ]
         ],
-        "states": 7
+        "states": 9
       },
       "errors": []
     },
     {
       "name": "free_roam_stuck_scan",
       "ok": false,
-      "ms": 5717,
-      "error": "{\"reached\":3,\"tries\":6,\"stuck\":23,\"spots\":[[-254,231,0],[-243,83,0],[-153,78,2],[-161,-122,3],[-164,-104,3],[1584,0,4],[1587,0,4],[1914,-176,4],[1944,-116,4],[1170,-9,6],[1173,-9,6],[1230,-6,6],[1442,9,6],[1505,-9,6],[1523,9,6],[1542,-9,6],[1552,9,6],[1550,-9,6],[1555,-2,6],[1561,-4,6],[1563,-153,6],[1648,-229,6],[1655,-262,6],[10,245,6],[-153,252,6],[-336,180,6],[-335,-24,6],[-329,-95,6],[918,9,6],[916,9,6],[855,-9,6],[821,9,6]]}",
+      "ms": 6855,
+      "error": "{\"reached\":2,\"tries\":6,\"stuck\":43,\"spots\":[[1118,-2,6],[245,-153,6],[245,-148,6],[245,-140,6],[245,-133,6],[572,9,6],[569,9,6],[545,9,6],[494,8,6],[490,8,6],[487,9,6],[437,-9,6],[429,9,6],[432,-9,6],[488,4,6],[503,4,6],[517,5,6],[532,5,6],[550,9,6],[505,9,6],[442,-9,6],[431,9,6],[546,9,6],[544,9,6],[-168,-39,6],[-413,-346,6],[-325,-336,6],[-206,-334,6],[-206,-334,6],[-80,-255,6],[252,-197,6],[252,-172,6],[253,86,6],[252,111,6],[245,127,6],[247,124,6],[-146,86,6],[-160,85,6],[-164,85,6],[-335,-16",
       "errors": []
     },
     {
       "name": "performance",
       "ok": true,
-      "ms": 34,
+      "ms": 155,
       "info": {
-        "updateMs": 0.03,
-        "buildFrameMs": 0.39,
-        "instances": 2742,
-        "traffic": 0
+        "updateMs": 0.07,
+        "buildFrameMs": 2.23,
+        "instances": 11984,
+        "traffic": 16
       },
       "errors": []
     },
     {
       "name": "locations",
       "ok": true,
-      "ms": 42338,
+      "ms": 43318,
       "info": {
         "count": 10
       },
@@ -178,7 +183,7 @@
     {
       "name": "mobile",
       "ok": true,
-      "ms": 9849,
+      "ms": 8521,
       "info": {
         "touchVisible": true,
         "speedAfterGas": 12,

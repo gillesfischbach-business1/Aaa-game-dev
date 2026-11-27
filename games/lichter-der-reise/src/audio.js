@@ -16,8 +16,15 @@ const ENGINE_SPEC={
  // env = tone balance in dB over frequency: nearly all energy sits below 600 Hz, the exhaust is muted above, turbo noise fills the top
  smaragd:{cyl:8,flat:true,pts:[1100,1900,2800,3800,4800,5800,6500,7000],
   ord:[-28,-16.4,-28,-6,-28,-21,-28,0,-28,-13.7,-28,-11.9,-28,-16.5,-28,-8.2,-28,-25.5],ordTail:-24,
-  env:[[40,-8],[90,-2],[160,0],[320,0],[640,-6],[1280,-12],[2560,-18],[5120,-22],[9000,-34]],
-  form:[],roll:[1,1],rough:.2,noise:[.1,.05],band:[450,3800],clatter:0,wobble:.006,gain:.58} };
+  env:[[40,-8],[90,-2],[160,0],[320,0],[450,-5],[640,-10],[1280,-14],[2560,-19],[5120,-24],[9000,-36]],
+  // ordHi = how much the half orders and the bank pulse fade towards 4500 rpm under load (dB; at the top of a rev only the firing line stands out),
+  // ordOff = levels of the half orders with the throttle shut above 3800 rpm, fading in from 2800 rpm (right after lifting off the bank pulse is as strong as the firing line, the orders above it calm down),
+  // life = what keeps it from sounding like a loop: [slow level drift, fast level flutter, extra slow drift on the overrun, pitch drift in cents, fast pitch jitter in cents, extra fast flutter under full load],
+  // lp = low-pass over the whole engine [throttle shut, throttle open] in Hz, roar = level of the broadband intake and exhaust roar under load,
+  // rumble = level of the low irregular rumble for a good second after lifting off at high revs (the recording shows a broad 50-110 Hz cluster there),
+  // res = fixed resonances of the exhaust [Hz, dB, Q]: the level surges whenever a strong order sweeps through one, as in the recording
+  ordHi:-8,ordOff:[-28,-12,-28,-5,-28,-18,-28,0,-28,-20,-28,-18,-28,-22],life:[.28,.08,.2,14,8,.12],lp:[1500,5200],roar:.34,rumble:.45,res:[[188,6,4],[290,5,4]],
+  form:[],roll:[1,1],rough:.2,noise:[.1,.05],band:[450,3800],clatter:0,wobble:.006,gain:.44} };
 const LOOP_SR=22050, LOOP_N=16384;
 function fftInverse(re,im){ const n=re.length; // in-place radix-2, returns the real signal in re
   for(let i=1,j=0;i<n;i++){ let b=n>>1; for(;j&b;b>>=1) j^=b; j^=b; if(i<j){ let t=re[i]; re[i]=re[j]; re[j]=t; t=im[i]; im[i]=im[j]; im[j]=t; } }
@@ -29,7 +36,7 @@ function engineLoop(ctx,S,rpm,load,seed){ const N=LOOP_N, re=new Float32Array(N)
   const put=(bin,a,ph)=>{ if(bin<1||bin>=N/2) return; const r=a*Math.cos(ph), q=a*Math.sin(ph); re[bin]+=r; im[bin]+=q; re[N-bin]+=r; im[N-bin]-=q; };
   const roll=S.roll[load?0:1], bright=load?1:.55;
   for(let h=1;h*fc<9000;h++){ const f=h*fc, n=h/S.cyl, firing=h%S.cyl===0; const ph=rnd()*6.283*(firing&&n<=3?.3:1); // the phase depends only on h: equal in every loop of this engine
-    let a=1/Math.pow(Math.max(n,.5),roll); if(S.ord) a=Math.pow(10,(h<=S.ord.length?S.ord[h-1]:S.ordTail)/20)*(firing||load?1:1.3)*(h>S.cyl&&!load?.7:1); else if(!firing) a*=S.rough*((S.flat&&h%(S.cyl/2)===0)?(S.flatGain||2.4):1)*(load?1:1.3);
+    let a=1/Math.pow(Math.max(n,.5),roll); if(S.ord) { let o=h<=S.ord.length?S.ord[h-1]:S.ordTail; if(!firing&&load) o+=(S.ordHi||0)*Math.min(1,Math.max(0,(rpm-1900)/2600)); else if(!load&&S.ordOff&&h<=S.ordOff.length) o+=(S.ordOff[h-1]-o)*Math.min(1,Math.max(0,(rpm-2800)/1000)); a=Math.pow(10,o/20)*(firing||load?1:1.3)*(h>S.cyl&&!load?.7:1); } else if(!firing) a*=S.rough*((S.flat&&h%(S.cyl/2)===0)?(S.flatGain||2.4):1)*(load?1:1.3);
     a*=form(f)*(f>1200?bright:1); put(h*K,a,ph); }
   fftInverse(re,im); const tone=re.slice();
   // noise: band-limited, pulsing with the firing (intake and exhaust), plus injector clatter for the diesel
@@ -62,6 +69,10 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    this.rain=this.loopNoise(this.white,'bandpass',2400,.5); this.rain.g.connect(this.bus.amb);
    this.city=this.loopNoise(this.pink,'lowpass',260); this.city.g.connect(this.bus.amb);
    this.turbo=this.loopNoise(this.white,'bandpass',3000,1.2); this.turbo.g.connect(this.bus.engine);
+   this.roar=this.loopNoise(this.pink,'bandpass',200,.4); this.roar.g.connect(this.bus.engine); this.rumble=this.loopNoise(this.pink,'bandpass',80,1.6); this.rumble.g.connect(this.bus.engine);
+   // random values that are played back extremely slowly: the browser interpolates them into smooth random curves, which drift the level and pitch of an engine at no cost
+   { const jb=c.createBuffer(1,8192,c.sampleRate), jd=jb.getChannelData(0); for(let i=0;i<jd.length;i++) jd[i]=Math.random()*2-1; this.jit=jb; }
+   this.drift=(perSec,depth,to)=>{ const s=c.createBufferSource(); s.buffer=this.jit; s.loop=true; s.playbackRate.value=perSec/c.sampleRate; const g=c.createGain(); g.gain.value=depth; s.connect(g); for(const p of to) g.connect(p); s.start(0,Math.random()*.18); return {s,g}; };
    this.night=c.createGain(); this.night.gain.value=0; this.night.connect(this.bus.amb);
    this.applyVolumes(); this.initEngines(); this.nextNote=c.currentTime+.2; setInterval(()=>this.tick(),90);
  }catch(e){ console.warn('audio off',e); this.ctx=null; } },
@@ -75,10 +86,13 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
      if(!this.engBuild.some(x=>x.key===b.key)) E.ready=true; if(this.engBuild.length) setTimeout(work,E.ready?40:4); };
    setTimeout(work,30); },
  /* start the loops of one engine, all at the same instant so their cycles stay in step */
- startEngine(key){ const c=this.ctx, E=this.eng[key], S=ENGINE_SPEC[key]; this.stopEngine(); if(!E||!E.ready) return; const t0=c.currentTime+.03, out=c.createGain(); out.gain.value=0; out.connect(this.engOut);
-   const v=[]; for(const L of E.loops){ const o={rpm:L.rpm}; for(const k of ['on','off']){ const src=c.createBufferSource(); src.buffer=L[k]; src.loop=true; src.playbackRate.value=this.rpm/L.rpm; const g=c.createGain(); g.gain.value=0; src.connect(g); g.connect(out); src.start(t0); o[k]={src,g,cur:0}; } v.push(o); }
-   this.live={key,out,v,S,load:0}; },
- stopEngine(){ const L=this.live; if(!L) return; const t=this.ctx.currentTime; L.out.gain.setTargetAtTime(0,t,.05); for(const o of L.v) for(const k of ['on','off']){ try{ o[k].src.stop(t+.4); }catch(e){} } setTimeout(()=>{ try{ L.out.disconnect(); }catch(e){} },600); this.live=null; },
+ startEngine(key){ const c=this.ctx, E=this.eng[key], S=ENGINE_SPEC[key]; this.stopEngine(); if(!E||!E.ready) return; const t0=c.currentTime+.03, out=c.createGain(); out.gain.value=0; const cyc=S.life?(Math.random()*6)|0:0; // start a few whole engine cycles into the loops (all loops alike, so they stay in step): no two starts sound the same
+   const v=[]; for(const L of E.loops){ const o={rpm:L.rpm}; for(const k of ['on','off']){ const src=c.createBufferSource(); src.buffer=L[k]; src.loop=true; src.playbackRate.value=this.rpm/L.rpm; const g=c.createGain(); g.gain.value=0; src.connect(g); g.connect(out); src.start(t0,cyc*120/L.rpm); o[k]={src,g,cur:0}; } v.push(o); }
+   const live=this.live={key,out,v,S,load:0,mod:[]};
+   if(S.life){ const am=c.createGain(), lp=c.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=.5; lp.frequency.value=S.lp[0]; out.connect(am); let last=am; for(const [f,g,q] of S.res||[]){ const pk=c.createBiquadFilter(); pk.type='peaking'; pk.frequency.value=f; pk.gain.value=g; pk.Q.value=q; last.connect(pk); last=pk; } last.connect(lp); lp.connect(this.engOut); live.am=am; live.lp=lp; const det=[]; for(const o of v){ det.push(o.on.src.detune,o.off.src.detune); }
+     live.mod=[this.drift(18,S.life[0],[am.gain]),this.drift(70,S.life[1],[am.gain]),this.drift(5,S.life[3],det),this.drift(45,S.life[4],det)]; }
+   else out.connect(this.engOut); },
+ stopEngine(){ const L=this.live; if(!L) return; const t=this.ctx.currentTime; L.out.gain.setTargetAtTime(0,t,.05); for(const o of L.v) for(const k of ['on','off']){ try{ o[k].src.stop(t+.4); }catch(e){} } setTimeout(()=>{ try{ L.out.disconnect(); if(L.am){ L.am.disconnect(); L.lp.disconnect(); } for(const m of L.mod){ m.s.stop(); m.g.disconnect(); } }catch(e){} },600); this.live=null; },
  resume(){ if(this.ctx&&this.ctx.state!=='running') this.ctx.resume().catch(()=>{}); },
  applyVolumes(){ if(this.song) this.song.volume=this.songVol(); if(!this.ctx) return; const t=this.ctx.currentTime; this.master.gain.setTargetAtTime(this.muted?0:this.vol.master,t,.05);
    for(const k of ['music','engine','fx','amb']) this.bus[k].gain.setTargetAtTime(this.vol[k],t,.05); },
@@ -107,11 +121,16 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
      for(let k=0;k<v2.length;k++){ const o=v2[k], gk=k===i?1-w:k===i+1?w:0; o.on.src.playbackRate.setTargetAtTime(rpm/o.rpm,t,.025); o.off.src.playbackRate.setTargetAtTime(rpm/o.rpm,t,.025);
        const gOn=gk*L.load, gOff=gk*(1-L.load); if(Math.abs(gOn-o.on.cur)>.004){ o.on.cur=gOn; o.on.g.gain.setTargetAtTime(gOn,t,.03); } if(Math.abs(gOff-o.off.cur)>.004){ o.off.cur=gOff; o.off.g.gain.setTargetAtTime(gOff,t,.03); } }
      L.out.gain.setTargetAtTime(on&&L.key===ek?S.gain*(.55+.45*L.load)*(.8+.2*Math.min(1,this.rpm/4000)):0,t,.08);
+     if(L.lp){ const over=clamp(1-L.load*5,0,1)*clamp((this.rpm-1800)/1500,0,1); // overrun: throttle shut at speed, the engine runs lumpy
+       L.lp.frequency.setTargetAtTime(S.lp[0]+(S.lp[1]-S.lp[0])*L.load*L.load,t,.06); L.mod[0].g.gain.setTargetAtTime(S.life[0]+S.life[2]*over,t,.1); L.mod[1].g.gain.setTargetAtTime(S.life[1]+S.life[5]*L.load*L.load,t,.1); }
      // lift-off pops of the hypercar: a few soft cracks when the throttle closes at high revs
-     if(L.key==='smaragd'&&this.prevLoad>.6&&load<.1&&this.rpm>4300){ for(let k=0;k<3;k++) setTimeout(()=>{ if(this.ctx) this.noiseBurst(.05,'bandpass',900+Math.random()*900,.1); },90+k*130+Math.random()*60); } }
+     if(L.key==='smaragd'){ this.hot=Math.max(load,(this.hot||0)-dt*1.5); if(load>.5) this.burb=0; else if(load<.2&&this.hot>.55&&this.rpm>3600&&!(this.burb>0)){ this.burb=1.3; this.hot=0; }
+       if(this.burb>0){ this.burb-=dt; if(load<.2&&this.rpm>2300&&Math.random()<dt*11*this.burb) this.crackle(.5+this.burb*.4); } } }
    this.prevLoad=load;
    // turbos: a hiss that grows with load and revs, and a short sigh from the blow-off valves when the throttle shuts
-   if(this.turbo){ const tb=on&&ek==='smaragd'?clamp((this.rpm-2200)/4000,0,1)*load:0; this.turbo.g.gain.setTargetAtTime(tb*.09,t,.16); this.turbo.f.frequency.setTargetAtTime(1900+this.rpm*.62,t,.14);
+   if(this.rumble) this.rumble.g.gain.setTargetAtTime(on&&this.live&&this.live.S.rumble&&this.burb>0&&load<.2?this.live.S.rumble*Math.min(1,this.burb*1.6)*clamp((this.rpm-1500)/1500,0,1):0,t,.04);
+   if(this.roar){ const L=this.live, rr=on&&L&&L.S.roar?L.S.roar*(.3+.7*L.load*L.load)*clamp((this.rpm+600)/4500,0,1.2):0; this.roar.g.gain.setTargetAtTime(rr,t,.05); this.roar.f.frequency.setTargetAtTime(90+this.rpm*.06,t,.1); }
+   if(this.turbo){ const tb=on&&ek==='smaragd'?clamp((this.rpm-2200)/4000,0,1)*load:0; this.turbo.g.gain.setTargetAtTime(tb*.07,t,.16); this.turbo.f.frequency.setTargetAtTime(1700+this.rpm*.45,t,.14);
      if(ek==='smaragd'&&(this.tbPrev||0)>.45&&load<.15) this.noiseBurst(.3,'highpass',2400,.1); this.tbPrev=tb; }
    this.whine.frequency.setTargetAtTime(420+v*46,t,.08); this.whineG.gain.setTargetAtTime(on&&ek==='smaragd'?(.008+clamp(v/45,0,1)*.022)*(.55+.45*load):0,t,.15);
    // tyres and wind grow with speed; braking adds a scrub
@@ -132,6 +151,8 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    s.connect(f); f.connect(g); g.connect(dest||this.bus.fx); s.start(t,Math.random()*2); s.stop(t+dur+.05); },
  /* exhaust spit: n short cracks, each a band of noise with a low thump; the game adds the flame */
  spit(n,vol){ if(!this.ctx) return; for(let k=0;k<n;k++) setTimeout(()=>{ if(!this.ctx) return; this.noiseBurst(.035+Math.random()*.03,'bandpass',500+Math.random()*700,.3*vol); this.thump(110+Math.random()*40,.05,.22*vol); this.spitFlag=(this.spitFlag||0)+1; },k*(70+Math.random()*60)); },
+ /* overrun burble: one soft irregular crack from the exhaust */
+ crackle(vol){ this.noiseBurst(.025+Math.random()*.03,'bandpass',350+Math.random()*900,.1*vol,this.bus.engine); if(Math.random()<.4) this.thump(90+Math.random()*50,.04,.08*vol); },
  thump(freq,dur,vol){ const c=this.ctx; if(!c) return; const t=c.currentTime; const o=c.createOscillator(); o.frequency.setValueAtTime(freq,t); o.frequency.exponentialRampToValueAtTime(freq*.45,t+dur); const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur); o.connect(g); g.connect(this.bus.fx); o.start(t); o.stop(t+dur+.05); },
  pickup(i){ const s=[0,2,4,7,9,12][((i%6)+6)%6]; this.bell(1046*Math.pow(2,s/12),.05); },
  noiseHit(dur,freq,vol){ this.noiseBurst(dur*.8,'lowpass',freq*1.5,vol*.9,null,90); this.thump(70,dur*.7,vol*.8); this.noiseBurst(.06,'highpass',3000,vol*.25); },
