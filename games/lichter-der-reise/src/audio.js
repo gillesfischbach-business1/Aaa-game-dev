@@ -19,11 +19,11 @@ const ENGINE_SPEC={
   env:[[40,-8],[90,-2],[160,0],[320,0],[450,-5],[640,-10],[1280,-14],[2560,-19],[5120,-24],[9000,-36]],
   // ordHi = how much the half orders and the bank pulse fade towards 4500 rpm under load (dB; at the top of a rev only the firing line stands out),
   // ordOff = levels of the half orders with the throttle shut above 3800 rpm, fading in from 2800 rpm (right after lifting off the bank pulse is as strong as the firing line, the orders above it calm down),
-  // life = what keeps it from sounding like a loop: [slow level drift, fast level flutter, extra slow drift on the overrun, pitch drift in cents, fast pitch jitter in cents, extra fast flutter under full load],
+  // life (optional, currently off) = random drift of level and pitch [slow level drift, fast level flutter, extra slow drift on the overrun, pitch drift in cents, fast pitch jitter in cents, extra fast flutter under full load]. Switched off after listening tests with neural audio models: every recording with it was judged less like the real car and more synthetic than every recording without it,
   // lp = low-pass over the whole engine [throttle shut, throttle open] in Hz, roar = level of the broadband intake and exhaust roar under load,
   // rumble = level of the low irregular rumble for a good second after lifting off at high revs (the recording shows a broad 50-110 Hz cluster there),
   // res = fixed resonances of the exhaust [Hz, dB, Q]: the level surges whenever a strong order sweeps through one, as in the recording
-  ordHi:-8,ordOff:[-28,-12,-28,-5,-28,-18,-28,0,-28,-20,-28,-18,-28,-22],life:[.28,.08,.2,14,8,.12],lp:[1500,5200],roar:.34,rumble:.45,res:[[188,6,4],[290,5,4]],
+  ordHi:-8,ordOff:[-28,-12,-28,-5,-28,-18,-28,0,-28,-20,-28,-18,-28,-22],lp:[1500,5200],roar:.34,rumble:.45,res:[[188,6,4],[290,5,4]],
   form:[],roll:[1,1],rough:.2,noise:[.1,.05],band:[450,3800],clatter:0,wobble:.006,gain:.44} };
 const LOOP_SR=22050, LOOP_N=16384;
 function fftInverse(re,im){ const n=re.length; // in-place radix-2, returns the real signal in re
@@ -130,7 +130,7 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    // turbos: a hiss that grows with load and revs, and a short sigh from the blow-off valves when the throttle shuts
    if(this.rumble) this.rumble.g.gain.setTargetAtTime(on&&this.live&&this.live.S.rumble&&this.burb>0&&load<.2?this.live.S.rumble*Math.min(1,this.burb*1.6)*clamp((this.rpm-1500)/1500,0,1):0,t,.04);
    if(this.roar){ const L=this.live, rr=on&&L&&L.S.roar?L.S.roar*(.3+.7*L.load*L.load)*clamp((this.rpm+600)/4500,0,1.2):0; this.roar.g.gain.setTargetAtTime(rr,t,.05); this.roar.f.frequency.setTargetAtTime(90+this.rpm*.06,t,.1); }
-   if(this.turbo){ const tb=on&&ek==='smaragd'?clamp((this.rpm-2200)/4000,0,1)*load:0; this.turbo.g.gain.setTargetAtTime(tb*.07,t,.16); this.turbo.f.frequency.setTargetAtTime(1700+this.rpm*.45,t,.14);
+   if(this.turbo){ const tb=on&&ek==='smaragd'?clamp((this.rpm-2200)/4000,0,1)*load:0; this.turbo.g.gain.setTargetAtTime(tb*(ENGINE_SPEC.smaragd.turbo||.07),t,.16); this.turbo.f.frequency.setTargetAtTime(1700+this.rpm*.45,t,.14);
      if(ek==='smaragd'&&(this.tbPrev||0)>.45&&load<.15) this.noiseBurst(.3,'highpass',2400,.1); this.tbPrev=tb; }
    this.whine.frequency.setTargetAtTime(420+v*46,t,.08); this.whineG.gain.setTargetAtTime(on&&ek==='smaragd'?(.008+clamp(v/45,0,1)*.022)*(.55+.45*load):0,t,.15);
    // tyres and wind grow with speed; braking adds a scrub
