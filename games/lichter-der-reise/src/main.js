@@ -29,7 +29,9 @@ function initUI(){
   $('dlgSkip').addEventListener('click',e=>{ e.stopPropagation(); skipDialog(); });
   $('btnMute').onclick=toggleMute; $('btnOptTitle').onclick=()=>openOptions('title'); $('btnOptPause').onclick=()=>openOptions('pause'); $('optClose').onclick=()=>closeOptions();
   document.querySelectorAll('#optTabs button').forEach(b=>b.onclick=()=>{ optTab=b.dataset.tab; rebinding=null; renderOptions(); });
-  $('btnContinue').onclick=()=>{ const s=readSlot('auto'); if(s){ goImmersive(); Audio_.init(); Audio_.resume(); $('title').hidden=true; restore(s); toast('Weiter, wo ihr aufgehört habt'); } };
+  $('btnContinue').onclick=()=>{ const s=readSlot('auto'); let ok=false; try{ ok=!!s&&restore(s); }catch(e){ showErr(e); }
+    if(ok){ $('title').hidden=true; toast('Weiter, wo ihr aufgehört habt'); } else { toast('Der Spielstand ließ sich nicht laden. Ein neues Spiel beginnt.'); $('title').hidden=true; try{ startGame(); }catch(e){ $('title').hidden=false; showErr(e); return; } }
+    soft(()=>{ Audio_.init(); Audio_.resume(); }); soft(goImmersive); graceFor(3000); };
   if(readSlot('auto')) $('btnContinue').hidden=false; $('btnPause').onclick=()=>togglePause(); $('btnResume').onclick=()=>togglePause();
   $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('lbSend').onclick=()=>lbSubmit(); $('lbName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') lbSubmit(); }); $('lbName').addEventListener('keyup',e=>e.stopPropagation()); $('btnView').onclick=()=>cycleView(); $('mapClose').onclick=()=>toggleMap();
   $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; const p=G.player; const n=nearestRoadPoint(p.x,p.z); p.x=n.x; p.z=n.z; p.v=0; p.lat=0; toast('Zurück auf die Straße'); };
@@ -37,7 +39,9 @@ function initUI(){
   $('btnAgain').onclick=()=>{ $('endO').hidden=true; startGame(); };
   $('btnFree').onclick=()=>freeRoam();
   $('btnRethink').onclick=()=>{ $('endO').hidden=true; G.state='talk'; G.camMode='finale'; LM.lit=false; say(STORY.finale.slice(-1)); };
-  $('btnStart').onclick=()=>{ goImmersive(); Audio_.init(); Audio_.resume(); $('title').hidden=true; Audio_.setMood(0); startGame(); };
+  // starting must never leave an empty screen: the game starts first, comfort features (fullscreen, sound) may fail without harm
+  const soft=f=>{ try{ f(); }catch(e){ showErr(e); } };
+  $('btnStart').onclick=()=>{ $('title').hidden=true; try{ startGame(); }catch(e){ $('title').hidden=false; showErr(e); return; } soft(()=>{ Audio_.init(); Audio_.resume(); Audio_.setMood(0); }); soft(goImmersive); graceFor(3000); };
   const best=loadBest(); if(best>0) $('bestLbl').textContent='Hellster Lichtturm bisher: '+best+' Funken';
   const al=$('album'); [['assets/panel_belval.jpg','Belval','-3deg'],['assets/panel_bar.jpg','Le Pont Violet','2deg'],['assets/glutplatz.jpg','Glutplatz, Eindhoven','-1deg'],['assets/monaco.jpg','Monte-Carlo','2.5deg']].forEach(([src,cap,r])=>{
     const f=document.createElement('figure'); f.className='polaroid'; f.style.setProperty('--r',r); const im=document.createElement('img'); im.src=src; im.alt=cap; im.loading='lazy'; f.appendChild(im); const s=document.createElement('span'); s.textContent=cap; f.appendChild(s); al.appendChild(f); });
@@ -65,3 +69,9 @@ function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false
 function cycleView(){ G.view=((G.view||0)+1)%3; toast(['Kamera: hinter dem Auto','Kamera: am Armaturenbrett','Kamera: Stoßstange'][G.view]); }
 
 if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude/.test(location.hostname)){ addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+
+/* errors become visible on the screen (small box, bottom right), so a screenshot is enough to report them */
+function showErr(e){ try{ let b=document.getElementById('errBox'); if(!b){ b=document.createElement('div'); b.id='errBox'; b.style.cssText='position:fixed;right:8px;bottom:8px;z-index:99;max-width:70vw;padding:8px 10px;border-radius:10px;background:rgba(120,20,20,.92);color:#fff;font:12px/1.35 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none'; document.body.appendChild(b); }
+    const m=(e&&(e.message||e.reason&&(e.reason.message||e.reason)))||String(e); const st=e&&e.stack?String(e.stack).split('\n').slice(1,3).join('\n').replace(/https?:\/\/[^ )]*\//g,''):''; if(b.textContent.length<600) b.textContent+=(b.textContent?'\n':'')+'Fehler: '+m+(st?'\n'+st:''); }catch(_){} }
+addEventListener('error',e=>showErr(e.error||e)); addEventListener('unhandledrejection',e=>showErr(e));
+addEventListener('resize',()=>graceFor(2500)); document.addEventListener('fullscreenchange',()=>graceFor(2500)); document.addEventListener('visibilitychange',()=>graceFor(3000));

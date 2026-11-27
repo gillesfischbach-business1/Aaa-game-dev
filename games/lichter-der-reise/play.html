@@ -2362,7 +2362,8 @@ function buildFrame(){
 }
 
 // ---------- loop ----------
-let last=0, acc=0, frames=0, adaptT=0, rafLast=0, rafMin=1, panel=1/60, tick=0, slowN=0, calm=0, backoff=8, holdW=1;
+let last=0, acc=0, frames=0, adaptT=0, rafLast=0, rafMin=1, panel=1/60, tick=0, slowN=0, calm=0, backoff=2.5, holdW=1, graceUntil=6000; // no judging of speed while the page is still warming up
+function graceFor(ms){ graceUntil=Math.max(graceUntil,performance.now()+ms); }
 function frame(now){
   { const d=(now-rafLast)/1000; rafLast=now; if(d>.003&&d<rafMin) rafMin=d; } /* shortest callback gap = refresh period of the panel */
   const cap=SET.gfx.fpsCap||0; if(cap&&panel<.6/cap&&now-last<1000/cap-panel*500){ requestAnimationFrame(frame); return; } /* 120 Hz panel, 60 fps target: draw every second refresh */
@@ -2370,26 +2371,29 @@ function frame(now){
   const goal=Math.max(panel,cap?1/cap:1/60); if(dtRaw>goal*1.45) slowN++;
   if(window.__manual){ last=now; requestAnimationFrame(frame); return; }
   // The simulation always runs in real time: a slow frame is caught up in several small steps instead of slowing the game down.
-  if(G.state!=='pause'&&G.state!=='map'){ const simT=Math.min(dtRaw,.5), n=Math.max(1,Math.ceil(simT*30)); for(let i=0;i<n;i++) update(simT/n); }
+  if(G.state!=='pause'&&G.state!=='map'){ const simT=Math.min(dtRaw,.5), n=Math.max(1,Math.ceil(simT*30)); try{ for(let i=0;i<n;i++) update(simT/n); }catch(e){ console.error(e); if(typeof showErr==='function') showErr(e); } }
   try{ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
     renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},shadowCtr(pl),window.__snapReq||null);
-    window.__snapReq=null; }catch(e){ console.error(e); }
+    window.__snapReq=null; }catch(e){ console.error(e); if(typeof showErr==='function') showErr(e); }
+  // safety net: never an empty picture. Title state without its screen, or a conversation without its text box, puts the UI back.
+  if(G.state==='title'&&$('title').hidden&&$('optO').hidden){ $('title').hidden=false; } else if(G.state==='talk'&&UI.dialog.hidden&&dlg.cur&&G.camMode==='orbit'){ UI.dialog.hidden=false; }
+  if(dtRaw>.6||now<graceUntil){ requestAnimationFrame(frame); return; } // a single hitch (loading, app switch, rotation) says nothing about the device
   acc+=dtRaw; frames++; adaptT+=dtRaw;
   // Rescue ladder: clearly too slow (under ~22 pictures per second)? Cut the load step by step, quickly, until it runs.
-  if(SET.gfx.adaptive&&((frames>=5&&adaptT>1.2&&acc/frames>.045)||(frames>=2&&acc/frames>.2))&&G.state!=='pause'&&G.state!=='map'){ rescueStep(acc/frames); acc=0; frames=0; adaptT=0; slowN=0; holdW=1; }
+  if(SET.gfx.adaptive&&((frames>=8&&adaptT>2&&acc/frames>.045)||(frames>=5&&acc/frames>.2))&&G.state!=='pause'&&G.state!=='map'){ rescueStep(acc/frames); acc=0; frames=0; adaptT=0; slowN=0; holdW=1; }
   if(adaptT>2.5){ const avg=acc/frames; const fb=$('fpsBox'); if(fb&&!fb.hidden) fb.textContent=Math.round(1/avg)+' FPS · '+R.W+'×'+R.H; panel=clamp(rafMin,1/240,1/30); rafMin=1; const lo=R.maxScale*(SET.gfx.minScale||.5)/Math.max(.01,SET.gfx.scale), bad=slowN/frames;
     if(!SET.gfx.adaptive||holdW>0||G.state==='pause'||G.state==='map'){ holdW=Math.max(0,holdW-1); }
     else if(bad>.12&&R.scale>lo){ R.scale=Math.max(lo,R.scale*(bad>.5?.82:.9)); R.needResize=true; if(calm<6) backoff=Math.min(120,backoff*2); calm=0; holdW=1; } /* a failed probe doubles the wait before the next one */
-    else if(bad<.02){ calm+=adaptT; if(calm>=backoff&&R.scale<R.maxScale){ R.scale=Math.min(R.maxScale,R.scale*1.07); R.needResize=true; calm=0; holdW=1; } }
+    else if(bad<.02){ calm+=adaptT; if(calm>=backoff&&R.scale<R.maxScale){ R.scale=Math.min(R.maxScale,R.scale*(backoff<=5?1.25:1.08)); /* climbs fast until the first failed attempt, carefully afterwards */ R.needResize=true; calm=0; holdW=1; } }
     else calm=0;
     acc=0; frames=0; adaptT=0; slowN=0; }
   requestAnimationFrame(frame); }
 let gpuLost=false;
 // phones often drop the GPU while the game is in the background: save, then reload by itself as soon as the page is visible again
 let rescueN=0;
-function rescueStep(avg){ const g=SET.gfx, floor=.42; let what='';
+function rescueStep(avg){ const g=SET.gfx, floor=Math.min(.75,R.maxScale); let what=''; // never coarser than three quarters of a screen point per pixel, except in an emergency
   if(avg>.2&&(g.msaa||g.shadows>0||g.viewDist>300||R.scale>floor+.01)){ // far too slow (under 5 pictures per second): everything down at once
-    g.msaa=false; g.shadows=0; g.viewDist=Math.min(g.viewDist,300); g.traffic=Math.min(g.traffic,6); g.bloom=Math.min(g.bloom,.6); g.preset='custom'; applySettings(); R.scale=Math.min(floor,R.maxScale); R.needResize=true; saveSettings(); rescueN++;
+    g.msaa=false; g.shadows=0; g.viewDist=Math.min(g.viewDist,300); g.traffic=Math.min(g.traffic,6); g.bloom=Math.min(g.bloom,.6); g.preset='custom'; applySettings(); R.scale=Math.min(.5,R.maxScale); R.needResize=true; rescueN++;
     toast('Grafik stark reduziert, damit das Spiel auf diesem Gerät läuft'); return; }
   if(R.scale>floor+.01){ R.scale=Math.max(floor,R.scale*(avg>.09?.55:.72)); R.needResize=true; what='Auflösung'; }
   else if(g.msaa){ g.msaa=false; what='Kantenglättung'; }
@@ -2397,9 +2401,9 @@ function rescueStep(avg){ const g=SET.gfx, floor=.42; let what='';
   else if(g.viewDist>300||g.traffic>6){ g.viewDist=Math.min(g.viewDist,300); g.traffic=Math.min(g.traffic,6); what='Sichtweite'; }
   else if(g.shadows>0){ g.shadows=0; what='Schatten'; }
   else if(g.bloom>0||g.grain){ g.bloom=0; g.grain=false; g.vignette=false; what='Effekte'; }
-  else if(avg>.1&&R.scale>.24){ R.scale=Math.max(.24,R.scale*.7); R.needResize=true; return; } // last resort: a coarse picture beats a frozen one
+  else if(avg>.1&&R.scale>.3){ R.scale=Math.max(.3,R.scale*.7); R.needResize=true; return; } // last resort: a coarse picture beats a frozen one
   else return;
-  rescueN++; if(what!=='Auflösung'){ g.preset='custom'; const keep=R.scale; applySettings(); R.scale=Math.min(keep,R.maxScale); R.needResize=true; saveSettings(); }
+  rescueN++; if(what!=='Auflösung'){ g.preset='custom'; const keep=R.scale; applySettings(); R.scale=Math.min(keep,R.maxScale); R.needResize=true; } // not saved: the next start measures again
   if(rescueN===1||what!=='Auflösung') toast('Grafik angepasst ('+what+'), damit es flüssig läuft'); }
 function onDeviceLost(info){ gpuLost=true; try{ autosave(); }catch(e){} $('errText').textContent='Die Grafik wurde zurückgesetzt ('+(info.message||info.reason)+'). Das Spiel lädt gleich neu, dein Spielstand ist gesichert.'; $('errO').hidden=false;
   const go=()=>{ if(!document.hidden) setTimeout(()=>location.reload(),1200); }; document.addEventListener('visibilitychange',go); go(); }
@@ -2426,8 +2430,11 @@ const DEFAULTS={
 const ACTION_LABEL={up:'Gas',down:'Bremse / Rückwärts',left:'Links lenken',right:'Rechts lenken',boost:'Lichtstoß',swap:'Auto wechseln',map:'Karte',pause:'Pause',options:'Optionen'};
 let SET=JSON.parse(JSON.stringify(DEFAULTS));
 function deepMerge(a,b){ for(const k in b){ if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])){ a[k]=a[k]||{}; deepMerge(a[k],b[k]); } else a[k]=b[k]; } return a; }
-function loadSettings(){ let s=null; try{ s=localStorage.getItem('ldr_settings'); }catch(e){} if(s){ try{ SET=deepMerge(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(s)); }catch(e){} }
-  else if(typeof isTouch!=='undefined'&&isTouch){ const p=phoneClass(); SET.gfx.preset=p; Object.assign(SET.gfx,PRESETS[p]); } }
+const SET_VER=3; // raise to discard stored graphics values after a change that could have saved bad ones
+function loadSettings(){ let s=null, old=null; try{ s=localStorage.getItem('ldr_settings'); }catch(e){} if(s){ try{ old=JSON.parse(s); }catch(e){ old=null; } }
+  const stale=!old||old.ver!==SET_VER; if(old){ if(stale) delete old.gfx; try{ SET=deepMerge(JSON.parse(JSON.stringify(DEFAULTS)),old); }catch(e){} }
+  if(stale&&typeof isTouch!=='undefined'&&isTouch){ const p=phoneClass(); SET.gfx.preset=p; Object.assign(SET.gfx,PRESETS[p]); }
+  SET.ver=SET_VER; if(stale&&old) saveSettings(); }
 /* Device class without UA sniffing: touch + high-DPR small screen + enough RAM/cores + a known flagship GPU family from the WebGPU adapter. Anything unknown stays on 'mittel'. */
 function phoneClass(){ const dpr=window.devicePixelRatio||1, small=Math.min(screen.width,screen.height)<=480, mem=navigator.deviceMemory||4, cores=navigator.hardwareConcurrency||4;
   const i=(typeof R!=='undefined'&&R.adapterInfo)||{}, gpu=((i.vendor||'')+' '+(i.architecture||'')+' '+(i.description||'')).toLowerCase();
@@ -2597,7 +2604,9 @@ function initUI(){
   $('dlgSkip').addEventListener('click',e=>{ e.stopPropagation(); skipDialog(); });
   $('btnMute').onclick=toggleMute; $('btnOptTitle').onclick=()=>openOptions('title'); $('btnOptPause').onclick=()=>openOptions('pause'); $('optClose').onclick=()=>closeOptions();
   document.querySelectorAll('#optTabs button').forEach(b=>b.onclick=()=>{ optTab=b.dataset.tab; rebinding=null; renderOptions(); });
-  $('btnContinue').onclick=()=>{ const s=readSlot('auto'); if(s){ goImmersive(); Audio_.init(); Audio_.resume(); $('title').hidden=true; restore(s); toast('Weiter, wo ihr aufgehört habt'); } };
+  $('btnContinue').onclick=()=>{ const s=readSlot('auto'); let ok=false; try{ ok=!!s&&restore(s); }catch(e){ showErr(e); }
+    if(ok){ $('title').hidden=true; toast('Weiter, wo ihr aufgehört habt'); } else { toast('Der Spielstand ließ sich nicht laden. Ein neues Spiel beginnt.'); $('title').hidden=true; try{ startGame(); }catch(e){ $('title').hidden=false; showErr(e); return; } }
+    soft(()=>{ Audio_.init(); Audio_.resume(); }); soft(goImmersive); graceFor(3000); };
   if(readSlot('auto')) $('btnContinue').hidden=false; $('btnPause').onclick=()=>togglePause(); $('btnResume').onclick=()=>togglePause();
   $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('lbSend').onclick=()=>lbSubmit(); $('lbName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') lbSubmit(); }); $('lbName').addEventListener('keyup',e=>e.stopPropagation()); $('btnView').onclick=()=>cycleView(); $('mapClose').onclick=()=>toggleMap();
   $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; const p=G.player; const n=nearestRoadPoint(p.x,p.z); p.x=n.x; p.z=n.z; p.v=0; p.lat=0; toast('Zurück auf die Straße'); };
@@ -2605,7 +2614,9 @@ function initUI(){
   $('btnAgain').onclick=()=>{ $('endO').hidden=true; startGame(); };
   $('btnFree').onclick=()=>freeRoam();
   $('btnRethink').onclick=()=>{ $('endO').hidden=true; G.state='talk'; G.camMode='finale'; LM.lit=false; say(STORY.finale.slice(-1)); };
-  $('btnStart').onclick=()=>{ goImmersive(); Audio_.init(); Audio_.resume(); $('title').hidden=true; Audio_.setMood(0); startGame(); };
+  // starting must never leave an empty screen: the game starts first, comfort features (fullscreen, sound) may fail without harm
+  const soft=f=>{ try{ f(); }catch(e){ showErr(e); } };
+  $('btnStart').onclick=()=>{ $('title').hidden=true; try{ startGame(); }catch(e){ $('title').hidden=false; showErr(e); return; } soft(()=>{ Audio_.init(); Audio_.resume(); Audio_.setMood(0); }); soft(goImmersive); graceFor(3000); };
   const best=loadBest(); if(best>0) $('bestLbl').textContent='Hellster Lichtturm bisher: '+best+' Funken';
   const al=$('album'); [['https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/panel_belval.jpg','Belval','-3deg'],['https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/panel_bar.jpg','Le Pont Violet','2deg'],['https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/glutplatz.jpg','Glutplatz, Eindhoven','-1deg'],['https://raw.githubusercontent.com/gillesfischbach-business1/Aaa-game-dev/gh-pages/games/lichter-der-reise/assets/monaco.jpg','Monte-Carlo','2.5deg']].forEach(([src,cap,r])=>{
     const f=document.createElement('figure'); f.className='polaroid'; f.style.setProperty('--r',r); const im=document.createElement('img'); im.src=src; im.alt=cap; im.loading='lazy'; f.appendChild(im); const s=document.createElement('span'); s.textContent=cap; f.appendChild(s); al.appendChild(f); });
@@ -2633,6 +2644,12 @@ function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false
 function cycleView(){ G.view=((G.view||0)+1)%3; toast(['Kamera: hinter dem Auto','Kamera: am Armaturenbrett','Kamera: Stoßstange'][G.view]); }
 
 if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude/.test(location.hostname)){ addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+
+/* errors become visible on the screen (small box, bottom right), so a screenshot is enough to report them */
+function showErr(e){ try{ let b=document.getElementById('errBox'); if(!b){ b=document.createElement('div'); b.id='errBox'; b.style.cssText='position:fixed;right:8px;bottom:8px;z-index:99;max-width:70vw;padding:8px 10px;border-radius:10px;background:rgba(120,20,20,.92);color:#fff;font:12px/1.35 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none'; document.body.appendChild(b); }
+    const m=(e&&(e.message||e.reason&&(e.reason.message||e.reason)))||String(e); const st=e&&e.stack?String(e.stack).split('\n').slice(1,3).join('\n').replace(/https?:\/\/[^ )]*\//g,''):''; if(b.textContent.length<600) b.textContent+=(b.textContent?'\n':'')+'Fehler: '+m+(st?'\n'+st:''); }catch(_){} }
+addEventListener('error',e=>showErr(e.error||e)); addEventListener('unhandledrejection',e=>showErr(e));
+addEventListener('resize',()=>graceFor(2500)); document.addEventListener('fullscreenchange',()=>graceFor(2500)); document.addEventListener('visibilitychange',()=>graceFor(3000));
 
 </script>
 </body>

@@ -14,8 +14,11 @@ const DEFAULTS={
 const ACTION_LABEL={up:'Gas',down:'Bremse / Rückwärts',left:'Links lenken',right:'Rechts lenken',boost:'Lichtstoß',swap:'Auto wechseln',map:'Karte',pause:'Pause',options:'Optionen'};
 let SET=JSON.parse(JSON.stringify(DEFAULTS));
 function deepMerge(a,b){ for(const k in b){ if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])){ a[k]=a[k]||{}; deepMerge(a[k],b[k]); } else a[k]=b[k]; } return a; }
-function loadSettings(){ let s=null; try{ s=localStorage.getItem('ldr_settings'); }catch(e){} if(s){ try{ SET=deepMerge(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(s)); }catch(e){} }
-  else if(typeof isTouch!=='undefined'&&isTouch){ const p=phoneClass(); SET.gfx.preset=p; Object.assign(SET.gfx,PRESETS[p]); } }
+const SET_VER=3; // raise to discard stored graphics values after a change that could have saved bad ones
+function loadSettings(){ let s=null, old=null; try{ s=localStorage.getItem('ldr_settings'); }catch(e){} if(s){ try{ old=JSON.parse(s); }catch(e){ old=null; } }
+  const stale=!old||old.ver!==SET_VER; if(old){ if(stale) delete old.gfx; try{ SET=deepMerge(JSON.parse(JSON.stringify(DEFAULTS)),old); }catch(e){} }
+  if(stale&&typeof isTouch!=='undefined'&&isTouch){ const p=phoneClass(); SET.gfx.preset=p; Object.assign(SET.gfx,PRESETS[p]); }
+  SET.ver=SET_VER; if(stale&&old) saveSettings(); }
 /* Device class without UA sniffing: touch + high-DPR small screen + enough RAM/cores + a known flagship GPU family from the WebGPU adapter. Anything unknown stays on 'mittel'. */
 function phoneClass(){ const dpr=window.devicePixelRatio||1, small=Math.min(screen.width,screen.height)<=480, mem=navigator.deviceMemory||4, cores=navigator.hardwareConcurrency||4;
   const i=(typeof R!=='undefined'&&R.adapterInfo)||{}, gpu=((i.vendor||'')+' '+(i.architecture||'')+' '+(i.description||'')).toLowerCase();
