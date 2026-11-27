@@ -3,7 +3,8 @@ let seed=1337; const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/429
 const LANES=[-3.4,0,3.4], ROAD_HALF=5.3, CHUNK=30;
 let statics=[], genZ=0, side={L:20,R:20}, landmarksDone={};
 // static object
-function S(m,x,y,z,sx,sy,sz,mat,col,param=0,ry=0,rx=0,rz=0,slot=0){ const o={m:typeof m==='string'?MESHIDX[m]:m,x,y,z,sx,sy,sz,mat,r:col[0],g:col[1],b:col[2],p:param,ry,rx,rz,slot,ext:Math.max(sx,sz)*0.6}; statics.push(o); return o; }
+function S(m,x,y,z,sx,sy,sz,mat,col,param=0,ry=0,rx=0,rz=0,slot=0){ const o={m:typeof m==='string'?MESHIDX[m]:m,x,y,z,sx,sy,sz,mat,r:col[0],g:col[1],b:col[2],p:param,ry,rx,rz,slot,ext:Math.max(sx,sz)*0.6}; if(GRP) o.grp=GRP; statics.push(o); return o; }
+let GRP=null; // while set, new statics belong to one rigid building
 function lightAt(o,x,y,z,col,int,rad){ o.L={x,y,z,r:col[0]*int,g:col[1]*int,b:col[2]*int,rad}; return o; }
 function partsAt(parts,X,Y,Z,ry=0){ const c=Math.cos(ry), s=Math.sin(ry); for(const q of parts){ const [m,x,y,z,sx,sy,sz,mat,r,g,b,p,rx,pry,rz,slot]=q;
   const o={m,x:X+x*c+z*s,y:Y+y,z:Z-x*s+z*c,sx,sy,sz,mat,r,g,b,p,ry:ry+pry,rx,rz,slot,ext:Math.max(sx,sz)}; statics.push(o); } }

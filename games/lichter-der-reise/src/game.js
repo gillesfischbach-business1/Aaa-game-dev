@@ -148,7 +148,8 @@ function update(dt){
   const pl=G.player; if(!pl) return;
   if(G.state==='drive'){
     const [s,th,br]=readInput(); G.boostT=Math.max(0,G.boostT-dt);
-    const hit=stepCar(pl,th,br,s,dt,G.boostT>0); if(hit>3){ G.shake=Math.min(1,hit/14); Audio_.noiseHit(.25,900,clamp(hit/20,.1,.5)); }
+    const px0=pl.x, pz0=pl.z; const hit=stepCar(pl,th,br,s,dt,G.boostT>0);
+    { let dw=yawW(pl.x,pl.z,pl.h)-yawW(px0,pz0,pl.h); while(dw>Math.PI)dw-=2*Math.PI; while(dw<-Math.PI)dw+=2*Math.PI; pl.h-=dw; } // the road bends, the car does not: you have to steer through curves if(hit>3){ G.shake=Math.min(1,hit/14); Audio_.noiseHit(.25,900,clamp(hit/20,.1,.5)); }
     if(Math.random()<dt*2) spawnTraffic(pl.x,pl.z); updateTraffic(dt,pl); updateHumans(dt,pl);
     const cx=Math.floor(pl.x/CELL), cz=Math.floor(pl.z/CELL), mag=pl.car==='fidele'?2.6:1.8;
     for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ const c=cells.get((cx+i)+','+(cz+j)); if(!c||!c.sparks) continue; for(const sp of c.sparks){ if(sp.alive&&Math.hypot(sp.x-pl.x,sp.z-pl.z)<mag+1){ sp.alive=false; collect(sp.x,sp.z); } } }
@@ -183,23 +184,30 @@ function updateHUD(){ const pl=G.player; UI.lightN.textContent=G.light; UI.speed
 function currentTarget(){ if(G.event==='glow') return LM.glow; const M=MISSIONS[G.mission]; return M?M.target():null; }
 
 // ---------- minimap ----------
-let mapImg=null; const MAPS=.42, MAPB={x0:-480,z0:-480,x1:2300,z1:480};
+let mapImg=null; const MAPS=.42, MAPB={x0:-540,z0:-540,x1:2360,z1:540};
 function buildMapImage(){ try{ const w=Math.ceil((MAPB.x1-MAPB.x0)*MAPS), h=Math.ceil((MAPB.z1-MAPB.z0)*MAPS); const cv=(typeof OffscreenCanvas!=='undefined')?new OffscreenCanvas(w,h):Object.assign(document.createElement('canvas'),{width:w,height:h});
   const g=cv.getContext('2d'); if(!g) return; g.fillStyle='#1b2418'; g.fillRect(0,0,w,h);
   const col={block:'#3a3530',park:'#24402a',industry:'#4a3326',valley:'#14301c',water:'#1d4a66',plaza:'#7a3a18',road:'#9a968e'};
-  for(const k of ['block','park','industry','valley','water','plaza','road']) for(const r of mapItems) if(r.kind===k){ g.fillStyle=col[k]; g.fillRect((r.x0-MAPB.x0)*MAPS,(r.z0-MAPB.z0)*MAPS,Math.max(1,(r.x1-r.x0)*MAPS),Math.max(1,(r.z1-r.z0)*MAPS)); }
+  for(const k of ['block','park','industry','valley','water','plaza','road']) for(const r of mapItems) if(r.kind===k){ g.fillStyle=col[k]; mapPoly(g,r); }
   g.fillStyle='rgba(255,255,255,.75)'; g.font='bold 22px Arial'; g.fillText('LUXEMBURG',(-120-MAPB.x0)*MAPS,(-440-MAPB.z0)*MAPS+18); g.fillText('EINDHOVEN',(1820-MAPB.x0)*MAPS,(-360-MAPB.z0)*MAPS); mapImg=cv; }catch(e){ mapImg=null; } }
+// maps show the bent world: outlines are warped point by point
+function wpt(x,z){ WARP(x,z); return [WP.x,WP.z]; }
+function mapPoly(g,r){ const pts=[]; const nx=Math.max(1,Math.ceil((r.x1-r.x0)/20)), nz=Math.max(1,Math.ceil((r.z1-r.z0)/20));
+  for(let i=0;i<nx;i++) pts.push([r.x0+(r.x1-r.x0)*i/nx,r.z0]); for(let j=0;j<nz;j++) pts.push([r.x1,r.z0+(r.z1-r.z0)*j/nz]);
+  for(let i=nx;i>0;i--) pts.push([r.x0+(r.x1-r.x0)*i/nx,r.z1]); for(let j=nz;j>0;j--) pts.push([r.x0,r.z0+(r.z1-r.z0)*j/nz]);
+  g.beginPath(); pts.forEach(([x,z],k)=>{ const q=wpt(x,z); const X=(q[0]-MAPB.x0)*MAPS, Z=(q[1]-MAPB.z0)*MAPS; if(k) g.lineTo(X,Z); else g.moveTo(X,Z); }); g.closePath(); g.fill(); g.strokeStyle=g.fillStyle; g.lineWidth=1; g.stroke(); }
 function drawMinimap(){ const c=UI.mini; if(!c||!c.getContext||!mapImg) return; const g=c.getContext('2d'); if(!g) return; const W=c.width, H=c.height, pl=G.player, z=1.6;
+  const [px,pz]=wpt(pl.x,pl.z), ph=yawW(pl.x,pl.z,pl.h), rel=(x,zz)=>{ const q=wpt(x,zz); return [(q[0]-px)*MAPS,(q[1]-pz)*MAPS]; };
   g.save(); g.clearRect(0,0,W,H); g.beginPath(); g.arc(W/2,H/2,W/2,0,7); g.clip(); g.fillStyle='#1b2418'; g.fillRect(0,0,W,H);
-  g.translate(W/2,H/2); g.rotate(pl.h); g.scale(z,z); g.drawImage(mapImg,-(pl.x-MAPB.x0)*MAPS,-(pl.z-MAPB.z0)*MAPS);
-  const t=currentTarget(); if(t){ if(G.route&&G.route.length){ g.strokeStyle='rgba(255,210,122,.9)'; g.lineWidth=3/z; g.beginPath(); g.moveTo(0,0); for(const n of G.route) g.lineTo((n.x-pl.x)*MAPS,(n.z-pl.z)*MAPS); g.lineTo((t.x-pl.x)*MAPS,(t.z-pl.z)*MAPS); g.stroke(); }
-    g.fillStyle='#ffd27a'; g.beginPath(); g.arc((t.x-pl.x)*MAPS,(t.z-pl.z)*MAPS,6/z,0,7); g.fill(); }
-  if(G.parked){ g.fillStyle=G.parked.car==='smaragd'?'#35c48a':'#ffffff'; g.fillRect((G.parked.x-pl.x)*MAPS-2,(G.parked.z-pl.z)*MAPS-2,4,4); }
+  g.translate(W/2,H/2); g.rotate(ph); g.scale(z,z); g.drawImage(mapImg,-(px-MAPB.x0)*MAPS,-(pz-MAPB.z0)*MAPS);
+  const t=currentTarget(); if(t){ const tq=rel(t.x,t.z); if(G.route&&G.route.length){ g.strokeStyle='rgba(255,210,122,.9)'; g.lineWidth=3/z; g.beginPath(); g.moveTo(0,0); for(const n of G.route){ const q=rel(n.x,n.z); g.lineTo(q[0],q[1]); } g.lineTo(tq[0],tq[1]); g.stroke(); }
+    g.fillStyle='#ffd27a'; g.beginPath(); g.arc(tq[0],tq[1],6/z,0,7); g.fill(); }
+  if(G.parked){ const q=rel(G.parked.x,G.parked.z); g.fillStyle=G.parked.car==='smaragd'?'#35c48a':'#ffffff'; g.fillRect(q[0]-2,q[1]-2,4,4); }
   g.restore(); g.fillStyle='#ffd27a'; g.beginPath(); g.moveTo(W/2,H/2-8); g.lineTo(W/2-5,H/2+6); g.lineTo(W/2+5,H/2+6); g.closePath(); g.fill(); }
 function drawBigMap(){ const c=UI.mapC; if(!c||!mapImg) return; const g=c.getContext('2d'); const W=c.width=Math.min(1100,innerWidth-32), H=c.height=Math.round(W*(MAPB.z1-MAPB.z0)/(MAPB.x1-MAPB.x0));
-  g.drawImage(mapImg,0,0,W,H); const s=W/(MAPB.x1-MAPB.x0), pl=G.player, X=x=>(x-MAPB.x0)*s, Z=z=>(z-MAPB.z0)*s;
-  const t=currentTarget(); if(t){ if(G.route&&G.route.length){ g.strokeStyle='#ffd27a'; g.lineWidth=3; g.beginPath(); g.moveTo(X(pl.x),Z(pl.z)); for(const n of G.route) g.lineTo(X(n.x),Z(n.z)); g.lineTo(X(t.x),Z(t.z)); g.stroke(); } g.fillStyle='#ffd27a'; g.beginPath(); g.arc(X(t.x),Z(t.z),7,0,7); g.fill(); }
-  g.save(); g.translate(X(pl.x),Z(pl.z)); g.rotate(-pl.h); g.fillStyle='#ff6f91'; g.beginPath(); g.moveTo(0,-9); g.lineTo(-6,7); g.lineTo(6,7); g.closePath(); g.fill(); g.restore(); }
+  g.drawImage(mapImg,0,0,W,H); const s=W/(MAPB.x1-MAPB.x0), pl=G.player, XZ=(x,z)=>{ const q=wpt(x,z); return [(q[0]-MAPB.x0)*s,(q[1]-MAPB.z0)*s]; }; const pq=XZ(pl.x,pl.z);
+  const t=currentTarget(); if(t){ const tq=XZ(t.x,t.z); if(G.route&&G.route.length){ g.strokeStyle='#ffd27a'; g.lineWidth=3; g.beginPath(); g.moveTo(pq[0],pq[1]); for(const n of G.route){ const q=XZ(n.x,n.z); g.lineTo(q[0],q[1]); } g.lineTo(tq[0],tq[1]); g.stroke(); } g.fillStyle='#ffd27a'; g.beginPath(); g.arc(tq[0],tq[1],7,0,7); g.fill(); }
+  g.save(); g.translate(pq[0],pq[1]); g.rotate(-yawW(pl.x,pl.z,pl.h)); g.fillStyle='#ff6f91'; g.beginPath(); g.moveTo(0,-9); g.lineTo(-6,7); g.lineTo(6,7); g.closePath(); g.fill(); g.restore(); }
 
 // ---------- frame ----------
 const cam={pos:[0,3,8],tgt:[0,1,-10],fov:58}; const _camCols=[];
@@ -208,8 +216,8 @@ function drawStatic(o,t,lampK,lights){ let y=o.y; if(o.bob!==undefined) y+=Math.
   if(o===LM.lichtTop) p=LM.lit?18:.25;
   if(o.blink) p=(t%1.5)<.15?8:.2;
   if(o.turbine){ const a=t*1.2+o.turbine.ph; for(let k=0;k<3;k++) P(MESHIDX.box,o.turbine.x,o.turbine.y,o.turbine.z,0,.9,22,.25,MAT.STD+.4,.92,.92,.94,.3,0,a+k*2.094); }
-  P(o.m,o.x,y,o.z,o.ry,o.sx,o.sy,o.sz,o.mat,o.r,o.g,o.b,p,o.rx,o.rz,o.slot);
-  if(lights&&o.L){ const k=(o.mat===MAT.EMI&&o.bob===undefined)?lampK:1; if(k>.05) Lt(o.L.x,o.L.y+(y-o.y),o.L.z,o.L.r*k,o.L.g*k,o.L.b*k,o.L.rad); } }
+  Praw(o.m,o.x,y,o.z,o.ry,o.sx,o.sy,o.sz,o.mat,o.r,o.g,o.b,p,o.rx,o.rz,o.slot);
+  if(lights&&o.L){ const k=(o.mat===MAT.EMI&&o.bob===undefined)?lampK:1; if(k>.05) LtRaw(o.L.x,o.L.y+(y-o.y),o.L.z,o.L.r*k,o.L.g*k,o.L.b*k,o.L.rad); } }
 function buildFrame(){
   const t=G.time, E=envCur, pl=G.player; if(!pl) return;
   // camera first, so culling uses this frame's camera
@@ -230,8 +238,9 @@ function buildFrame(){
   else { const f=G.finalePos||{x:pl.x,z:pl.z}; const L=LM.licht;
     if(G.camMode==='ignite'){ const k=smooth(clamp(G.endT/6,0,1)); cam.pos=[f.x+lerp(4,10,k),lerp(1.8,9,k),f.z+lerp(11,32,k)]; cam.tgt=[lerp(f.x-1,L.x,k),lerp(1.4,40,k),lerp(f.z+2,L.z,k)]; cam.fov=lerp(48,62,k); }
     else { const b=G.endT*.03; cam.pos=[f.x+4+Math.sin(b),1.8,f.z+11]; cam.tgt=[f.x-1,1.4,f.z+2]; cam.fov=48; } }
-  const ccx=cam.pos[0], ccz=cam.pos[2]; const RAD=SET.gfx.viewDist, RS=Math.min(230,RAD*.45), gx=Math.floor(ccx/CELL), gz=Math.floor(ccz/CELL), nR=Math.ceil(RAD/CELL);
-  const fx=cam.tgt[0]-ccx, fz=cam.tgt[2]-ccz, fl=Math.hypot(fx,fz)||1; const lampK=E.lamps;
+  WARP(cam.pos[0],cam.pos[2]); const ccx=WP.x, ccz=WP.z; WARP(cam.tgt[0],cam.tgt[2]); const wtx=WP.x, wtz=WP.z; // the static world is stored bent, so cull it with the bent camera
+  const RAD=SET.gfx.viewDist, RS=Math.min(230,RAD*.45), gx=Math.floor(ccx/CELL), gz=Math.floor(ccz/CELL), nR=Math.ceil(RAD/CELL);
+  const fx=wtx-ccx, fz=wtz-ccz, fl=Math.hypot(fx,fz)||1; const lampK=E.lamps;
   for(const o of globalStatics) drawStatic(o,t,lampK,false);
   for(let i=-nR;i<=nR;i++) for(let j=-nR;j<=nR;j++){ const c=cells.get((gx+i)+','+(gz+j)); if(!c) continue;
     const ox=(gx+i+.5)*CELL-ccx, oz=(gz+j+.5)*CELL-ccz; const d=Math.hypot(ox,oz); if(d>RAD+CELL) continue;
@@ -260,6 +269,7 @@ function buildFrame(){
       P(MESHIDX.sph,s.x+ox,y,s.z+oz,G.time*.2,r*2,r*2,r*2,MAT.LAVA,1,1,1,.55); Lt(s.x+ox,y-.5,s.z+oz,90,30,6,18); } }
   if((G.camMode==='finale'||G.camMode==='ignite')&&G.finalePos){ const f=G.finalePos; drawParts(LEO_STAND,f.x-.2,0,f.z+3.6,-2.6,{}); drawParts(MIRA_STAND,f.x-.9,0,f.z+3.8,-2.4,{});
     if(LM.lit){ const L=LM.licht, k=clamp(G.endT/3,0,1); Lt(L.x,57,L.z,700*k,800*k,1000*k,160); const b=G.endT*.8; P(MESHIDX.box,L.x+Math.sin(b)*60,57,L.z+Math.cos(b)*60,b,1,1,120,MAT.EMI,.8,.9,1,3*k); } }
+  cam.pos=[ccx,cam.pos[1],ccz]; cam.tgt=[wtx,cam.tgt[1],wtz]; // hand the renderer the camera in the bent world
 }
 
 // ---------- loop ----------
@@ -269,14 +279,15 @@ function frame(now){
   if(window.__manual){ last=now; requestAnimationFrame(frame); return; }
   if(G.state!=='pause'&&G.state!=='map') update(dt);
   try{ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
-    renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},[pl.x-Math.sin(G.camYaw)*14,0,pl.z-Math.cos(G.camYaw)*14],window.__snapReq||null);
+    renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},shadowCtr(pl),window.__snapReq||null);
     window.__snapReq=null; }catch(e){ console.error(e); }
   acc+=dtRaw; frames++; adaptT+=dtRaw;
   if(adaptT>2.5){ const avg=acc/frames; const fb=$('fpsBox'); if(fb&&!fb.hidden) fb.textContent=Math.round(1/avg)+' FPS · '+R.W+'×'+R.H; if(!SET.gfx.adaptive){ acc=0; frames=0; adaptT=0; } else if(avg>.026&&R.scale>.5){ R.scale=Math.max(.5,R.scale*.82); R.needResize=true; } else if(avg<.012&&R.scale<R.maxScale){ R.scale=Math.min(R.maxScale,R.scale*1.12); R.needResize=true; } acc=0; frames=0; adaptT=0; }
   requestAnimationFrame(frame); }
 function onDeviceLost(info){ $('errText').textContent='Die Grafikkarte wurde zurückgesetzt ('+(info.message||info.reason)+'). Bitte lade die Seite neu.'; $('errO').hidden=false; }
 
+function shadowCtr(pl){ WARP(pl.x-Math.sin(G.camYaw)*14,pl.z-Math.cos(G.camYaw)*14); return [WP.x,0,WP.z]; }
 /* test hook: render exactly one frame and wait until the GPU has finished it */
 async function renderNow(snapCb){ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
-  renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},[pl.x-Math.sin(G.camYaw)*14,0,pl.z-Math.cos(G.camYaw)*14],snapCb||null);
+  renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},shadowCtr(pl),snapCb||null);
   await R.device.queue.onSubmittedWorkDone(); }

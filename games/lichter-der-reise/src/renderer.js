@@ -30,10 +30,12 @@ function buildMeshes(){
 const R={ device:null, ctx:null, fmt:'bgra8unorm', W:1, H:1, scale:1, maxScale:1, needResize:true, ok:false };
 const MAXI=48000;
 const lists=[]; // per mesh: {op:Float32Array, nop, gl:Float32Array, ngl}
-function P(m,x,y,z,ry,sx,sy,sz,mat,r,g,b,p,rx=0,rz=0,slot=0){ const L=lists[m]; const glass=mat>=6&&mat<7; const a=glass?L.gl:L.op; let n=glass?L.ngl:L.nop; if(n>=(glass?400:8000)) return;
+// P draws something given in street-grid coordinates: it is moved and turned by the world bend (see WARP). Praw takes final world coordinates.
+function P(m,x,y,z,ry,sx,sy,sz,mat,r,g,b,p,rx=0,rz=0,slot=0){ WARP(x,z); const sn=Math.sin(ry), cs=Math.cos(ry); Praw(m,WP.x,y,WP.z,Math.atan2(WP.a*sn+WP.b*cs,WP.c*sn+WP.d*cs),sx,sy,sz,mat,r,g,b,p,rx,rz,slot); }
+function Praw(m,x,y,z,ry,sx,sy,sz,mat,r,g,b,p,rx=0,rz=0,slot=0){ const L=lists[m]; const glass=mat>=6&&mat<7; const a=glass?L.gl:L.op; let n=glass?L.ngl:L.nop; if(n>=(glass?400:L.cap)) return;
   const o=n*16; a[o]=x;a[o+1]=y;a[o+2]=z;a[o+3]=ry;a[o+4]=sx;a[o+5]=sy;a[o+6]=sz;a[o+7]=mat;a[o+8]=r;a[o+9]=g;a[o+10]=b;a[o+11]=p;a[o+12]=rx;a[o+13]=rz;a[o+14]=slot;a[o+15]=0;
   if(glass) L.ngl=n+1; else L.nop=n+1; }
-let lightsTmp=[]; function Lt(x,y,z,r,g,b,rad){ lightsTmp.push([x,y,z,r,g,b,rad,0]); }
+let lightsTmp=[]; function LtRaw(x,y,z,r,g,b,rad){ lightsTmp.push([x,y,z,r,g,b,rad,0]); } function Lt(x,y,z,r,g,b,rad){ WARP(x,z); lightsTmp.push([WP.x,y,WP.z,r,g,b,rad,0]); }
 
 async function initGPU(canvas){
   if(!navigator.gpu) throw new Error('nogpu');
@@ -46,7 +48,7 @@ async function initGPU(canvas){
   R.mesh=MESHES.map(({m})=>{ const vb=device.createBuffer({size:m.v.length*4,usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST}); device.queue.writeBuffer(vb,0,new Float32Array(m.v));
     const big=m.n>65535; const ia=big?new Uint32Array(m.ix):new Uint16Array(Math.ceil(m.ix.length/2)*2); if(!big) ia.set(m.ix);
     const ib=device.createBuffer({size:ia.byteLength,usage:GPUBufferUsage.INDEX|GPUBufferUsage.COPY_DST}); device.queue.writeBuffer(ib,0,ia); return {vb,ib,n:m.ix.length,fmt:big?'uint32':'uint16'}; });
-  for(let i=0;i<MESHES.length;i++) lists.push({op:new Float32Array(8000*16),nop:0,gl:new Float32Array(400*16),ngl:0});
+  for(let i=0;i<MESHES.length;i++) { const cap=i===MESHIDX.box?28000:8000; lists.push({cap,op:new Float32Array(cap*16),nop:0,gl:new Float32Array(400*16),ngl:0}); }
   R.lin=device.createSampler({magFilter:'linear',minFilter:'linear',addressModeU:'clamp-to-edge',addressModeV:'clamp-to-edge'});
   R.cmp=device.createSampler({compare:'less',magFilter:'linear',minFilter:'linear'});
   R.sceneBuf=device.createBuffer({size:336*4,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});

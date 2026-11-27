@@ -7,6 +7,32 @@ const CANAL={x0:1558,x1:2242,z0:90,z1:162,water:-2.2};
 const MOTORWAY={x0:420,x1:1564,hw:10};
 const WORLD={x0:-1400,x1:3300,z0:-1400,z1:1400};
 const LUX_BRIDGES=[-4,-2,1], EHV_BRIDGES=[-3,0,2];
+/* ----- the world bend -----
+   Streets are laid out on a grid, which keeps collisions, routes and missions simple. Before anything is drawn, every position goes
+   through WARP: a smooth displacement that turns the grid into gently winding streets with skewed junctions. WP also holds the local
+   Jacobian (a b / c d) so objects can be turned to follow their street. */
+const WP={x:0,z:0,a:1,b:0,c:0,d:1};
+function WARP(x,z){ const p1=z/118+1.3, p2=z/53+x/210+.5, p3=x/260+2.1, p4=x/127+.7, p5=x/49-z/190+4, p6=z/240+1;
+  const c1=Math.cos(p1), c2=Math.cos(p2), c3=Math.cos(p3), c4=Math.cos(p4), c5=Math.cos(p5), c6=Math.cos(p6);
+  WP.x=x+24*Math.sin(p1)+13*Math.sin(p2)+14*Math.sin(p3); WP.z=z+20*Math.sin(p4)+12*Math.sin(p5)+12*Math.sin(p6);
+  WP.a=1+13*c2/210+14*c3/260; WP.b=24*c1/118+13*c2/53; WP.c=20*c4/127+12*c5/49; WP.d=1-12*c5/190+12*c6/240; return WP; }
+function yawW(x,z,h){ WARP(x,z); const sn=Math.sin(h), cs=Math.cos(h); return Math.atan2(WP.a*sn+WP.b*cs,WP.c*sn+WP.d*cs); }
+// bake the bend into the static world: buildings stay rigid, long flat pieces are cut into tiles that follow the curve
+function bakeWarp(list){ const out=[]; const fac=Math.floor(MAT.FACADE), dec=Math.floor(MAT.DECAL);
+  const place=(o)=>{ const flat0=o.ry===0&&!o.rx&&!o.rz; WARP(o.x,o.z); const tz=Math.atan2(WP.b,WP.d), tx=-Math.atan2(WP.c,WP.a); const asp=Math.max(o.sx,o.sz)/Math.max(.01,Math.min(o.sx,o.sz));
+    const th=(flat0&&asp>2.5)?(o.sx>o.sz?tx:tz):(tx+tz)/2; if(o.L){ const lx=o.L.x-o.x, lz=o.L.z-o.z, c=Math.cos(th), s=Math.sin(th); o.L.x=WP.x+lx*c+lz*s; o.L.z=WP.z-lx*s+lz*c; }
+    o.x=WP.x; o.z=WP.z; o.ry+=th; out.push(o); };
+  for(const o of list){
+    if(o.grp){ const g=o.grp; if(g.wx===undefined){ WARP(g.x,g.z); g.wx=WP.x; g.wz=WP.z; g.th=g.ax?-Math.atan2(WP.c,WP.a):Math.atan2(WP.b,WP.d); g.cs=Math.cos(g.th); g.sn=Math.sin(g.th); }
+      const rel=(px,pz)=>[g.wx+(px-g.x)*g.cs+(pz-g.z)*g.sn,g.wz-(px-g.x)*g.sn+(pz-g.z)*g.cs]; if(o.L){ const q=rel(o.L.x,o.L.z); o.L.x=q[0]; o.L.z=q[1]; }
+      const q=rel(o.x,o.z); o.x=q[0]; o.z=q[1]; o.ry+=g.th; out.push(o); continue; }
+    const id=Math.floor(o.mat), big=Math.max(o.sx,o.sz);
+    if(o.m===MESHIDX.box&&o.ry===0&&!o.rx&&!o.rz&&big>16&&id!==fac&&id!==dec&&id!==1&&id!==2&&!o.L&&!o.turbine&&!o.blink&&o.bob===undefined){
+      const T=(o.sy<1&&Math.min(o.sx,o.sz)>10)?24:13; const nx=Math.ceil(o.sx/T), nz=Math.ceil(o.sz/T), px=o.sx/nx, pz=o.sz/nz, ov=o.sy<1?1.05:1.01; // wide flat slabs can use bigger tiles
+      for(let i=0;i<nx;i++) for(let j=0;j<nz;j++){ const t={...o,x:o.x-o.sx/2+px*(i+.5),z:o.z-o.sz/2+pz*(j+.5),sx:px*(nx>1?ov:1),sz:pz*(nz>1?ov:1)}; t.ext=Math.max(t.sx,t.sz)*.6; place(t); }
+      continue; }
+    place(o); }
+  return out; }
 let colliders=new Map(), cells=new Map(), globalStatics=[], roadsList=[], graph={nodes:new Map(),edges:[]}, mapItems=[], sparksAll=[];
 const CC=32, CELL=64;
 function addCol(x0,z0,x1,z1,tag){ const c={x0:Math.min(x0,x1),z0:Math.min(z0,z1),x1:Math.max(x0,x1),z1:Math.max(z0,z1),tag};
@@ -59,6 +85,7 @@ function fillBlock(x0,z0,x1,z1,st,env){
     {ax:false,fz:x0+s,dir:1,a:z0+s+D,b:z1-s-D,ry:-Math.PI/2},{ax:false,fz:x1-s,dir:-1,a:z0+s+D,b:z1-s-D,ry:Math.PI/2}];
   for(const r of rows){ let t=r.a; while(t<r.b-3){ let w=Math.min(rr(st.w[0],st.w[1]),r.b-t); if(r.b-t-w<st.w[0]*.6) w=r.b-t; const h=rr(st.h[0],st.h[1]); const col=pick(st.cols); const mid=t+w/2; const cIn=r.fz+r.dir*D/2;
       const x=r.ax?mid:cIn, z=r.ax?cIn:mid, sx=r.ax?w-.15:D, sz=r.ax?D:w-.15;
+      GRP={x,z,ax:r.ax};
       S('box',x,h/2+.1,z,sx,h,sz,MAT.FACADE+.6,col,st.fac); addCol(x-sx/2,z-sz/2,x+sx/2,z+sz/2);
       { // facade depth kit: plinth, shop-floor band, cornice, pilaster, recessed entrance, bay
         const F=(al,y,len,hg,dp,mat,c,par=0)=>{ const cc=r.fz-r.dir*(dp/2-.02); return S('box',r.ax?al:cc,y,r.ax?cc:al,r.ax?len:dp,hg,r.ax?dp:len,mat,c,par); };
@@ -81,7 +108,7 @@ function fillBlock(x0,z0,x1,z1,st,env){
           S('box',bx,y,bz,2.2,.14,1.2,MAT.STONE,[.7,.68,.64],0,fr); const rx2=r.ax?bx:bx-r.dir*.55, rz2=r.ax?bz-r.dir*.55:bz; S('box',rx2,y+.5,rz2,2.2,.9,.04,MAT.STD+.4,[.1,.1,.11],.6,fr); } } }
       if(st.gable&&rnd()<.5){ const cx2=x+(r.ax?rr(-sx/3,sx/3):0), cz2=z+(r.ax?0:rr(-sz/3,sz/3)); S('box',cx2,h+Math.min(w,D)*.3,cz2,.7,1.6,.7,MAT.FACADE+.6,[.4,.2,.14],5); }
       else if(!st.gable&&st!==STYLE.strijp&&rnd()<.6){ S('box',x+rr(-sx/4,sx/4),h+1.1,z+rr(-sz/4,sz/4),2.2,1.2,1.6,MAT.STD+.5,[.55,.56,.58],.6); }
-      t+=w; } }
+      GRP=null; t+=w; } }
   // courtyard
   const ix0=x0+s+D, ix1=x1-s-D, iz0=z0+s+D, iz1=z1-s-D;
   if(st===STYLE.strijp&&rnd()<.6){ const cx=(x0+x1)/2+rr(-6,6), cz=(z0+z1)/2+rr(-6,6), H=rr(38,50); S('cylY',cx,H/2,cz,3.2,H,3.2,MAT.FACADE+.6,[.4,.18,.12],5); S('cylY',cx,H+.4,cz,3.6,.8,3.6,MAT.STONE,[.25,.2,.18]); addCol(cx-1.6,cz-1.6,cx+1.6,cz+1.6); }
@@ -233,7 +260,14 @@ function genCity(key,env){ const C=CITY[key], n=C.n, P=OW.P, h=OW.W/2;
 }
 // ---------- ground (with holes for the valley and the canal) ----------
 function genGround(){ const W=WORLD, V=VALLEY, C=CANAL, g=[.13,.2,.08];
-  const rect=(x0,z0,x1,z1)=>{ if(x1-x0>1&&z1-z0>1) globalStatics.push({m:MESHIDX.box,x:(x0+x1)/2,y:-.3,z:(z0+z1)/2,sx:x1-x0,sy:.3,sz:z1-z0,mat:MAT.GRASS,r:g[0],g:g[1],b:g[2],p:0,ry:0,rx:0,rz:0,slot:0}); };
+  const far=(x0,z0,x1,z1)=>{ if(x1-x0>1&&z1-z0>1) globalStatics.push({m:MESHIDX.box,x:(x0+x1)/2,y:-.3,z:(z0+z1)/2,sx:x1-x0,sy:.3,sz:z1-z0,mat:MAT.GRASS,r:g[0],g:g[1],b:g[2],p:0,ry:0,rx:0,rz:0,slot:0}); };
+  // near the cities the ground is laid in tiles that follow the bend (S, culled per cell); beyond, large flat slabs with an overlap
+  const I={x0:-640,x1:2640,z0:-640,z1:640}, O=70;
+  const rect=(x0,z0,x1,z1)=>{ const ix0=Math.max(x0,I.x0), ix1=Math.min(x1,I.x1), iz0=Math.max(z0,I.z0), iz1=Math.min(z1,I.z1);
+    if(ix1-ix0>1&&iz1-iz0>1){ const nx=Math.ceil((ix1-ix0)/40), nz=Math.ceil((iz1-iz0)/40), px=(ix1-ix0)/nx, pz=(iz1-iz0)/nz;
+      for(let i=0;i<nx;i++) for(let j=0;j<nz;j++){ const tx=ix0+px*(i+.5), tz=iz0+pz*(j+.5); const town=(Math.abs(tx)<432&&Math.abs(tz)<432)||(Math.abs(tx-1900)<348&&Math.abs(tz)<348); // under the cities the base is dark, so seams between bent tiles never show grass
+        const o=S('box',tx,-.3,tz,px*1.07,.3,pz*1.07,town?MAT.ROAD+.6:MAT.GRASS,town?[.07,.07,.075]:g); o.ext=24; } }
+    far(x0,z0,Math.min(x1,I.x0+O),z1); far(Math.max(x0,I.x1-O),z0,x1,z1); far(Math.max(x0,I.x0),z0,Math.min(x1,I.x1),Math.min(z1,I.z0+O)); far(Math.max(x0,I.x0),Math.max(z0,I.z1-O),Math.min(x1,I.x1),z1); };
   rect(W.x0,W.z0,V.x0,W.z1); rect(V.x0,W.z0,V.x1,V.z0); rect(V.x0,V.z1,V.x1,W.z1); rect(V.x1,W.z0,C.x0,W.z1); rect(C.x0,W.z0,C.x1,C.z0); rect(C.x0,C.z1,C.x1,W.z1); rect(C.x1,W.z0,W.x1,W.z1);
   for(const [x,z,w,h,d] of [[-1000,-1000,1300,160,700],[300,-1250,1800,120,500],[1500,-1150,1400,140,600],[2900,-500,900,170,1200],[2700,900,1200,120,600],[900,1200,2000,100,500],[-1100,700,1000,130,900]]) globalStatics.push({m:MESHIDX.sph,x,y:-20,z,sx:w,sy:h*2,sz:d,mat:MAT.GRASS,r:.1,g:.15,b:.07,p:0,ry:.3,rx:0,rz:0,slot:0});
 }
@@ -244,6 +278,7 @@ function genSparks(){ sparksAll=[]; for(const r of roadsList){ const len=Math.ma
 
 function buildWorld(env){ seed=4242; statics=[]; globalStatics=[]; colliders=new Map(); cells=new Map(); roadsList=[]; mapItems=[]; graph={nodes:new Map(),edges:[]};
   genGround(); genCity('lux',env); genValley(env); genMotorway(env); genCity('ehv',env); genCanal(); genSparks();
+  statics=bakeWarp(statics);
   for(const o of statics){ o.small=Math.max(o.sx,o.sy,o.sz)<3.2&&!o.L; if(o.ext>CELL*.9){ globalStatics.push(o); continue; } const k=Math.floor(o.x/CELL)+','+Math.floor(o.z/CELL); let a=cells.get(k); if(!a){ a=[]; cells.set(k,a); } a.push(o); }
   statics=[];
   for(const s of sparksAll){ const k=Math.floor(s.x/CELL)+','+Math.floor(s.z/CELL); let c=cells.get(k); if(!c){ c=[]; cells.set(k,c); } (c.sparks||(c.sparks=[])).push(s); }
