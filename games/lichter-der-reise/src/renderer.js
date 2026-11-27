@@ -22,7 +22,7 @@ function decodeModels(){ const out={}; if(typeof MODELS_B64==='undefined') retur
   return out; }
 function buildMeshes(){
   const list={ box:meshBox(), quad:meshQuad(), sph:meshSphere(24,16), sphLo:meshSphere(8,6), cylY:meshCylY(24), cylX:meshLathe([[0,-.5],[.5,-.5],[.5,-.5],[.5,.5],[.5,.5],[0,.5]],24,'x'),
-    cone:meshCone(24), gable:meshGable(), rbox:meshRBox(.5,.5,.5,.14,3),
+    cone:meshCone(24), gable:meshGable(), caps:meshLathe([[0,-.5],[.27,-.46],[.44,-.36],[.5,-.2],[.5,.2],[.44,.36],[.27,.46],[0,.5]],12), rbox:meshRBox(.5,.5,.5,.14,3),
     yHull:meshLoft([{z:-15,w:.12,yb:2.2,yt:3.9,e:2.5,tw:1},{z:-13.6,w:1.1,yb:.9,yt:3.7,e:3,tw:1},{z:-10,w:2.1,yb:.1,yt:3.4,e:4,tw:1},{z:-3,w:2.5,yb:-.4,yt:3.2,e:5,tw:1},{z:8,w:2.5,yb:-.4,yt:3.2,e:6,tw:1},{z:14.2,w:2.3,yb:.2,yt:3.2,e:7,tw:1},{z:15,w:2.2,yb:.6,yt:3.15,e:8,tw:1}],28),
     ...carMeshes(), ...decodeModels() };
   for(const k in list){ MESHIDX[k]=MESHES.length; MESHES.push({key:k,m:list[k]}); }

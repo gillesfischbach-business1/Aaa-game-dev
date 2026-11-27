@@ -180,6 +180,11 @@ function genMotorway(env){ const M=MOTORWAY, cx=(M.x0+M.x1)/2, L=M.x1-M.x0;
     const z=sd*rr(60,180); S('box',x,.02,z,rr(70,110),.04,rr(60,110),MAT.GRASS,pick([[.35,.3,.12],[.15,.25,.08],[.28,.3,.1],[.4,.33,.18]]),1);
     if(rnd()<.35){ const fz=sd*rr(40,60); S('box',x+20,4,fz,14,8,10,MAT.FACADE+.6,[.45,.2,.14],5); S('gable',x+20,8,fz,14.2,6,10.2,MAT.STONE,[.12,.1,.1],0,Math.PI/2); addCol(x+13,fz-5,x+27,fz+5); }
     for(let k=0;k<4;k++) tree(x+rr(-40,40),sd*rr(22,40),rr(6,10)); for(let k=0;k<5;k++) tree(x-30+k*15,sd*17.5,rr(11,14),[.08,.16,.06],'poplar');
+    { const kz=sd*rr(110,260), kw=rr(120,220), kh=rr(7,16); const o=S('sph',x+rr(-40,40),-kh*.25,kz,kw,kh*2,kw*rr(.6,1),MAT.GRASS,pick([[.13,.2,.08],[.16,.23,.09],[.11,.18,.07]])); o.ext=kw; // rolling land
+      for(let k=0;k<9;k++) S('sph',x-48+k*12+rr(-2,2),1.1,z-sd*rr(30,34),rr(4,6),rr(2,2.8),rr(2.4,3.4),MAT.FOLIAGE,[.06*rr(.8,1.3),.12*rr(.8,1.3),.04]); // hedgerow
+      if(rnd()<.45){ const fx=x+rr(-30,30), fz=sd*rr(70,130); for(let k=0;k<9;k++){ const a=rnd()*6.28, d=rr(0,16); tree(fx+Math.cos(a)*d,fz+Math.sin(a)*d,rr(8,13),[.07*rr(.8,1.2),.14*rr(.8,1.2),.05]); } }
+      if(rnd()<.5) for(let k=0;k<5;k++) S('cylX',x+rr(-35,35),.7,sd*rr(45,95),1.5,1.4,1.4,MAT.STD+.95,[.5,.42,.2],0,rr(0,3));
+      for(let k=0;k<3;k++){ const b=rr(.6,1.6); S('sph',x+rr(-45,45),b*.2,sd*rr(14,40),b*1.6,b,b*1.3,MAT.STONE,[.36,.35,.33],0,rr(0,3),rr(-.2,.2)); } }
     if(rnd()<.5){ const tx=x+rr(-30,30), tz=sd*rr(200,320); S('cylY',tx,30,tz,2.4,60,2.4,MAT.STD+.4,[.9,.9,.92],.3); S('box',tx,60,tz+1.5,2.4,2.4,5,MAT.STD+.4,[.9,.9,.92],.3); const t=S('box',tx,60,tz-1.2,1.2,1.2,1.2,MAT.STD,[.9,.9,.92]); t.turbine={x:tx,y:60,z:tz-1.4,ph:rnd()*6};
       const red=S('sph',tx,61.5,tz+2,.4,.4,.4,MAT.EMI,[1,.05,.03],6); red.blink=true; } }
   node(M.x0,0); node(M.x1,0); edge(node(M.x0,0),node(M.x1,0),2);

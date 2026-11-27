@@ -54,7 +54,8 @@ fn rot(v:vec3f,it:Inst)->vec3f{
 fn leafDisp(wp:vec3f,dir:vec3f,s:vec3f)->vec3f{
   let r=min(s.x,min(s.y,s.z)); if(r<0.5){ return wp; }
   let n=noise3(wp*(1.6/sqrt(r))+vec3f(3.1))*0.65+noise3(wp*(3.7/sqrt(r)))*0.35;
-  return wp+normalize(dir)*(n-0.5)*r*0.42;
+  let t=S.misc.y; let sway=vec3f(sin(t*1.1+wp.x*0.21+wp.z*0.13),0.0,cos(t*0.9+wp.z*0.19))*0.045*r+vec3f(sin(t*3.7+wp.y*1.3+wp.x),sin(t*4.3+wp.z*1.7),cos(t*3.1+wp.y))*0.012*r;
+  return wp+normalize(dir)*(n-0.5)*r*0.42+sway; // crowns breathe in the wind
 }
 @vertex fn vsShadow(@location(0) p:vec3f,@builtin(instance_index) ii:u32)->@builtin(position) vec4f{
   let it=I[ii]; var wp=rot(p*it.b.xyz,it)+it.a.xyz; if(floor(it.b.w)==11.0){ wp=leafDisp(wp,rot(p,it),it.b.xyz); } return S.lightVP*vec4f(wp,1.0);

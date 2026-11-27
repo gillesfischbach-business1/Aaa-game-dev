@@ -3,6 +3,7 @@ function initUI(){
   bindUI();
   addEventListener('keydown',e=>{ const k=(e.key||'').toLowerCase();
     if(!$('optO').hidden){ if(rebinding){ e.preventDefault&&e.preventDefault(); handleRebind(k); return; } if(k==='escape') closeOptions(); return; }
+    if(k==='v'&&!e.repeat&&G.state==='drive'){ cycleView(); }
     keys[k]=true; const a=actionOfKey(k);
     if([' ','arrowleft','arrowright','arrowup','arrowdown'].includes(k)) e.preventDefault&&e.preventDefault();
     if(!UI.dialog.hidden&&(k===' '||k==='enter')){ advance(); return; }
@@ -27,7 +28,7 @@ function initUI(){
   document.querySelectorAll('#optTabs button').forEach(b=>b.onclick=()=>{ optTab=b.dataset.tab; rebinding=null; renderOptions(); });
   $('btnContinue').onclick=()=>{ const s=readSlot('auto'); if(s){ Audio_.init(); Audio_.resume(); $('title').hidden=true; restore(s); toast('Weiter, wo ihr aufgehört habt'); } };
   if(readSlot('auto')) $('btnContinue').hidden=false; $('btnPause').onclick=()=>togglePause(); $('btnResume').onclick=()=>togglePause();
-  $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('mapClose').onclick=()=>toggleMap();
+  $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('btnView').onclick=()=>cycleView(); $('mapClose').onclick=()=>toggleMap();
   $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; const p=G.player; const n=nearestRoadPoint(p.x,p.z); p.x=n.x; p.z=n.z; p.v=0; p.lat=0; toast('Zurück auf die Straße'); };
   $('btnRestart').onclick=()=>{ $('pauseO').hidden=true; startGame(); };
   $('btnAgain').onclick=()=>{ $('endO').hidden=true; startGame(); };
@@ -52,3 +53,5 @@ function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false
     placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; requestAnimationFrame(t=>{ last=t; frame(t); }); }
   catch(e){ console.error(e); $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
 })();
+
+function cycleView(){ G.view=((G.view||0)+1)%3; toast(['Kamera: hinter dem Auto','Kamera: am Armaturenbrett','Kamera: Stoßstange'][G.view]); }

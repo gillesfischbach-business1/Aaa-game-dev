@@ -220,7 +220,11 @@ function buildFrame(){
     let tHit=1; for(let k=1;k<=14;k++){ const tt=k/14; const px=pl.x+sx*back*tt, pz=pl.z+sz*back*tt; colsNear(px,pz,_camCols);
       let inside=false; for(const b of _camCols){ if(Math.min(b.x1-b.x0,b.z1-b.z0)>3&&px>b.x0-.5&&px<b.x1+.5&&pz>b.z0-.5&&pz<b.z1+.5){ inside=true; break; } } if(inside){ tHit=Math.max(.22,tt-.1); break; } }
     G.camK=tHit<(G.camK||1)?tHit:lerp(G.camK||1,tHit,.04);
-    const bk=back*G.camK; cam.pos=[pl.x+sx*bk+rr(-sh,sh),ch*lerp(1.25,1,G.camK)+Math.abs(pl.v)*.012+rr(-sh,sh),pl.z+sz*bk]; cam.tgt=[pl.x-sx*14,1.2,pl.z-sz*14]; cam.fov=lerp(cam.fov,56+SET.gfx.fov+(G.boostT>0?10:0)+Math.abs(pl.v)*.16,.08); }
+    const bk=back*G.camK; cam.pos=[pl.x+sx*bk+rr(-sh,sh),ch*lerp(1.25,1,G.camK)+Math.abs(pl.v)*.012+rr(-sh,sh),pl.z+sz*bk]; cam.tgt=[pl.x-sx*14,1.2,pl.z-sz*14]; cam.fov=lerp(cam.fov,56+SET.gfx.fov+(G.boostT>0?10:0)+Math.abs(pl.v)*.16,.08);
+    if(G.view){ // 1 = from the dashboard, 2 = from the front bumper: you sit in the car instead of watching it
+      const E=window.__eye||(G.view===1?(pl.car==='fidele'?[0,1.62,-.9]:[0,1.05,-.6]):[0,pl.car==='fidele'?.85:.55,-(V.half[1]+.25)]); const c=Math.cos(pl.h), s=Math.sin(pl.h);
+      const hb=Math.sin(G.time*11)*.0035*Math.min(1,Math.abs(pl.v)/12)+rr(-sh,sh)*.5; const look=(pl.steer||0)*7;
+      cam.pos=[pl.x+E[0]*c+E[2]*s,E[1]+hb,pl.z-E[0]*s+E[2]*c]; cam.tgt=[cam.pos[0]-s*30+c*look,E[1]-.9-(pl.pitch||0)*20,cam.pos[2]-c*30-s*look]; cam.fov=lerp(cam.fov,(G.view===1?70:74)+SET.gfx.fov+(G.boostT>0?9:0)+Math.abs(pl.v)*.12,.1); } }
   else if(G.camMode==='orbit'){ const a=G.time*.1; cam.pos=[pl.x+Math.sin(a)*10,2.6,pl.z+Math.cos(a)*10]; cam.tgt=[pl.x,1.1,pl.z]; cam.fov=50; }
   else if(G.camMode==='standing'){ const s=G.standAt, a=Math.sin(G.time*.15)*.35; cam.pos=[s.x+Math.sin(a)*6.5,1.4,s.z-Math.cos(a)*6.5]; cam.tgt=[s.x,3.0,s.z]; cam.fov=58; }
   else { const f=G.finalePos||{x:pl.x,z:pl.z}; const L=LM.licht;

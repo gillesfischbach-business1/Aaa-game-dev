@@ -208,7 +208,7 @@ kbd{font-family:var(--body);font-size:12px;border:1px solid var(--line);border-b
     <canvas id="mini" width="170" height="170" aria-label="Minikarte"></canvas>
     <div class="row" style="gap:8px;justify-content:flex-end">
       <div class="hud-box" id="light"><i></i><span id="lightN">0</span></div>
-      <div id="topBtns"><button class="icon-btn" id="btnMap" aria-label="Karte">⌖</button><button class="icon-btn" id="btnSwap" aria-label="Auto wechseln">⇄</button><button class="icon-btn" id="btnMute" aria-label="Ton an oder aus">♪</button><button class="icon-btn" id="btnPause" aria-label="Pause">❚❚</button></div>
+      <div id="topBtns"><button class="icon-btn" id="btnMap" aria-label="Karte">⌖</button><button class="icon-btn" id="btnSwap" aria-label="Auto wechseln">⇄</button><button class="icon-btn" id="btnView" aria-label="Kamera wechseln">◉</button><button class="icon-btn" id="btnMute" aria-label="Ton an oder aus">♪</button><button class="icon-btn" id="btnPause" aria-label="Pause">❚❚</button></div>
     </div>
   </div>
   <div id="dash" class="hud-box"><b id="speedN">0</b><small id="speedU">km/h</small><span id="carName">Fidèle</span><span id="clock">18:30</span><span id="boostHint">Lichtstoß</span></div>
@@ -414,7 +414,8 @@ fn rot(v:vec3f,it:Inst)->vec3f{
 fn leafDisp(wp:vec3f,dir:vec3f,s:vec3f)->vec3f{
   let r=min(s.x,min(s.y,s.z)); if(r<0.5){ return wp; }
   let n=noise3(wp*(1.6/sqrt(r))+vec3f(3.1))*0.65+noise3(wp*(3.7/sqrt(r)))*0.35;
-  return wp+normalize(dir)*(n-0.5)*r*0.42;
+  let t=S.misc.y; let sway=vec3f(sin(t*1.1+wp.x*0.21+wp.z*0.13),0.0,cos(t*0.9+wp.z*0.19))*0.045*r+vec3f(sin(t*3.7+wp.y*1.3+wp.x),sin(t*4.3+wp.z*1.7),cos(t*3.1+wp.y))*0.012*r;
+  return wp+normalize(dir)*(n-0.5)*r*0.42+sway; // crowns breathe in the wind
 }
 @vertex fn vsShadow(@location(0) p:vec3f,@builtin(instance_index) ii:u32)->@builtin(position) vec4f{
   let it=I[ii]; var wp=rot(p*it.b.xyz,it)+it.a.xyz; if(floor(it.b.w)==11.0){ wp=leafDisp(wp,rot(p,it),it.b.xyz); } return S.lightVP*vec4f(wp,1.0);
@@ -1007,7 +1008,7 @@ function decodeModels(){ const out={}; if(typeof MODELS_B64==='undefined') retur
   return out; }
 function buildMeshes(){
   const list={ box:meshBox(), quad:meshQuad(), sph:meshSphere(24,16), sphLo:meshSphere(8,6), cylY:meshCylY(24), cylX:meshLathe([[0,-.5],[.5,-.5],[.5,-.5],[.5,.5],[.5,.5],[0,.5]],24,'x'),
-    cone:meshCone(24), gable:meshGable(), rbox:meshRBox(.5,.5,.5,.14,3),
+    cone:meshCone(24), gable:meshGable(), caps:meshLathe([[0,-.5],[.27,-.46],[.44,-.36],[.5,-.2],[.5,.2],[.44,.36],[.27,.46],[0,.5]],12), rbox:meshRBox(.5,.5,.5,.14,3),
     yHull:meshLoft([{z:-15,w:.12,yb:2.2,yt:3.9,e:2.5,tw:1},{z:-13.6,w:1.1,yb:.9,yt:3.7,e:3,tw:1},{z:-10,w:2.1,yb:.1,yt:3.4,e:4,tw:1},{z:-3,w:2.5,yb:-.4,yt:3.2,e:5,tw:1},{z:8,w:2.5,yb:-.4,yt:3.2,e:6,tw:1},{z:14.2,w:2.3,yb:.2,yt:3.2,e:7,tw:1},{z:15,w:2.2,yb:.6,yt:3.15,e:8,tw:1}],28),
     ...carMeshes(), ...decodeModels() };
   for(const k in list){ MESHIDX[k]=MESHES.length; MESHES.push({key:k,m:list[k]}); }
@@ -1479,6 +1480,11 @@ function genMotorway(env){ const M=MOTORWAY, cx=(M.x0+M.x1)/2, L=M.x1-M.x0;
     const z=sd*rr(60,180); S('box',x,.02,z,rr(70,110),.04,rr(60,110),MAT.GRASS,pick([[.35,.3,.12],[.15,.25,.08],[.28,.3,.1],[.4,.33,.18]]),1);
     if(rnd()<.35){ const fz=sd*rr(40,60); S('box',x+20,4,fz,14,8,10,MAT.FACADE+.6,[.45,.2,.14],5); S('gable',x+20,8,fz,14.2,6,10.2,MAT.STONE,[.12,.1,.1],0,Math.PI/2); addCol(x+13,fz-5,x+27,fz+5); }
     for(let k=0;k<4;k++) tree(x+rr(-40,40),sd*rr(22,40),rr(6,10)); for(let k=0;k<5;k++) tree(x-30+k*15,sd*17.5,rr(11,14),[.08,.16,.06],'poplar');
+    { const kz=sd*rr(110,260), kw=rr(120,220), kh=rr(7,16); const o=S('sph',x+rr(-40,40),-kh*.25,kz,kw,kh*2,kw*rr(.6,1),MAT.GRASS,pick([[.13,.2,.08],[.16,.23,.09],[.11,.18,.07]])); o.ext=kw; // rolling land
+      for(let k=0;k<9;k++) S('sph',x-48+k*12+rr(-2,2),1.1,z-sd*rr(30,34),rr(4,6),rr(2,2.8),rr(2.4,3.4),MAT.FOLIAGE,[.06*rr(.8,1.3),.12*rr(.8,1.3),.04]); // hedgerow
+      if(rnd()<.45){ const fx=x+rr(-30,30), fz=sd*rr(70,130); for(let k=0;k<9;k++){ const a=rnd()*6.28, d=rr(0,16); tree(fx+Math.cos(a)*d,fz+Math.sin(a)*d,rr(8,13),[.07*rr(.8,1.2),.14*rr(.8,1.2),.05]); } }
+      if(rnd()<.5) for(let k=0;k<5;k++) S('cylX',x+rr(-35,35),.7,sd*rr(45,95),1.5,1.4,1.4,MAT.STD+.95,[.5,.42,.2],0,rr(0,3));
+      for(let k=0;k<3;k++){ const b=rr(.6,1.6); S('sph',x+rr(-45,45),b*.2,sd*rr(14,40),b*1.6,b,b*1.3,MAT.STONE,[.36,.35,.33],0,rr(0,3),rr(-.2,.2)); } }
     if(rnd()<.5){ const tx=x+rr(-30,30), tz=sd*rr(200,320); S('cylY',tx,30,tz,2.4,60,2.4,MAT.STD+.4,[.9,.9,.92],.3); S('box',tx,60,tz+1.5,2.4,2.4,5,MAT.STD+.4,[.9,.9,.92],.3); const t=S('box',tx,60,tz-1.2,1.2,1.2,1.2,MAT.STD,[.9,.9,.92]); t.turbine={x:tx,y:60,z:tz-1.4,ph:rnd()*6};
       const red=S('sph',tx,61.5,tz+2,.4,.4,.4,MAT.EMI,[1,.05,.03],6); red.blink=true; } }
   node(M.x0,0); node(M.x1,0); edge(node(M.x0,0),node(M.x1,0),2);
@@ -1631,7 +1637,7 @@ const PEDS=[], BIKES=[];
 const SKIN=[[.86,.64,.5],[.78,.55,.42],[.62,.42,.3],[.45,.3,.22],[.9,.72,.6]];
 const CLOTH=[[.08,.09,.12],[.5,.12,.1],[.15,.25,.4],[.7,.66,.58],[.25,.3,.2],[.85,.82,.75],[.35,.2,.3],[.12,.12,.13],[.55,.45,.3],[.2,.35,.45]];
 const HAIR=[[.05,.035,.025],[.22,.12,.06],[.5,.35,.15],[.7,.7,.68],[.12,.08,.05]];
-function pedLook(){ return {skin:pick(SKIN),top:pick(CLOTH),legs:pick([[.12,.16,.26],[.08,.08,.09],[.5,.45,.38],[.3,.3,.32]]),hair:pick(HAIR),h:rr(.92,1.08),bun:Math.random()<.35,coat:Math.random()<.3,bag:Math.random()<.25,phone:Math.random()<.12}; }
+function pedLook(){ return {skin:pick(SKIN),top:pick(CLOTH),legs:pick([[.12,.16,.26],[.08,.08,.09],[.5,.45,.38],[.3,.3,.32]]),hair:pick(HAIR),h:rr(.9,1.1),build:rr(.86,1.18),long:Math.random()<.3,hat:Math.random()<.12,sleeve:Math.random()<.7,bun:Math.random()<.2,coat:Math.random()<.3,bag:Math.random()<.25,phone:Math.random()<.12}; }
 /* sidewalk loops: one rectangle per city block, 1.6 m inside its edge */
 let SIDEWALKS=null;
 function sidewalks(){ if(SIDEWALKS) return SIDEWALKS; SIDEWALKS=mapItems.filter(r=>r.kind==='block'||r.kind==='plaza').map(r=>({x0:r.x0+1.6,z0:r.z0+1.6,x1:r.x1-1.6,z1:r.z1-1.6})); return SIDEWALKS; }
@@ -1649,20 +1655,42 @@ function updatePeds(dt,car){ const V=car?VEH[car.car]:null;
     // step aside when a car comes close (people never get hit)
     if(car){ const dx=p.x-car.x, dz=p.z-car.z, d=Math.hypot(dx,dz); const R2=V.half[1]+1.2; if(d<R2+2){ p.dodge=Math.min(1,p.dodge+dt*4); } else p.dodge=Math.max(0,p.dodge-dt); if(d<R2&&d>1e-3){ p.ox=dx/d*(R2-d); p.oz=dz/d*(R2-d); } else { p.ox=(p.ox||0)*.9; p.oz=(p.oz||0)*.9; } }
     if(car&&Math.hypot(p.x-car.x,p.z-car.z)>220) PEDS.splice(i,1); } }
-function drawPerson(x,z,h,look,ph,walking,o={}){ const c=Math.cos(h), s=Math.sin(h), H=look.h; const sw=walking?Math.sin(ph)*.45:0; const M=MESHIDX;
-  const at=(lx,ly,lz)=>[x+lx*c+lz*s,ly,z-lx*s+lz*c];
-  const seated=o.seated; const hip=seated?.5:.92*H;
-  for(const side of [-1,1]){ const a=sw*side; // legs swing around the hip
-    if(seated){ const [ax,ay,az]=at(side*.1,hip,-.22); P(M.rbox,ax,ay,az,h,.13,.13,.44,MAT.STD+.85,...look.legs,0); const [bx,by,bz]=at(side*.1,.25,-.42); P(M.rbox,bx,by,bz,h,.12,.5,.13,MAT.STD+.85,...look.legs,0); }
-    else { const L=.88*H; const [lx,ly,lz]=at(side*.1,hip-Math.cos(a)*L/2,-Math.sin(a)*L/2); P(M.rbox,lx,ly,lz,h,.14,L,.15,MAT.STD+.85,...look.legs,0,a,0); const [fx,fy,fz]=at(side*.1,.05,-Math.sin(a)*L-.05); P(M.rbox,fx,fy,fz,h,.11,.09,.27,MAT.STD+.6,.1,.1,.1,0); } }
-  const tl=(look.coat?.72:.58)*H; const [tx,ty,tz]=at(0,hip+tl/2-(look.coat?.12:0),0); P(M.rbox,tx,ty,tz,h,.42,tl,.24,MAT.STD+.9,...look.top,0);
-  for(const side of [-1,1]){ const a=walking?-sw*side*.8:(o.phone&&side>0?-1.2:0); const AL=.56*H; const sy=hip+.52*H; const [ax,ay,az]=at(side*.25,sy-Math.cos(a)*AL/2,-Math.sin(a)*AL/2); P(M.rbox,ax,ay,az,h,.11,AL,.12,MAT.STD+.9,...look.top,0,a,0);
-    const [hx,hy,hz]=at(side*.25,sy-Math.cos(a)*AL,-Math.sin(a)*AL); P(M.sphLo,hx,hy,hz,0,.09,.1,.09,MAT.SKIN,...look.skin,0); }
-  if(look.bag){ const [bx,by,bz]=at(.3,hip+.05,.05); P(M.rbox,bx,by,bz,h,.08,.3,.32,MAT.STD+.7,.35,.22,.12,0); }
-  const hy=hip+.62*H+.14; const [nx,ny,nz]=at(0,hy,0); P(M.head,nx,ny,nz,h,.19,.24,.21,MAT.SKIN,...look.skin,0);
-  const [rx,ry,rz]=at(0,hy+.07,.02); P(M.head,rx,ry,rz,h,.21,.15,.23,MAT.STD+.85,...look.hair,0);
-  if(look.bun){ const [ux,uy,uz]=at(0,hy+.17,.08); P(M.head,ux,uy,uz,h,.12,.11,.12,MAT.STD+.85,...look.hair,0); }
-  if(o.phone){ const [px2,py2,pz2]=at(.22,hy-.05,-.12); P(M.box,px2,py2,pz2,h,.07,.13,.02,MAT.EMI,.6,.75,1,1.5); } }
+/* A person built from soft capsule limbs with knees, elbows, shoulders and a neck; walk cycle with body bob and counter-swing. */
+function drawPerson(x,z,h,look,ph,walking,o={}){ const c=Math.cos(h), s=Math.sin(h), H=look.h, B=look.build||1; const M=MESHIDX, K=MAT.STD+.9;
+  const bob=walking?Math.abs(Math.sin(ph))*.035:Math.sin(ph*.35)*.006; const sway=walking?Math.sin(ph)*.02:Math.sin(ph*.2)*.012;
+  const at=(lx,ly,lz)=>[x+(lx+sway)*c+lz*s,ly+bob,z-(lx+sway)*s+lz*c];
+  // a limb segment from joint j, pointing down, pitched by a; returns the far end
+  const seg=(jx,jy,jz,a,L,w,d,mat,col)=>{ const ca=Math.cos(a), sa=Math.sin(a); const [px,py,pz]=at(jx,jy-ca*L/2,jz-sa*L/2); P(M.caps,px,py,pz,h,w,L+w*.5,d,mat,col[0],col[1],col[2],0,a,0); return [jx,jy-ca*L,jz-sa*L]; };
+  const seated=o.seated; const hip=seated?.5:.93*H; const sk=look.skin, lg=look.legs, tp=look.top;
+  for(const side of [-1,1]){ const hx=side*.095*B;
+    if(seated){ const k=seg(hx,hip,0,1.45,.44,.15*B,.15,K,lg); const f=seg(k[0],k[1],k[2],.05,.46,.12*B,.12,K,lg); const [fx,fy,fz]=at(f[0],.05,f[2]-.07); P(M.caps,fx,fy,fz,h,.1,.09,.27,MAT.STD+.6,.09,.08,.08,0); }
+    else { const sw=walking?Math.sin(ph)*.5*side:side*.03; const bend=walking?Math.max(0,-Math.cos(ph)*side)*.95+.08:.04;
+      const k=seg(hx,hip,0,sw,.46*H,.16*B,.17,K,lg); const f=seg(k[0],k[1],k[2],sw-bend,.46*H,.12*B,.13,K,lg);
+      const [fx,fy,fz]=at(f[0],Math.max(.05,f[1]+.02)-bob,f[2]-.08); P(M.caps,fx,fy,fz,h,.1,.09,.27,MAT.STD+.6,.09,.08,.08,0,walking?(sw-bend)*.5:0,0); } }
+  // pelvis, torso, shoulders, neck
+  const tl=.56*H, lean=walking?.07:.02; const [px,py,pz]=at(0,hip+.02,0); P(M.caps,px,py,pz,h,.34*B,.22,.22*B,K,lg[0],lg[1],lg[2],0);
+  const tw=walking?Math.sin(ph)*.1:0; const [tx,ty,tz]=at(0,hip+tl/2+.02,-lean*tl/2); P(M.caps,tx,ty,tz,h+tw,.38*B,tl+.1,.23*B,K,tp[0],tp[1],tp[2],0,lean,0);
+  if(look.coat){ const [cx,cy,cz]=at(0,hip-.1,0); P(M.caps,cx,cy,cz,h,.4*B,.5,.26*B,K,tp[0]*.9,tp[1]*.9,tp[2]*.9,0); }
+  const sy=hip+tl-.04; const [nx0,ny0,nz0]=at(0,sy+.07,-lean*tl); P(M.caps,nx0,ny0,nz0,h,.11,.16,.11,MAT.SKIN,sk[0],sk[1],sk[2],0);
+  for(const side of [-1,1]){ const ax=side*.21*B; const [qx,qy,qz]=at(ax,sy-.03,-lean*tl); P(M.sphLo,qx,qy,qz,h,.15,.14,.15,K,tp[0],tp[1],tp[2],0);
+    const a=walking?-Math.sin(ph)*.42*side:(o.phone&&side>0?-.5:.04); const el=walking?.35+Math.max(0,Math.sin(ph)*side)*.3:(o.phone&&side>0?1.9:.12);
+    const e=seg(ax+side*.02,sy-.04,-lean*tl,a,.29*H,.105,.11,K,tp); const w2=seg(e[0],e[1],e[2],a-el,.27*H,.085,.09,look.sleeve?K:MAT.SKIN,look.sleeve?tp:sk);
+    const [hx2,hy2,hz2]=at(w2[0],w2[1]-.03,w2[2]); P(M.sphLo,hx2,hy2,hz2,h,.085,.1,.07,MAT.SKIN,sk[0],sk[1],sk[2],0); }
+  if(look.bag){ const [bx,by,bz]=at(.27*B,hip+.02,.04); P(M.rbox,bx,by,bz,h,.09,.3,.34,MAT.STD+.7,.35,.22,.12,0); const [gx,gy,gz]=at(.1,hip+.45,0); P(M.box,gx,gy,gz,h,.03,.75,.03,MAT.STD+.7,.3,.19,.1,0,0,.42); }
+  // head with a slight natural turn, hair shapes
+  const hy=sy+.25, hz=-lean*tl-.01, nod=walking?Math.sin(ph*.5)*.12:Math.sin(ph*.23)*.35; const [nx,ny,nz]=at(0,hy,hz); P(M.head,nx,ny,nz,h+nod,.19,.235,.21,MAT.SKIN,sk[0],sk[1],sk[2],0);
+  const hr=look.hair; const [rx,ry,rz]=at(0,hy+.065,hz+.025); P(M.head,rx,ry,rz,h+nod,.215,.16,.235,MAT.STD+.85,hr[0],hr[1],hr[2],0);
+  if(look.long){ const [lx,ly,lz]=at(0,hy-.1,hz+.09); P(M.caps,lx,ly,lz,h+nod,.21,.34,.1,MAT.STD+.85,hr[0],hr[1],hr[2],0,.12,0); }
+  if(look.bun){ const [ux,uy,uz]=at(0,hy+.17,hz+.09); P(M.sphLo,ux,uy,uz,h,.12,.11,.12,MAT.STD+.85,hr[0],hr[1],hr[2],0); }
+  if(look.hat){ const [ux,uy,uz]=at(0,hy+.12,hz); P(M.caps,ux,uy,uz,h,.23,.13,.25,MAT.STD+.95,tp[0]*.6,tp[1]*.6,tp[2]*.6,0); }
+  if(o.phone){ const [px2,py2,pz2]=at(.19*B,sy-.08,-.2); P(M.box,px2,py2,pz2,h,.07,.13,.02,MAT.EMI,.6,.75,1,1.5); } }
+/* birds wheel over the player by day */
+const BIRDS=[]; for(let i=0;i<16;i++) BIRDS.push({a:Math.random()*6.28,r:18+Math.random()*40,y:22+Math.random()*26,sp:(.12+Math.random()*.1)*(Math.random()<.5?1:-1),ph:Math.random()*6,fl:5+Math.random()*3});
+function drawBirds(cx,cz,t,hour){ if(hour<6.2||hour>20.2||SET.gfx.traffic===0) return; const M=MESHIDX;
+  for(const b of BIRDS){ const a=b.a+t*b.sp, x=cx+Math.cos(a)*b.r+Math.sin(t*.07+b.ph)*25, z=cz+Math.sin(a)*b.r+Math.cos(t*.05+b.ph)*25, y=b.y+Math.sin(t*.4+b.ph)*3; const hd=-a-(b.sp>0?0:Math.PI);
+    const glide=Math.sin(t*.6+b.ph)>.3; const fl=glide?.15:Math.sin(t*b.fl+b.ph)*.75; const c=Math.cos(hd), s=Math.sin(hd);
+    P(M.caps,x,y,z,hd,.14,.16,.5,MAT.STD+.8,.07,.07,.08,0,1.57,0);
+    for(const side of [-1,1]){ const wx=side*.34*Math.cos(fl), wy=Math.sin(fl)*.34; P(M.box,x+wx*c,y+wy,z-wx*s,hd,.7,.02,.24,MAT.STD+.8,.09,.09,.1,0,0,side*fl); } } }
 function drawPeds(camx,camz){ for(const p of PEDS){ if(Math.hypot(p.x-camx,p.z-camz)>160) continue; drawPerson(p.x+(p.ox||0),p.z+(p.oz||0),p.h,p.look,p.ph,!p.stand,{phone:p.look.phone&&p.stand}); } }
 
 /* cyclists ride along the right edge of Eindhoven streets */
@@ -1725,7 +1753,7 @@ function updateBanter(dt,pl){ if(G.state!=='drive') return; const kmh=Math.abs(p
   if(pl.z>230&&pl.x<-200&&pl.x>-430) banter('furnace');
   for(const k of CAFES) if(Math.hypot(k.x-pl.x,k.z-pl.z)<25){ banter('people'); break; } }
 function updateHumans(dt,pl){ spawnPeds(pl.x,pl.z); if(Math.random()<dt) spawnBikes(pl.x,pl.z); updatePeds(dt,pl); updateBikes(dt,pl); updateBanter(dt,pl); }
-function drawHumans(cx,cz){ drawPeds(cx,cz); drawBikes(cx,cz); drawCafes(cx,cz); }
+function drawHumans(cx,cz){ drawPeds(cx,cz); drawBikes(cx,cz); drawCafes(cx,cz); drawBirds(cx,cz,G.time,G.hour); }
 
 /* ===== Story missions in the open world =====
    A line: {w: speaker, t: text, img?: photo card, cap?: caption} */
@@ -2150,7 +2178,11 @@ function buildFrame(){
     let tHit=1; for(let k=1;k<=14;k++){ const tt=k/14; const px=pl.x+sx*back*tt, pz=pl.z+sz*back*tt; colsNear(px,pz,_camCols);
       let inside=false; for(const b of _camCols){ if(Math.min(b.x1-b.x0,b.z1-b.z0)>3&&px>b.x0-.5&&px<b.x1+.5&&pz>b.z0-.5&&pz<b.z1+.5){ inside=true; break; } } if(inside){ tHit=Math.max(.22,tt-.1); break; } }
     G.camK=tHit<(G.camK||1)?tHit:lerp(G.camK||1,tHit,.04);
-    const bk=back*G.camK; cam.pos=[pl.x+sx*bk+rr(-sh,sh),ch*lerp(1.25,1,G.camK)+Math.abs(pl.v)*.012+rr(-sh,sh),pl.z+sz*bk]; cam.tgt=[pl.x-sx*14,1.2,pl.z-sz*14]; cam.fov=lerp(cam.fov,56+SET.gfx.fov+(G.boostT>0?10:0)+Math.abs(pl.v)*.16,.08); }
+    const bk=back*G.camK; cam.pos=[pl.x+sx*bk+rr(-sh,sh),ch*lerp(1.25,1,G.camK)+Math.abs(pl.v)*.012+rr(-sh,sh),pl.z+sz*bk]; cam.tgt=[pl.x-sx*14,1.2,pl.z-sz*14]; cam.fov=lerp(cam.fov,56+SET.gfx.fov+(G.boostT>0?10:0)+Math.abs(pl.v)*.16,.08);
+    if(G.view){ // 1 = from the dashboard, 2 = from the front bumper: you sit in the car instead of watching it
+      const E=window.__eye||(G.view===1?(pl.car==='fidele'?[0,1.62,-.9]:[0,1.05,-.6]):[0,pl.car==='fidele'?.85:.55,-(V.half[1]+.25)]); const c=Math.cos(pl.h), s=Math.sin(pl.h);
+      const hb=Math.sin(G.time*11)*.0035*Math.min(1,Math.abs(pl.v)/12)+rr(-sh,sh)*.5; const look=(pl.steer||0)*7;
+      cam.pos=[pl.x+E[0]*c+E[2]*s,E[1]+hb,pl.z-E[0]*s+E[2]*c]; cam.tgt=[cam.pos[0]-s*30+c*look,E[1]-.9-(pl.pitch||0)*20,cam.pos[2]-c*30-s*look]; cam.fov=lerp(cam.fov,(G.view===1?70:74)+SET.gfx.fov+(G.boostT>0?9:0)+Math.abs(pl.v)*.12,.1); } }
   else if(G.camMode==='orbit'){ const a=G.time*.1; cam.pos=[pl.x+Math.sin(a)*10,2.6,pl.z+Math.cos(a)*10]; cam.tgt=[pl.x,1.1,pl.z]; cam.fov=50; }
   else if(G.camMode==='standing'){ const s=G.standAt, a=Math.sin(G.time*.15)*.35; cam.pos=[s.x+Math.sin(a)*6.5,1.4,s.z-Math.cos(a)*6.5]; cam.tgt=[s.x,3.0,s.z]; cam.fov=58; }
   else { const f=G.finalePos||{x:pl.x,z:pl.z}; const L=LM.licht;
@@ -2318,6 +2350,7 @@ function initUI(){
   bindUI();
   addEventListener('keydown',e=>{ const k=(e.key||'').toLowerCase();
     if(!$('optO').hidden){ if(rebinding){ e.preventDefault&&e.preventDefault(); handleRebind(k); return; } if(k==='escape') closeOptions(); return; }
+    if(k==='v'&&!e.repeat&&G.state==='drive'){ cycleView(); }
     keys[k]=true; const a=actionOfKey(k);
     if([' ','arrowleft','arrowright','arrowup','arrowdown'].includes(k)) e.preventDefault&&e.preventDefault();
     if(!UI.dialog.hidden&&(k===' '||k==='enter')){ advance(); return; }
@@ -2342,7 +2375,7 @@ function initUI(){
   document.querySelectorAll('#optTabs button').forEach(b=>b.onclick=()=>{ optTab=b.dataset.tab; rebinding=null; renderOptions(); });
   $('btnContinue').onclick=()=>{ const s=readSlot('auto'); if(s){ Audio_.init(); Audio_.resume(); $('title').hidden=true; restore(s); toast('Weiter, wo ihr aufgehört habt'); } };
   if(readSlot('auto')) $('btnContinue').hidden=false; $('btnPause').onclick=()=>togglePause(); $('btnResume').onclick=()=>togglePause();
-  $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('mapClose').onclick=()=>toggleMap();
+  $('btnMap').onclick=()=>toggleMap(); $('btnSwap').onclick=()=>swapCar(); $('btnView').onclick=()=>cycleView(); $('mapClose').onclick=()=>toggleMap();
   $('btnReset').onclick=()=>{ $('pauseO').hidden=true; G.state='drive'; const p=G.player; const n=nearestRoadPoint(p.x,p.z); p.x=n.x; p.z=n.z; p.v=0; p.lat=0; toast('Zurück auf die Straße'); };
   $('btnRestart').onclick=()=>{ $('pauseO').hidden=true; startGame(); };
   $('btnAgain').onclick=()=>{ $('endO').hidden=true; startGame(); };
@@ -2367,6 +2400,8 @@ function toggleMap(){ if(G.state==='drive'){ G.state='map'; UI.mapO.hidden=false
     placeAtStart(); G.state='title'; G.camMode='orbit'; G.hour=18.6; requestAnimationFrame(t=>{ last=t; frame(t); }); }
   catch(e){ console.error(e); $('title').hidden=true; $('errO').hidden=false; if(/WGSL|Pipeline/.test(String(e.message))) $('errText').textContent='Interner Grafikfehler: '+e.message; }
 })();
+
+function cycleView(){ G.view=((G.view||0)+1)%3; toast(['Kamera: hinter dem Auto','Kamera: am Armaturenbrett','Kamera: Stoßstange'][G.view]); }
 
 </script>
 </body>

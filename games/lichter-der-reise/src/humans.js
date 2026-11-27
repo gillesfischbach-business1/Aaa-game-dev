@@ -3,7 +3,7 @@ const PEDS=[], BIKES=[];
 const SKIN=[[.86,.64,.5],[.78,.55,.42],[.62,.42,.3],[.45,.3,.22],[.9,.72,.6]];
 const CLOTH=[[.08,.09,.12],[.5,.12,.1],[.15,.25,.4],[.7,.66,.58],[.25,.3,.2],[.85,.82,.75],[.35,.2,.3],[.12,.12,.13],[.55,.45,.3],[.2,.35,.45]];
 const HAIR=[[.05,.035,.025],[.22,.12,.06],[.5,.35,.15],[.7,.7,.68],[.12,.08,.05]];
-function pedLook(){ return {skin:pick(SKIN),top:pick(CLOTH),legs:pick([[.12,.16,.26],[.08,.08,.09],[.5,.45,.38],[.3,.3,.32]]),hair:pick(HAIR),h:rr(.92,1.08),bun:Math.random()<.35,coat:Math.random()<.3,bag:Math.random()<.25,phone:Math.random()<.12}; }
+function pedLook(){ return {skin:pick(SKIN),top:pick(CLOTH),legs:pick([[.12,.16,.26],[.08,.08,.09],[.5,.45,.38],[.3,.3,.32]]),hair:pick(HAIR),h:rr(.9,1.1),build:rr(.86,1.18),long:Math.random()<.3,hat:Math.random()<.12,sleeve:Math.random()<.7,bun:Math.random()<.2,coat:Math.random()<.3,bag:Math.random()<.25,phone:Math.random()<.12}; }
 /* sidewalk loops: one rectangle per city block, 1.6 m inside its edge */
 let SIDEWALKS=null;
 function sidewalks(){ if(SIDEWALKS) return SIDEWALKS; SIDEWALKS=mapItems.filter(r=>r.kind==='block'||r.kind==='plaza').map(r=>({x0:r.x0+1.6,z0:r.z0+1.6,x1:r.x1-1.6,z1:r.z1-1.6})); return SIDEWALKS; }
@@ -21,20 +21,42 @@ function updatePeds(dt,car){ const V=car?VEH[car.car]:null;
     // step aside when a car comes close (people never get hit)
     if(car){ const dx=p.x-car.x, dz=p.z-car.z, d=Math.hypot(dx,dz); const R2=V.half[1]+1.2; if(d<R2+2){ p.dodge=Math.min(1,p.dodge+dt*4); } else p.dodge=Math.max(0,p.dodge-dt); if(d<R2&&d>1e-3){ p.ox=dx/d*(R2-d); p.oz=dz/d*(R2-d); } else { p.ox=(p.ox||0)*.9; p.oz=(p.oz||0)*.9; } }
     if(car&&Math.hypot(p.x-car.x,p.z-car.z)>220) PEDS.splice(i,1); } }
-function drawPerson(x,z,h,look,ph,walking,o={}){ const c=Math.cos(h), s=Math.sin(h), H=look.h; const sw=walking?Math.sin(ph)*.45:0; const M=MESHIDX;
-  const at=(lx,ly,lz)=>[x+lx*c+lz*s,ly,z-lx*s+lz*c];
-  const seated=o.seated; const hip=seated?.5:.92*H;
-  for(const side of [-1,1]){ const a=sw*side; // legs swing around the hip
-    if(seated){ const [ax,ay,az]=at(side*.1,hip,-.22); P(M.rbox,ax,ay,az,h,.13,.13,.44,MAT.STD+.85,...look.legs,0); const [bx,by,bz]=at(side*.1,.25,-.42); P(M.rbox,bx,by,bz,h,.12,.5,.13,MAT.STD+.85,...look.legs,0); }
-    else { const L=.88*H; const [lx,ly,lz]=at(side*.1,hip-Math.cos(a)*L/2,-Math.sin(a)*L/2); P(M.rbox,lx,ly,lz,h,.14,L,.15,MAT.STD+.85,...look.legs,0,a,0); const [fx,fy,fz]=at(side*.1,.05,-Math.sin(a)*L-.05); P(M.rbox,fx,fy,fz,h,.11,.09,.27,MAT.STD+.6,.1,.1,.1,0); } }
-  const tl=(look.coat?.72:.58)*H; const [tx,ty,tz]=at(0,hip+tl/2-(look.coat?.12:0),0); P(M.rbox,tx,ty,tz,h,.42,tl,.24,MAT.STD+.9,...look.top,0);
-  for(const side of [-1,1]){ const a=walking?-sw*side*.8:(o.phone&&side>0?-1.2:0); const AL=.56*H; const sy=hip+.52*H; const [ax,ay,az]=at(side*.25,sy-Math.cos(a)*AL/2,-Math.sin(a)*AL/2); P(M.rbox,ax,ay,az,h,.11,AL,.12,MAT.STD+.9,...look.top,0,a,0);
-    const [hx,hy,hz]=at(side*.25,sy-Math.cos(a)*AL,-Math.sin(a)*AL); P(M.sphLo,hx,hy,hz,0,.09,.1,.09,MAT.SKIN,...look.skin,0); }
-  if(look.bag){ const [bx,by,bz]=at(.3,hip+.05,.05); P(M.rbox,bx,by,bz,h,.08,.3,.32,MAT.STD+.7,.35,.22,.12,0); }
-  const hy=hip+.62*H+.14; const [nx,ny,nz]=at(0,hy,0); P(M.head,nx,ny,nz,h,.19,.24,.21,MAT.SKIN,...look.skin,0);
-  const [rx,ry,rz]=at(0,hy+.07,.02); P(M.head,rx,ry,rz,h,.21,.15,.23,MAT.STD+.85,...look.hair,0);
-  if(look.bun){ const [ux,uy,uz]=at(0,hy+.17,.08); P(M.head,ux,uy,uz,h,.12,.11,.12,MAT.STD+.85,...look.hair,0); }
-  if(o.phone){ const [px2,py2,pz2]=at(.22,hy-.05,-.12); P(M.box,px2,py2,pz2,h,.07,.13,.02,MAT.EMI,.6,.75,1,1.5); } }
+/* A person built from soft capsule limbs with knees, elbows, shoulders and a neck; walk cycle with body bob and counter-swing. */
+function drawPerson(x,z,h,look,ph,walking,o={}){ const c=Math.cos(h), s=Math.sin(h), H=look.h, B=look.build||1; const M=MESHIDX, K=MAT.STD+.9;
+  const bob=walking?Math.abs(Math.sin(ph))*.035:Math.sin(ph*.35)*.006; const sway=walking?Math.sin(ph)*.02:Math.sin(ph*.2)*.012;
+  const at=(lx,ly,lz)=>[x+(lx+sway)*c+lz*s,ly+bob,z-(lx+sway)*s+lz*c];
+  // a limb segment from joint j, pointing down, pitched by a; returns the far end
+  const seg=(jx,jy,jz,a,L,w,d,mat,col)=>{ const ca=Math.cos(a), sa=Math.sin(a); const [px,py,pz]=at(jx,jy-ca*L/2,jz-sa*L/2); P(M.caps,px,py,pz,h,w,L+w*.5,d,mat,col[0],col[1],col[2],0,a,0); return [jx,jy-ca*L,jz-sa*L]; };
+  const seated=o.seated; const hip=seated?.5:.93*H; const sk=look.skin, lg=look.legs, tp=look.top;
+  for(const side of [-1,1]){ const hx=side*.095*B;
+    if(seated){ const k=seg(hx,hip,0,1.45,.44,.15*B,.15,K,lg); const f=seg(k[0],k[1],k[2],.05,.46,.12*B,.12,K,lg); const [fx,fy,fz]=at(f[0],.05,f[2]-.07); P(M.caps,fx,fy,fz,h,.1,.09,.27,MAT.STD+.6,.09,.08,.08,0); }
+    else { const sw=walking?Math.sin(ph)*.5*side:side*.03; const bend=walking?Math.max(0,-Math.cos(ph)*side)*.95+.08:.04;
+      const k=seg(hx,hip,0,sw,.46*H,.16*B,.17,K,lg); const f=seg(k[0],k[1],k[2],sw-bend,.46*H,.12*B,.13,K,lg);
+      const [fx,fy,fz]=at(f[0],Math.max(.05,f[1]+.02)-bob,f[2]-.08); P(M.caps,fx,fy,fz,h,.1,.09,.27,MAT.STD+.6,.09,.08,.08,0,walking?(sw-bend)*.5:0,0); } }
+  // pelvis, torso, shoulders, neck
+  const tl=.56*H, lean=walking?.07:.02; const [px,py,pz]=at(0,hip+.02,0); P(M.caps,px,py,pz,h,.34*B,.22,.22*B,K,lg[0],lg[1],lg[2],0);
+  const tw=walking?Math.sin(ph)*.1:0; const [tx,ty,tz]=at(0,hip+tl/2+.02,-lean*tl/2); P(M.caps,tx,ty,tz,h+tw,.38*B,tl+.1,.23*B,K,tp[0],tp[1],tp[2],0,lean,0);
+  if(look.coat){ const [cx,cy,cz]=at(0,hip-.1,0); P(M.caps,cx,cy,cz,h,.4*B,.5,.26*B,K,tp[0]*.9,tp[1]*.9,tp[2]*.9,0); }
+  const sy=hip+tl-.04; const [nx0,ny0,nz0]=at(0,sy+.07,-lean*tl); P(M.caps,nx0,ny0,nz0,h,.11,.16,.11,MAT.SKIN,sk[0],sk[1],sk[2],0);
+  for(const side of [-1,1]){ const ax=side*.21*B; const [qx,qy,qz]=at(ax,sy-.03,-lean*tl); P(M.sphLo,qx,qy,qz,h,.15,.14,.15,K,tp[0],tp[1],tp[2],0);
+    const a=walking?-Math.sin(ph)*.42*side:(o.phone&&side>0?-.5:.04); const el=walking?.35+Math.max(0,Math.sin(ph)*side)*.3:(o.phone&&side>0?1.9:.12);
+    const e=seg(ax+side*.02,sy-.04,-lean*tl,a,.29*H,.105,.11,K,tp); const w2=seg(e[0],e[1],e[2],a-el,.27*H,.085,.09,look.sleeve?K:MAT.SKIN,look.sleeve?tp:sk);
+    const [hx2,hy2,hz2]=at(w2[0],w2[1]-.03,w2[2]); P(M.sphLo,hx2,hy2,hz2,h,.085,.1,.07,MAT.SKIN,sk[0],sk[1],sk[2],0); }
+  if(look.bag){ const [bx,by,bz]=at(.27*B,hip+.02,.04); P(M.rbox,bx,by,bz,h,.09,.3,.34,MAT.STD+.7,.35,.22,.12,0); const [gx,gy,gz]=at(.1,hip+.45,0); P(M.box,gx,gy,gz,h,.03,.75,.03,MAT.STD+.7,.3,.19,.1,0,0,.42); }
+  // head with a slight natural turn, hair shapes
+  const hy=sy+.25, hz=-lean*tl-.01, nod=walking?Math.sin(ph*.5)*.12:Math.sin(ph*.23)*.35; const [nx,ny,nz]=at(0,hy,hz); P(M.head,nx,ny,nz,h+nod,.19,.235,.21,MAT.SKIN,sk[0],sk[1],sk[2],0);
+  const hr=look.hair; const [rx,ry,rz]=at(0,hy+.065,hz+.025); P(M.head,rx,ry,rz,h+nod,.215,.16,.235,MAT.STD+.85,hr[0],hr[1],hr[2],0);
+  if(look.long){ const [lx,ly,lz]=at(0,hy-.1,hz+.09); P(M.caps,lx,ly,lz,h+nod,.21,.34,.1,MAT.STD+.85,hr[0],hr[1],hr[2],0,.12,0); }
+  if(look.bun){ const [ux,uy,uz]=at(0,hy+.17,hz+.09); P(M.sphLo,ux,uy,uz,h,.12,.11,.12,MAT.STD+.85,hr[0],hr[1],hr[2],0); }
+  if(look.hat){ const [ux,uy,uz]=at(0,hy+.12,hz); P(M.caps,ux,uy,uz,h,.23,.13,.25,MAT.STD+.95,tp[0]*.6,tp[1]*.6,tp[2]*.6,0); }
+  if(o.phone){ const [px2,py2,pz2]=at(.19*B,sy-.08,-.2); P(M.box,px2,py2,pz2,h,.07,.13,.02,MAT.EMI,.6,.75,1,1.5); } }
+/* birds wheel over the player by day */
+const BIRDS=[]; for(let i=0;i<16;i++) BIRDS.push({a:Math.random()*6.28,r:18+Math.random()*40,y:22+Math.random()*26,sp:(.12+Math.random()*.1)*(Math.random()<.5?1:-1),ph:Math.random()*6,fl:5+Math.random()*3});
+function drawBirds(cx,cz,t,hour){ if(hour<6.2||hour>20.2||SET.gfx.traffic===0) return; const M=MESHIDX;
+  for(const b of BIRDS){ const a=b.a+t*b.sp, x=cx+Math.cos(a)*b.r+Math.sin(t*.07+b.ph)*25, z=cz+Math.sin(a)*b.r+Math.cos(t*.05+b.ph)*25, y=b.y+Math.sin(t*.4+b.ph)*3; const hd=-a-(b.sp>0?0:Math.PI);
+    const glide=Math.sin(t*.6+b.ph)>.3; const fl=glide?.15:Math.sin(t*b.fl+b.ph)*.75; const c=Math.cos(hd), s=Math.sin(hd);
+    P(M.caps,x,y,z,hd,.14,.16,.5,MAT.STD+.8,.07,.07,.08,0,1.57,0);
+    for(const side of [-1,1]){ const wx=side*.34*Math.cos(fl), wy=Math.sin(fl)*.34; P(M.box,x+wx*c,y+wy,z-wx*s,hd,.7,.02,.24,MAT.STD+.8,.09,.09,.1,0,0,side*fl); } } }
 function drawPeds(camx,camz){ for(const p of PEDS){ if(Math.hypot(p.x-camx,p.z-camz)>160) continue; drawPerson(p.x+(p.ox||0),p.z+(p.oz||0),p.h,p.look,p.ph,!p.stand,{phone:p.look.phone&&p.stand}); } }
 
 /* cyclists ride along the right edge of Eindhoven streets */
@@ -97,4 +119,4 @@ function updateBanter(dt,pl){ if(G.state!=='drive') return; const kmh=Math.abs(p
   if(pl.z>230&&pl.x<-200&&pl.x>-430) banter('furnace');
   for(const k of CAFES) if(Math.hypot(k.x-pl.x,k.z-pl.z)<25){ banter('people'); break; } }
 function updateHumans(dt,pl){ spawnPeds(pl.x,pl.z); if(Math.random()<dt) spawnBikes(pl.x,pl.z); updatePeds(dt,pl); updateBikes(dt,pl); updateBanter(dt,pl); }
-function drawHumans(cx,cz){ drawPeds(cx,cz); drawBikes(cx,cz); drawCafes(cx,cz); }
+function drawHumans(cx,cz){ drawPeds(cx,cz); drawBikes(cx,cz); drawCafes(cx,cz); drawBirds(cx,cz,G.time,G.hour); }
