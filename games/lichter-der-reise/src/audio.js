@@ -96,8 +96,9 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    rpm=Math.max(G.idle,wheelRpm*G.ratios[this.gear-1]*G.final);
    if(v<1.2) rpm=G.idle+thr*(G.red-G.idle)*.35;
    if(this.shiftT>0) rpm*=car==='fidele'?.82:.9;
+   const D=this.dbg; if(D) rpm=D.rpm; // test hook (tests/audio_capture.js): Audio_.dbg={rpm,load} drives the engine sound directly; never set in normal play
    rpm=Math.min(rpm,G.red); this.rpm+=(rpm-this.rpm)*Math.min(1,dt*(car==='fidele'?6:12));
-   const load=this.shiftT>0?.1:clamp(thr*.9+(v>1?.1:0),0,1);
+   const load=D?D.load:this.shiftT>0?.1:clamp(thr*.9+(v>1?.1:0),0,1);
    const ek=GEARS[car]===PETROL?'petrol':car; this.wantKey=ek; // the everyday cars share one four-cylinder petrol engine
    if(on&&(!this.live||this.live.key!==ek)&&this.eng[ek]&&this.eng[ek].ready) this.startEngine(ek);
    const L=this.live;
