@@ -2,6 +2,8 @@
 const PRESETS={
  niedrig:{scale:.6,shadows:0,msaa:false,viewDist:340,bloom:.6,traffic:8},
  mittel:{scale:.85,shadows:1024,msaa:false,viewDist:450,bloom:1,traffic:12},
+ /* Galaxy S21 FE class (Adreno 660 / Mali-G78, DPR 2.6-3): scale is a fraction of the NATIVE panel resolution here (dprCap lifts the 1.5 clamp) */
+ handy:{scale:.6,dprCap:3,minScale:.45,adaptive:true,fpsCap:60,shadows:2048,msaa:true,viewDist:500,bloom:1,traffic:12},
  hoch:{scale:1.0,shadows:2048,msaa:true,viewDist:560,bloom:1,traffic:16},
  ultra:{scale:1.5,shadows:4096,msaa:true,viewDist:720,bloom:1.15,traffic:22}};
 const DEFAULTS={
@@ -13,14 +15,19 @@ const ACTION_LABEL={up:'Gas',down:'Bremse / Rückwärts',left:'Links lenken',rig
 let SET=JSON.parse(JSON.stringify(DEFAULTS));
 function deepMerge(a,b){ for(const k in b){ if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])){ a[k]=a[k]||{}; deepMerge(a[k],b[k]); } else a[k]=b[k]; } return a; }
 function loadSettings(){ let s=null; try{ s=localStorage.getItem('ldr_settings'); }catch(e){} if(s){ try{ SET=deepMerge(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(s)); }catch(e){} }
-  else if(typeof isTouch!=='undefined'&&isTouch){ SET.gfx.preset='mittel'; Object.assign(SET.gfx,PRESETS.mittel); } }
+  else if(typeof isTouch!=='undefined'&&isTouch){ const p=phoneClass(); SET.gfx.preset=p; Object.assign(SET.gfx,PRESETS[p]); } }
+/* Device class without UA sniffing: touch + high-DPR small screen + enough RAM/cores + a known flagship GPU family from the WebGPU adapter. Anything unknown stays on 'mittel'. */
+function phoneClass(){ const dpr=window.devicePixelRatio||1, small=Math.min(screen.width,screen.height)<=480, mem=navigator.deviceMemory||4, cores=navigator.hardwareConcurrency||4;
+  const i=(typeof R!=='undefined'&&R.adapterInfo)||{}, gpu=((i.vendor||'')+' '+(i.architecture||'')+' '+(i.description||'')).toLowerCase();
+  const flagship=/adreno[- ]?[678]|valhall|5th-gen|immortalis|xclipse/.test(gpu);
+  return (small&&dpr>=2.5&&mem>=4&&cores>=8&&(flagship||!gpu.trim()))?'handy':'mittel'; }
 function saveSettings(){ try{ localStorage.setItem('ldr_settings',JSON.stringify(SET)); }catch(e){} }
 function keyFor(action){ return SET.ctl.keys[action]; }
 function actionOfKey(k){ for(const a in SET.ctl.keys) if(SET.ctl.keys[a]===k) return a; return null; }
 function keyName(k){ return k===' '?'Leertaste':k==='arrowup'?'↑':k==='arrowdown'?'↓':k==='arrowleft'?'←':k==='arrowright'?'→':k==='shift'?'Umschalt':k==='escape'?'Esc':k.length===1?k.toUpperCase():k; }
 function applySettings(){
   const g=SET.gfx;
-  if(R.ok){ R.maxScale=g.scale*Math.min(window.devicePixelRatio||1,1.5); if(!g.adaptive) R.scale=R.maxScale; else R.scale=Math.min(R.scale||R.maxScale,R.maxScale); R.needResize=true;
+  if(R.ok){ R.maxScale=g.scale*Math.min(window.devicePixelRatio||1,g.dprCap||1.5); if(!g.adaptive) R.scale=R.maxScale; else R.scale=Math.min(R.scale||R.maxScale,R.maxScale); R.needResize=true;
     if(g.shadows) setShadowSize(g.shadows); setMSAA(g.msaa); }
   Audio_.vol={master:SET.snd.master,music:SET.snd.music,engine:SET.snd.engine,fx:SET.snd.fx,amb:SET.snd.amb}; Audio_.muted=SET.snd.mute; Audio_.applyVolumes();
   const mb=$('btnMute'); if(mb) mb.textContent=SET.snd.mute?'✕':'♪';
@@ -55,7 +62,7 @@ function toggle(id,on){ return `<label class="switch"><input type="checkbox" id=
 function select(id,opts,val){ return `<select id="${id}">${opts.map(([v,l])=>`<option value="${v}" ${String(v)===String(val)?'selected':''}>${l}</option>`).join('')}</select>`; }
 const pct=v=>Math.round(v*100)+' %';
 function renderOptions(){ document.querySelectorAll('#optTabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===optTab)); const g=SET.gfx, s=SET.snd, c=SET.ctl, gm=SET.game; let h='';
-  if(optTab==='gfx'){ h+=row('Qualitätsstufe',select('o_preset',[['niedrig','Niedrig'],['mittel','Mittel'],['hoch','Hoch'],['ultra','Ultra'],['custom','Benutzerdefiniert']],g.preset),'Setzt alle Werte darunter');
+  if(optTab==='gfx'){ h+=row('Qualitätsstufe',select('o_preset',[['niedrig','Niedrig'],['mittel','Mittel'],['handy','Handy (S21-Klasse)'],['hoch','Hoch'],['ultra','Ultra'],['custom','Benutzerdefiniert']],g.preset),'Setzt alle Werte darunter');
     h+=row('Auflösung',slider('o_scale',.5,2,.05,g.scale,v=>Math.round(v*100)+' %'),'Renderauflösung relativ zum Bildschirm');
     h+=row('Automatische Auflösung',toggle('o_adaptive',g.adaptive),'Senkt die Auflösung, wenn es ruckelt');
     h+=row('Schatten',select('o_shadows',[[0,'Aus'],[1024,'Niedrig (1024)'],[2048,'Hoch (2048)'],[4096,'Ultra (4096)']],g.shadows));
@@ -84,7 +91,7 @@ function bindOptions(){ const on=(id,ev,fn)=>{ const e=$(id); if(e) e.addEventLi
   const num=(id,set,after)=>on(id,'input',e=>{ const v=+e.target.value; set(v); const o=e.target.nextElementSibling; if(o) o.textContent=formatOut(id,v); after&&after(); applySettings(); saveSettings(); });
   const chk=(id,set)=>on(id,'change',e=>{ set(e.target.checked); applySettings(); saveSettings(); });
   const custom=()=>{ SET.gfx.preset='custom'; const p=$('o_preset'); if(p) p.value='custom'; };
-  on('o_preset','change',e=>{ const p=PRESETS[e.target.value]; SET.gfx.preset=e.target.value; if(p) Object.assign(SET.gfx,p); applySettings(); saveSettings(); renderOptions(); });
+  on('o_preset','change',e=>{ const p=PRESETS[e.target.value]; SET.gfx.preset=e.target.value; if(p){ delete SET.gfx.dprCap; delete SET.gfx.fpsCap; delete SET.gfx.minScale; Object.assign(SET.gfx,p); } applySettings(); saveSettings(); renderOptions(); });
   num('o_scale',v=>SET.gfx.scale=v,custom); chk('o_adaptive',v=>SET.gfx.adaptive=v); on('o_shadows','change',e=>{ SET.gfx.shadows=+e.target.value; custom(); applySettings(); saveSettings(); });
   chk('o_msaa',v=>{ SET.gfx.msaa=v; custom(); }); num('o_view',v=>SET.gfx.viewDist=v,custom); num('o_traffic',v=>SET.gfx.traffic=v,custom); num('o_bloom',v=>SET.gfx.bloom=v,custom);
   num('o_exposure',v=>SET.gfx.exposure=v); num('o_fov',v=>SET.gfx.fov=v); chk('o_vignette',v=>SET.gfx.vignette=v); chk('o_grain',v=>SET.gfx.grain=v); chk('o_fps',v=>SET.gfx.fps=v);

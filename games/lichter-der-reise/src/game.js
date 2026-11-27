@@ -174,13 +174,14 @@ function update(dt){
   updateHUD();
 }
 function collect(x,z){ G.light++; G.total++; Audio_.pickup(G.light%6); burst(x,1.1,z,8,[1,.85,.4],4,.5,.07,2,9); }
-function updateHUD(){ const pl=G.player; UI.lightN.textContent=G.light; UI.speedN.textContent=Math.round(Math.abs(pl.v)*(SET.ctl.unit==='mph'?2.237:3.6)); $('speedU').textContent=SET.ctl.unit==='mph'?'mph':'km/h'; const hh=Math.floor(G.hour), mm=Math.floor((G.hour-hh)*60);
-  UI.clock.textContent=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); UI.carName.textContent=pl.car==='fidele'?'Fidèle':'Smaragd';
-  UI.boostHint.textContent=G.boostT>0?'Lichtstoß aktiv':(G.light>=5?'Lichtstoß bereit':'Lichtstoß ab 5');
+function setT(el,v){ if(el&&el._v!==v){ el._v=v; el.textContent=v; } } /* write the DOM only when the text really changed */
+function updateHUD(){ const pl=G.player; setT(UI.lightN,G.light); setT(UI.speedN,Math.round(Math.abs(pl.v)*(SET.ctl.unit==='mph'?2.237:3.6))); setT($('speedU'),SET.ctl.unit==='mph'?'mph':'km/h'); const hh=Math.floor(G.hour), mm=Math.floor((G.hour-hh)*60);
+  setT(UI.clock,String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')); setT(UI.carName,pl.car==='fidele'?'Fidèle':'Smaragd');
+  setT(UI.boostHint,G.boostT>0?'Lichtstoß aktiv':(G.light>=5?'Lichtstoß bereit':'Lichtstoß ab 5'));
   const t=currentTarget();
-  if(t){ const dx=t.x-pl.x, dz=t.z-pl.z; UI.objDist.textContent=Math.round(Math.hypot(dx,dz))+' m'; const ang=Math.atan2(dx,-dz)+pl.h; UI.objArrow.style.transform='rotate('+ang+'rad)'; UI.objArrow.hidden=false; }
-  else { UI.objDist.textContent=G.total+' / '+sparksAll.length+' Funken'; UI.objArrow.hidden=true; }
-  drawMinimap(); }
+  if(t){ const dx=t.x-pl.x, dz=t.z-pl.z; setT(UI.objDist,Math.round(Math.hypot(dx,dz))+' m'); const ang=Math.atan2(dx,-dz)+pl.h; UI.objArrow.style.transform='rotate('+ang+'rad)'; UI.objArrow.hidden=false; }
+  else { setT(UI.objDist,G.total+' / '+sparksAll.length+' Funken'); UI.objArrow.hidden=true; }
+  if(((updateHUD.n=(updateHUD.n|0)+1)&1)||!isTouch) drawMinimap(); }
 function currentTarget(){ if(G.event==='glow') return LM.glow; const M=MISSIONS[G.mission]; return M?M.target():null; }
 
 // ---------- minimap ----------
@@ -211,12 +212,12 @@ function drawBigMap(){ const c=UI.mapC; if(!c||!mapImg) return; const g=c.getCon
 
 // ---------- frame ----------
 const cam={pos:[0,3,8],tgt:[0,1,-10],fov:58}; const _camCols=[];
-function drawStatic(o,t,lampK,lights){ let y=o.y; if(o.bob!==undefined) y+=Math.sin(t*.8+o.bob)*.4; let p=o.p;
+function drawStatic(o,t,lampK,lights,lod){ let y=o.y; if(o.bob!==undefined) y+=Math.sin(t*.8+o.bob)*.4; let p=o.p;
   if(o.mat===MAT.EMI&&o.L&&o.bob===undefined) p*=Math.max(.06,lampK);
   if(o===LM.lichtTop) p=LM.lit?18:.25;
   if(o.blink) p=(t%1.5)<.15?8:.2;
   if(o.turbine){ const a=t*1.2+o.turbine.ph; for(let k=0;k<3;k++) P(MESHIDX.box,o.turbine.x,o.turbine.y,o.turbine.z,0,.9,22,.25,MAT.STD+.4,.92,.92,.94,.3,0,a+k*2.094); }
-  Praw(o.m,o.x,y,o.z,o.ry,o.sx,o.sy,o.sz,o.mat,o.r,o.g,o.b,p,o.rx,o.rz,o.slot);
+  Praw(lod&&o.m===MESHIDX.sph&&o.sx<14?MESHIDX.sphMd:o.m,o.x,y,o.z,o.ry,o.sx,o.sy,o.sz,o.mat,o.r,o.g,o.b,p,o.rx,o.rz,o.slot);
   if(lights&&o.L){ const k=(o.mat===MAT.EMI&&o.bob===undefined)?lampK:1; if(k>.05) LtRaw(o.L.x,o.L.y+(y-o.y),o.L.z,o.L.r*k,o.L.g*k,o.L.b*k,o.L.rad); } }
 function buildFrame(){
   const t=G.time, E=envCur, pl=G.player; if(!pl) return;
@@ -241,12 +242,15 @@ function buildFrame(){
   WARP(cam.pos[0],cam.pos[2]); const ccx=WP.x, ccz=WP.z; WARP(cam.tgt[0],cam.tgt[2]); const wtx=WP.x, wtz=WP.z; // the static world is stored bent, so cull it with the bent camera
   const RAD=SET.gfx.viewDist, RS=Math.min(230,RAD*.45), gx=Math.floor(ccx/CELL), gz=Math.floor(ccz/CELL), nR=Math.ceil(RAD/CELL);
   const fx=wtx-ccx, fz=wtz-ccz, fl=Math.hypot(fx,fz)||1; const lampK=E.lamps;
+  /* cull with the camera the renderer will really get: the bent-world one (ccx/ccz, wtx/wtz) that buildFrame hands over at its end */
+  setCull({pos:[ccx,cam.pos[1],ccz],tgt:typeof wtx==='undefined'?cam.tgt:[wtx,cam.tgt[1],wtz],fov:cam.fov},(typeof shadowCtr==='function')?shadowCtr(pl):[pl.x-Math.sin(G.camYaw)*14,0,pl.z-Math.cos(G.camYaw)*14],E);
   for(const o of globalStatics) drawStatic(o,t,lampK,false);
-  for(let i=-nR;i<=nR;i++) for(let j=-nR;j<=nR;j++){ const c=cells.get((gx+i)+','+(gz+j)); if(!c) continue;
+  if(!buildFrame.ord||buildFrame.ordN!==nR){ const a=[]; for(let i=-nR;i<=nR;i++) for(let j=-nR;j<=nR;j++) a.push([i,j]); a.sort((p,q)=>p[0]*p[0]+p[1]*p[1]-q[0]*q[0]-q[1]*q[1]); buildFrame.ord=a; buildFrame.ordN=nR; }
+  for(const [i,j] of buildFrame.ord){ const c=cells.get((gx+i)+','+(gz+j)); if(!c) continue; /* near cells first: front-to-back helps early-Z */
     const ox=(gx+i+.5)*CELL-ccx, oz=(gz+j+.5)*CELL-ccz; const d=Math.hypot(ox,oz); if(d>RAD+CELL) continue;
     if(d>110&&(ox*fx+oz*fz)/(d*fl)<-.35) continue;
     const near=d<RS+CELL;
-    for(const o of c){ if(o.small&&!near) continue; drawStatic(o,t,lampK,d<220); }
+    for(const o of c){ if(o.small&&!near) continue; drawStatic(o,t,lampK,d<220,d>120); }
     if(c.sparks) for(const s of c.sparks){ if(!s.alive) continue; const y=s.y+Math.sin(t*3+s.ph)*.18; P(MESHIDX.sph,s.x,y,s.z,0,.36,.36,.36,MAT.EMI,1,.78,.35,14); if(d<120) Lt(s.x,y,s.z,5,3.4,1.2,6); } }
   const lightsOn=E.lamps>.3;
   drawCar(pl,PEOPLE_SUP,lightsOn);
@@ -273,16 +277,24 @@ function buildFrame(){
 }
 
 // ---------- loop ----------
-let last=0, acc=0, frames=0, adaptT=0;
+let last=0, acc=0, frames=0, adaptT=0, rafLast=0, rafMin=1, panel=1/60, tick=0, slowN=0, calm=0, backoff=8, holdW=1;
 function frame(now){
+  { const d=(now-rafLast)/1000; rafLast=now; if(d>.003&&d<rafMin) rafMin=d; } /* shortest callback gap = refresh period of the panel */
+  const cap=SET.gfx.fpsCap||0; if(cap&&panel<.6/cap&&now-last<1000/cap-panel*500){ requestAnimationFrame(frame); return; } /* 120 Hz panel, 60 fps target: draw every second refresh */
   const dtRaw=Math.max(0,(now-last)/1000); last=now; const dt=Math.min(.05,dtRaw);
+  const goal=Math.max(panel,cap?1/cap:1/60); if(dtRaw>goal*1.45) slowN++;
   if(window.__manual){ last=now; requestAnimationFrame(frame); return; }
   if(G.state!=='pause'&&G.state!=='map') update(dt);
   try{ buildFrame(); const pl=G.player||{x:0,z:0}; const dark=G.camMode==='dark';
     renderFrame(cam,envCur,G.time,{exposure:envCur.exposure*(dark?.55:1)*Math.pow(2,SET.gfx.exposure),bloom:.045*SET.gfx.bloom,flash:G.flash*.6,fade:0,sat:envCur.sat*(dark?.45:1),tint:envCur.tint,vignette:SET.gfx.vignette?.5:0,grain:SET.gfx.grain?.018:0},shadowCtr(pl),window.__snapReq||null);
     window.__snapReq=null; }catch(e){ console.error(e); }
   acc+=dtRaw; frames++; adaptT+=dtRaw;
-  if(adaptT>2.5){ const avg=acc/frames; const fb=$('fpsBox'); if(fb&&!fb.hidden) fb.textContent=Math.round(1/avg)+' FPS · '+R.W+'×'+R.H; if(!SET.gfx.adaptive){ acc=0; frames=0; adaptT=0; } else if(avg>.026&&R.scale>.5){ R.scale=Math.max(.5,R.scale*.82); R.needResize=true; } else if(avg<.012&&R.scale<R.maxScale){ R.scale=Math.min(R.maxScale,R.scale*1.12); R.needResize=true; } acc=0; frames=0; adaptT=0; }
+  if(adaptT>2.5){ const avg=acc/frames; const fb=$('fpsBox'); if(fb&&!fb.hidden) fb.textContent=Math.round(1/avg)+' FPS · '+R.W+'×'+R.H; panel=clamp(rafMin,1/240,1/30); rafMin=1; const lo=R.maxScale*(SET.gfx.minScale||.5)/Math.max(.01,SET.gfx.scale), bad=slowN/frames;
+    if(!SET.gfx.adaptive||holdW>0||G.state==='pause'||G.state==='map'){ holdW=Math.max(0,holdW-1); }
+    else if(bad>.12&&R.scale>lo){ R.scale=Math.max(lo,R.scale*(bad>.5?.82:.9)); R.needResize=true; if(calm<6) backoff=Math.min(120,backoff*2); calm=0; holdW=1; } /* a failed probe doubles the wait before the next one */
+    else if(bad<.02){ calm+=adaptT; if(calm>=backoff&&R.scale<R.maxScale){ R.scale=Math.min(R.maxScale,R.scale*1.07); R.needResize=true; calm=0; holdW=1; } }
+    else calm=0;
+    acc=0; frames=0; adaptT=0; slowN=0; }
   requestAnimationFrame(frame); }
 function onDeviceLost(info){ $('errText').textContent='Die Grafikkarte wurde zurückgesetzt ('+(info.message||info.reason)+'). Bitte lade die Seite neu.'; $('errO').hidden=false; }
 

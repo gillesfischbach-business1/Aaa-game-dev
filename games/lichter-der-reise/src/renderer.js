@@ -21,7 +21,7 @@ function decodeModels(){ const out={}; if(typeof MODELS_B64==='undefined') retur
     const key=m.model+'|'+m.mat; out[key]=mb; (MODEL_GROUPS[m.model]||(MODEL_GROUPS[m.model]=[])).push({key,mat:m.mat}); }
   return out; }
 function buildMeshes(){
-  const list={ box:meshBox(), quad:meshQuad(), sph:meshSphere(24,16), sphLo:meshSphere(8,6), cylY:meshCylY(24), cylX:meshLathe([[0,-.5],[.5,-.5],[.5,-.5],[.5,.5],[.5,.5],[0,.5]],24,'x'),
+  const list={ box:meshBox(), quad:meshQuad(), sph:meshSphere(24,16), sphMd:meshSphere(14,9), sphLo:meshSphere(8,6), cylY:meshCylY(24), cylX:meshLathe([[0,-.5],[.5,-.5],[.5,-.5],[.5,.5],[.5,.5],[0,.5]],24,'x'),
     cone:meshCone(24), gable:meshGable(), caps:meshLathe([[0,-.5],[.27,-.46],[.44,-.36],[.5,-.2],[.5,.2],[.44,.36],[.27,.46],[0,.5]],12), rbox:meshRBox(.5,.5,.5,.14,3),
     yHull:meshLoft([{z:-15,w:.12,yb:2.2,yt:3.9,e:2.5,tw:1},{z:-13.6,w:1.1,yb:.9,yt:3.7,e:3,tw:1},{z:-10,w:2.1,yb:.1,yt:3.4,e:4,tw:1},{z:-3,w:2.5,yb:-.4,yt:3.2,e:5,tw:1},{z:8,w:2.5,yb:-.4,yt:3.2,e:6,tw:1},{z:14.2,w:2.3,yb:.2,yt:3.2,e:7,tw:1},{z:15,w:2.2,yb:.6,yt:3.15,e:8,tw:1}],28),
     ...carMeshes(), ...decodeModels() };
@@ -32,15 +32,30 @@ const MAXI=48000;
 const lists=[]; // per mesh: {op:Float32Array, nop, gl:Float32Array, ngl}
 // P draws something given in street-grid coordinates: it is moved and turned by the world bend (see WARP). Praw takes final world coordinates.
 function P(m,x,y,z,ry,sx,sy,sz,mat,r,g,b,p,rx=0,rz=0,slot=0){ WARP(x,z); const sn=Math.sin(ry), cs=Math.cos(ry); Praw(m,WP.x,y,WP.z,Math.atan2(WP.a*sn+WP.b*cs,WP.c*sn+WP.d*cs),sx,sy,sz,mat,r,g,b,p,rx,rz,slot); }
-function Praw(m,x,y,z,ry,sx,sy,sz,mat,r,g,b,p,rx=0,rz=0,slot=0){ const L=lists[m]; const glass=mat>=6&&mat<7; const a=glass?L.gl:L.op; let n=glass?L.ngl:L.nop; if(n>=(glass?400:L.cap)) return;
-  const o=n*16; a[o]=x;a[o+1]=y;a[o+2]=z;a[o+3]=ry;a[o+4]=sx;a[o+5]=sy;a[o+6]=sz;a[o+7]=mat;a[o+8]=r;a[o+9]=g;a[o+10]=b;a[o+11]=p;a[o+12]=rx;a[o+13]=rz;a[o+14]=slot;a[o+15]=0;
+function Praw(m,x,y,z,ry,sx,sy,sz,mat,r,g,b,p,rx=0,rz=0,slot=0){ const L=lists[m]; const glass=mat>=6&&mat<7; if(mat>=9&&mat<10){ const n=L.nct|0; if(n>=1500) return; const c=L.ct||(L.ct=new Float32Array(1500*16)), o=n*16; c[o]=x;c[o+1]=y;c[o+2]=z;c[o+3]=ry;c[o+4]=sx;c[o+5]=sy;c[o+6]=sz;c[o+7]=mat;c[o+8]=r;c[o+9]=g;c[o+10]=b;c[o+11]=p;c[o+12]=rx;c[o+13]=rz;c[o+14]=slot;c[o+15]=0; L.nct=n+1; return; }
+  const a=glass?L.gl:L.op; let n=glass?L.ngl:L.nop; if(n>=(glass?400:L.cap)) return;
+  let sh=false;
+  if(CULL.on){ const C=CULL, rad=L.rad*Math.max(Math.abs(sx),Math.abs(sy),Math.abs(sz));
+    if(!glass&&C.sr>0){ const ax=x-C.sx, az=z-C.sz, t=ax*C.dx+y*C.dy+az*C.dz, qx=ax-C.dx*t, qy=y-C.dy*t, qz=az-C.dz*t, q=C.sr+rad; sh=qx*qx+qy*qy+qz*qz<q*q; } /* distance to the sun axis through the shadow centre */
+    if(!sh){ const vx=x-C.cx, vy=y-C.cy, vz=z-C.cz, f=vx*C.fx+vy*C.fy+vz*C.fz; if(f<-rad||Math.abs(vx*C.rx+vz*C.rz)-f*C.tx>rad*C.k) return; } }
+  let o=n*16; if(sh){ const q=L.nsh*16; if(q!==o) for(let k=0;k<16;k++) a[o+k]=a[q+k]; o=q; L.nsh++; } /* shadow casters stay packed at the front of the list */
+  a[o]=x;a[o+1]=y;a[o+2]=z;a[o+3]=ry;a[o+4]=sx;a[o+5]=sy;a[o+6]=sz;a[o+7]=mat;a[o+8]=r;a[o+9]=g;a[o+10]=b;a[o+11]=p;a[o+12]=rx;a[o+13]=rz;a[o+14]=slot;a[o+15]=0;
   if(glass) L.ngl=n+1; else L.nop=n+1; }
+const CULL={on:false,cx:0,cy:0,cz:0,fx:0,fy:0,fz:1,rx:1,rz:0,tx:1,k:1,sx:0,sz:0,dx:0,dy:1,dz:0,sr:-1};
+function meshRad(m){ const v=m.v; let r2=0; for(let k=0;k<v.length;k+=8) r2=Math.max(r2,v[k]*v[k]+v[k+1]*v[k+1]+v[k+2]*v[k+2]); return Math.sqrt(r2)*1.3+.05; } /* bounding radius, +30 % for wind and leaf displacement */
+/* call once per frame BEFORE the instances are pushed, with exactly the camera and shadow centre that go to renderFrame */
+function setCull(cam,sc,env){ const C=CULL, as=R.W/R.H, x=cam.tgt[0]-cam.pos[0], y=cam.tgt[1]-cam.pos[1], z=cam.tgt[2]-cam.pos[2], l=Math.hypot(x,y,z)||1, h=Math.hypot(x,z)||1, s=env.sunDir, sl=Math.hypot(s[0],s[1],s[2])||1;
+  C.cx=cam.pos[0]; C.cy=cam.pos[1]; C.cz=cam.pos[2]; C.fx=x/l; C.fy=y/l; C.fz=z/l; C.rx=-z/h; C.rz=x/h;
+  C.tx=Math.tan(Math.min(89,(as<1?Math.min(cam.fov*1.35,95):cam.fov)+6)*Math.PI/360)*as*1.08; C.k=Math.hypot(1,C.tx);
+  C.sx=sc[0]; C.sz=sc[2]; C.dx=s[0]/sl; C.dy=s[1]/sl; C.dz=s[2]/sl; C.sr=env.shadow>.01?58*1.4143+1:-1; C.on=true; }
 let lightsTmp=[]; function LtRaw(x,y,z,r,g,b,rad){ lightsTmp.push([x,y,z,r,g,b,rad,0]); } function Lt(x,y,z,r,g,b,rad){ WARP(x,z); lightsTmp.push([WP.x,y,WP.z,r,g,b,rad,0]); }
 
 async function initGPU(canvas){
   if(!navigator.gpu) throw new Error('nogpu');
   const adapter=await navigator.gpu.requestAdapter({powerPreference:'high-performance'}); if(!adapter) throw new Error('noadapter');
-  const device=R.device=await adapter.requestDevice();
+  R.adapterInfo=adapter.info||null;
+  const f11=adapter.features.has('rg11b10ufloat-renderable'); R.bloomFmt=f11?'rg11b10ufloat':'rgba16float';
+  const device=R.device=await adapter.requestDevice({requiredFeatures:f11?['rg11b10ufloat-renderable']:[]});
   device.lost.then(info=>{ if(info.reason!=='destroyed') onDeviceLost(info); });
   R.ctx=canvas.getContext('webgpu'); R.fmt=navigator.gpu.getPreferredCanvasFormat();
   R.ctx.configure({device,format:R.fmt,alphaMode:'opaque',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.COPY_SRC});
@@ -48,10 +63,10 @@ async function initGPU(canvas){
   R.mesh=MESHES.map(({m})=>{ const vb=device.createBuffer({size:m.v.length*4,usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST}); device.queue.writeBuffer(vb,0,new Float32Array(m.v));
     const big=m.n>65535; const ia=big?new Uint32Array(m.ix):new Uint16Array(Math.ceil(m.ix.length/2)*2); if(!big) ia.set(m.ix);
     const ib=device.createBuffer({size:ia.byteLength,usage:GPUBufferUsage.INDEX|GPUBufferUsage.COPY_DST}); device.queue.writeBuffer(ib,0,ia); return {vb,ib,n:m.ix.length,fmt:big?'uint32':'uint16'}; });
-  for(let i=0;i<MESHES.length;i++) { const cap=i===MESHIDX.box?28000:8000; lists.push({cap,op:new Float32Array(cap*16),nop:0,gl:new Float32Array(400*16),ngl:0}); }
+  for(let i=0;i<MESHES.length;i++) { const cap=i===MESHIDX.box?28000:8000; lists.push({cap,op:new Float32Array(cap*16),nop:0,gl:new Float32Array(400*16),ngl:0,nsh:0,rad:meshRad(MESHES[i].m)}); }
   R.lin=device.createSampler({magFilter:'linear',minFilter:'linear',addressModeU:'clamp-to-edge',addressModeV:'clamp-to-edge'});
   R.cmp=device.createSampler({compare:'less',magFilter:'linear',minFilter:'linear'});
-  R.sceneBuf=device.createBuffer({size:336*4,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
+  R.sceneBuf=device.createBuffer({size:592*4,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
   R.instBuf=device.createBuffer({size:MAXI*64,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});
   R.compBuf=device.createBuffer({size:48,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
   R.shadowSize=2048; R.shadow=device.createTexture({size:[R.shadowSize,R.shadowSize],format:'depth32float',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.TEXTURE_BINDING});
@@ -78,10 +93,12 @@ async function initGPU(canvas){
   R.pShadow=device.createRenderPipeline({layout:device.createPipelineLayout({bindGroupLayouts:[bglS]}),vertex:{module:M.scene,entryPoint:'vsShadow',buffers:[{arrayStride:32,attributes:[{shaderLocation:0,offset:0,format:'float32x3'}]}]},
     primitive:{topology:'triangle-list',cullMode:'none'},depthStencil:{format:'depth32float',depthWriteEnabled:true,depthCompare:'less',depthBias:3,depthBiasSlopeScale:2.0,depthBiasClamp:0.01}});
   R.pSky=device.createRenderPipeline({layout:'auto',vertex:{module:M.sky,entryPoint:'vs'},fragment:{module:M.sky,entryPoint:'fs',targets:[{format:HDR}]},primitive:{topology:'triangle-list'},
-    depthStencil:{format:'depth24plus',depthWriteEnabled:false,depthCompare:'always'},multisample:{count:MS}});
-  R.pipes[MS]={scene:R.pScene,glass:R.pGlass,sky:R.pSky,bgSky:device.createBindGroup({layout:R.pSky.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:R.sceneBuf}}]})}; }
-  R.pDown=device.createRenderPipeline({layout:'auto',vertex:{module:M.post,entryPoint:'vs'},fragment:{module:M.post,entryPoint:'down',targets:[{format:HDR}]},primitive:{topology:'triangle-list'}});
-  R.pUp=device.createRenderPipeline({layout:'auto',vertex:{module:M.post,entryPoint:'vs'},fragment:{module:M.post,entryPoint:'up',targets:[{format:HDR,blend:{color:{srcFactor:'one',dstFactor:'one'},alpha:{srcFactor:'one',dstFactor:'one'}}}]},primitive:{topology:'triangle-list'}});
+    depthStencil:{format:'depth24plus',depthWriteEnabled:false,depthCompare:'less-equal'},multisample:{count:MS}});
+  const pCut=device.createRenderPipeline({layout:lay,vertex:{module:M.scene,entryPoint:'vs',buffers:vbuf},fragment:{module:M.scene,entryPoint:'fsCut',targets:[{format:HDR}]},
+    primitive:{topology:'triangle-list',cullMode:'none'},depthStencil:{format:'depth24plus',depthWriteEnabled:true,depthCompare:'less'},multisample:{count:MS}});
+  R.pipes[MS]={cut:pCut,scene:R.pScene,glass:R.pGlass,sky:R.pSky,bgSky:device.createBindGroup({layout:R.pSky.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:R.sceneBuf}}]})}; }
+  R.pDown=device.createRenderPipeline({layout:'auto',vertex:{module:M.post,entryPoint:'vs'},fragment:{module:M.post,entryPoint:'down',targets:[{format:R.bloomFmt}]},primitive:{topology:'triangle-list'}});
+  R.pUp=device.createRenderPipeline({layout:'auto',vertex:{module:M.post,entryPoint:'vs'},fragment:{module:M.post,entryPoint:'up',targets:[{format:R.bloomFmt,blend:{color:{srcFactor:'one',dstFactor:'one'},alpha:{srcFactor:'one',dstFactor:'one'}}}]},primitive:{topology:'triangle-list'}});
   R.pComp=device.createRenderPipeline({layout:'auto',vertex:{module:M.comp,entryPoint:'vs'},fragment:{module:M.comp,entryPoint:'fs',targets:[{format:R.fmt}]},primitive:{topology:'triangle-list'}});
   const err=await device.popErrorScope(); if(err) throw new Error('Pipeline: '+err.message);
   R.makeSceneBG=()=>{ R.bgScene=device.createBindGroup({layout:bgl,entries:[{binding:0,resource:{buffer:R.sceneBuf}},{binding:1,resource:{buffer:R.instBuf}},{binding:2,resource:R.shadow.createView()},{binding:3,resource:R.cmp},{binding:4,resource:R.atlas.createView()},{binding:5,resource:R.lin}]}); }; R.makeSceneBG(); R.ms=4;
@@ -98,7 +115,7 @@ function resizeTargets(){ const d=R.device, c=R.canvas;
   if(R.ms>1) TEX.msaa=d.createTexture({size:[R.W,R.H],format:'rgba16float',sampleCount:R.ms,usage:GPUTextureUsage.RENDER_ATTACHMENT});
   TEX.depth=d.createTexture({size:[R.W,R.H],format:'depth24plus',sampleCount:R.ms,usage:GPUTextureUsage.RENDER_ATTACHMENT});
   TEX.hdr=d.createTexture({size:[R.W,R.H],format:'rgba16float',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.TEXTURE_BINDING});
-  TEX.mips=[]; let w=R.W,h=R.H; for(let i=0;i<6;i++){ w=Math.max(1,w>>1); h=Math.max(1,h>>1); TEX.mips.push(d.createTexture({size:[w,h],format:'rgba16float',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.TEXTURE_BINDING})); }
+  TEX.mips=[]; let w=R.W,h=R.H; for(let i=0;i<6;i++){ w=Math.max(1,w>>1); h=Math.max(1,h>>1); TEX.mips.push(d.createTexture({size:[w,h],format:R.bloomFmt,usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.TEXTURE_BINDING})); }
   (R.postBufs||[]).forEach(b=>b.destroy()); R.postBufs=[]; R.down=[]; R.up=[];
   const mk=(pipe,src,vals)=>{ const ub=d.createBuffer({size:16,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST}); d.queue.writeBuffer(ub,0,new Float32Array(vals)); R.postBufs.push(ub);
     return d.createBindGroup({layout:pipe.getBindGroupLayout(0),entries:[{binding:0,resource:src.createView()},{binding:1,resource:R.lin},{binding:2,resource:{buffer:ub}}]}); };
@@ -107,7 +124,7 @@ function resizeTargets(){ const d=R.device, c=R.canvas;
   R.bgComp=d.createBindGroup({layout:R.pComp.getBindGroupLayout(0),entries:[{binding:0,resource:TEX.hdr.createView()},{binding:1,resource:TEX.mips[0].createView()},{binding:2,resource:R.lin},{binding:3,resource:{buffer:R.compBuf}}]});
   R.needResize=false; }
 
-const sceneF=new Float32Array(336), V16=new Float32Array(16), P16=new Float32Array(16), VP=new Float32Array(16), LV=new Float32Array(16), LP=new Float32Array(16), LVP=new Float32Array(16), compF=new Float32Array(12);
+const sceneF=new Float32Array(592), sceneU=new Uint32Array(sceneF.buffer), V16=new Float32Array(16), P16=new Float32Array(16), VP=new Float32Array(16), LV=new Float32Array(16), LP=new Float32Array(16), LVP=new Float32Array(16), compF=new Float32Array(12);
 const instAll=new Float32Array(MAXI*16);
 /* cam: {pos,tgt,fov}; env: current environment; post: {exposure,bloom,flash,fade,sat,tint,vignette} */
 function renderFrame(cam,env,time,post,shadowCenter,snapCb){
@@ -127,26 +144,32 @@ function renderFrame(cam,env,time,post,shadowCenter,snapCb){
   sceneF.set([...env.skyGround,env.sunSize],64); sceneF.set([...env.ambTop,env.windows],68); sceneF.set([...env.ambBot,env.wet],72);
   const fx=cam.tgt[0], fz=cam.tgt[2]; const lc=lightsTmp; for(const l of lc) l[7]=Math.hypot(l[0]-fx,(l[2]-fz)*0.7)-l[6]*0.5; lc.sort((a,b)=>a[7]-b[7]); const nL=Math.min(NL,lc.length);
   for(let i=0;i<nL;i++){ const l=lc[i]; sceneF.set([l[0],l[1],l[2],0],80+i*4); sceneF.set([l[3],l[4],l[5],l[6]],208+i*4); }
-  sceneF.set([nL,time,1/R.shadowSize,0],76);
+  const gx0=fx-192, gz0=fz-192; sceneU.fill(0,336,592); /* 16x16 tiles of 24 m around the focus point, one bit per light */
+  for(let i=0;i<nL;i++){ const l=lc[i], a0=clamp(Math.floor((l[0]-l[6]-gx0)/24),0,15), a1=clamp(Math.floor((l[0]+l[6]-gx0)/24),0,15), b0=clamp(Math.floor((l[2]-l[6]-gz0)/24),0,15), b1=clamp(Math.floor((l[2]+l[6]-gz0)/24),0,15);
+    for(let b=b0;b<=b1;b++) for(let a=a0;a<=a1;a++) sceneU[336+b*16+a]|=1<<i; }
+  sceneF.set([nL,time,1/R.shadowSize,gz0],76); sceneF[47]=gx0;
   d.queue.writeBuffer(R.sceneBuf,0,sceneF);
   // pack instances
   let off=0; const opF=[], glF=[];
   for(let m=0;m<lists.length;m++){ const L=lists[m]; opF.push(off); if(L.nop&&off+L.nop<=MAXI){ instAll.set(L.op.subarray(0,L.nop*16),off*16); off+=L.nop; } }
   for(let m=0;m<lists.length;m++){ const L=lists[m]; glF.push(off); if(L.ngl&&off+L.ngl<=MAXI){ instAll.set(L.gl.subarray(0,L.ngl*16),off*16); off+=L.ngl; } }
+  const ctF=[]; for(let m=0;m<lists.length;m++){ const L=lists[m]; ctF.push(off); if(L.nct&&off+L.nct<=MAXI){ instAll.set(L.ct.subarray(0,L.nct*16),off*16); off+=L.nct; } else L.nct=0; }
   if(off) d.queue.writeBuffer(R.instBuf,0,instAll,0,off*16);
   compF.set([post.exposure,post.bloom,post.flash,post.fade, time,post.sat,post.grain===undefined?0.018:post.grain,0.01, post.tint[0],post.tint[1],post.tint[2],post.vignette]);
   d.queue.writeBuffer(R.compBuf,0,compF);
   const enc=d.createCommandEncoder();
-  const drawList=(pass,glass,shadow)=>{ for(let m=0;m<lists.length;m++){ const L=lists[m]; const n=glass?L.ngl:L.nop; if(!n)continue; if(shadow&&(m===MESHIDX.quad||m===MESHIDX.sphLo)) continue; const me=R.mesh[m]; pass.setVertexBuffer(0,me.vb); pass.setIndexBuffer(me.ib,me.fmt); pass.drawIndexed(me.n,n,0,0,glass?glF[m]:opF[m]); } };
+  const drawList=(pass,glass,shadow)=>{ for(let m=0;m<lists.length;m++){ const L=lists[m]; const n=glass?L.ngl:(shadow&&CULL.on)?L.nsh:L.nop; if(!n)continue; if(shadow&&(m===MESHIDX.quad||m===MESHIDX.sphLo)) continue; const me=R.mesh[m]; pass.setVertexBuffer(0,me.vb); pass.setIndexBuffer(me.ib,me.fmt); pass.drawIndexed(me.n,n,0,0,glass?glF[m]:opF[m]); } };
   // shadow
+  const shOn=env.shadow>0.01; if(shOn||R.shDirty!==R.shadow){ R.shDirty=shOn?null:R.shadow; /* the shader ignores the map when shadow strength is 0: clear it once, not every frame */
   const sp=enc.beginRenderPass({colorAttachments:[],depthStencilAttachment:{view:R.shadow.createView(),depthLoadOp:'clear',depthStoreOp:'store',depthClearValue:1}});
-  if(env.shadow>0.01){ sp.setPipeline(R.pShadow); sp.setBindGroup(0,R.bgShadow); drawList(sp,false,true); } sp.end();
+  if(shOn){ sp.setPipeline(R.pShadow); sp.setBindGroup(0,R.bgShadow); drawList(sp,false,true); } sp.end(); }
   // scene
   const PP=R.pipes[R.ms];
   const pass=enc.beginRenderPass({colorAttachments:[R.ms>1?{view:TEX.msaa.createView(),resolveTarget:TEX.hdr.createView(),loadOp:'clear',storeOp:'discard',clearValue:{r:0,g:0,b:0,a:1}}:{view:TEX.hdr.createView(),loadOp:'clear',storeOp:'store',clearValue:{r:0,g:0,b:0,a:1}}],
     depthStencilAttachment:{view:TEX.depth.createView(),depthLoadOp:'clear',depthStoreOp:'discard',depthClearValue:1}});
-  pass.setPipeline(PP.sky); pass.setBindGroup(0,PP.bgSky); pass.draw(3);
   pass.setPipeline(PP.scene); pass.setBindGroup(0,R.bgScene); drawList(pass,false);
+  pass.setPipeline(PP.cut); for(let m=0;m<lists.length;m++){ const L=lists[m]; if(!L.nct) continue; const me=R.mesh[m]; pass.setVertexBuffer(0,me.vb); pass.setIndexBuffer(me.ib,me.fmt); pass.drawIndexed(me.n,L.nct,0,0,ctF[m]); L.nct=0; }
+  pass.setPipeline(PP.sky); pass.setBindGroup(0,PP.bgSky); pass.draw(3); /* sky last: only pixels no geometry covered */
   pass.setPipeline(PP.glass); pass.setBindGroup(0,R.bgScene); drawList(pass,true);
   pass.end();
   for(let i=0;i<TEX.mips.length;i++){ const p=enc.beginRenderPass({colorAttachments:[{view:TEX.mips[i].createView(),loadOp:'clear',storeOp:'store',clearValue:{r:0,g:0,b:0,a:1}}]}); p.setPipeline(R.pDown); p.setBindGroup(0,R.down[i]); p.draw(3); p.end(); }
@@ -159,5 +182,5 @@ function renderFrame(cam,env,time,post,shadowCenter,snapCb){
   d.queue.submit([enc.finish()]);
   if(snap) snap.buf.mapAsync(GPUMapMode.READ).then(()=>{ snapCb({data:new Uint8Array(snap.buf.getMappedRange().slice(0)),bpr:snap.bpr,w:snap.w,h:snap.h,fmt:R.fmt}); snap.buf.destroy(); });
   // reset lists
-  for(const L of lists){ L.nop=0; L.ngl=0; } lightsTmp.length=0;
+  for(const L of lists){ L.nop=0; L.ngl=0; L.nsh=0; } lightsTmp.length=0;
 }

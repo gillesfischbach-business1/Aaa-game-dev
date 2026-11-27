@@ -8,8 +8,9 @@ const PI=3.14159265;
 struct Scene{
   viewProj:mat4x4f, lightVP:mat4x4f, camPos:vec4f, camRight:vec4f, camUp:vec4f, camFwd:vec4f,
   sunDir:vec4f, sunCol:vec4f, skyTop:vec4f, skyHor:vec4f, skyGround:vec4f, ambTop:vec4f, ambBot:vec4f, misc:vec4f,
-  lightPos:array<vec4f,${NL}>, lightCol:array<vec4f,${NL}>
+  lightPos:array<vec4f,${NL}>, lightCol:array<vec4f,${NL}>, lightGrid:array<vec4u,64>
 };
+fn lightMask(P:vec3f)->u32{ let c=vec2i(clamp(floor((P.xz-vec2f(S.camFwd.w,S.misc.w))/24.0),vec2f(0.0),vec2f(15.0))); let k=c.y*16+c.x; return S.lightGrid[k>>2u][k&3]; }
 @group(0) @binding(0) var<uniform> S:Scene;
 fn hash3(p:vec3f)->f32{ var q=fract(p*0.3183099+vec3f(0.11,0.17,0.13)); q*=17.0; return fract(q.x*q.y*q.z*(q.x+q.y+q.z)); }
 fn hash2(p:vec2f)->f32{ var q=fract(p*vec2f(0.1031,0.1030)); q+=dot(q,q.yx+33.33); return fract((q.x+q.y)*q.x); }
@@ -104,8 +105,9 @@ fn shade(P:vec3f,V:vec3f,s:Surf,sh:f32)->vec3f{
   // point lights
   let cnt=i32(S.misc.x);
   let rightH=normalize(vec3f(-V.z,0.0,V.x)+vec3f(1e-4,0.0,0.0));
-  for(var i=0;i<${NL};i++){
-    if(i>=cnt){ break; }
+  var lm=lightMask(P);
+  while(lm!=0u){
+    let i=countTrailingZeros(lm); lm&=lm-1u;
     let lc=S.lightCol[i]; var Lp=S.lightPos[i].xyz-P; let d=length(Lp); if(d>lc.w){ continue; }
     Lp/=d; let x=d/lc.w; let win=clamp(1.0-x*x*x*x,0.0,1.0);
     let att=win*win/(d*d+0.6);
@@ -218,13 +220,16 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
   return s;
 }
 
-@fragment fn fs(i:VO,@builtin(front_facing) ff:bool)->@location(0) vec4f{
+@fragment fn fs(i:VO,@builtin(front_facing) ff:bool)->@location(0) vec4f{ return vec4f(fsBody(i,ff).rgb,1.0); }
+@fragment fn fsCut(i:VO,@builtin(front_facing) ff:bool)->@location(0) vec4f{ let c=fsBody(i,ff); if(c.a<0.5){ discard; } return vec4f(c.rgb,1.0); }
+fn fsBody(i:VO,ff:bool)->vec4f{
+  var cutA=1.0;
   let fwW=length(fwidth(i.wp)); let fwL=length(fwidth(i.lp));
   var N=normalize(i.n); if(!ff){ N=-N; }
   let toC=S.camPos.xyz-i.wp; let dist=length(toC); let V=toC/dist;
   let mat=i.mat.x; let t=S.misc.y; let wetG=S.ambBot.w;
   var s:Surf; s.alb=i.col.rgb; s.rough=max(i.mat.y,0.03); s.metal=0.0; s.em=vec3f(0.0); s.n=N; s.ao=1.0; s.wet=0.0; s.coat=0.0; s.wrap=0.0;
-  var col=vec3f(0.0); var direct=true;
+  var col=vec3f(0.0); var direct=true; var leafEm=vec3f(0.0);
   if(mat<0.5){ s.metal=i.col.a; }
   else if(mat<1.5){ col=i.col.rgb*i.col.a; direct=false; }
   else if(mat<2.5){ // lava orb
@@ -267,14 +272,14 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
   else if(mat<6.5){ col=vec3f(0.0); direct=false; } // transparent glass handled in fsGlass
   else if(mat<7.5){ // asphalt
     let fade=clamp(1.0-fwW*4.0,0.0,1.0);
-    let ag=noise2(i.wp.xz*9.0)*fade; let pch=fbm2(i.wp.xz*0.08);
+    var ag=0.0; var ag2=0.5; if(fade>0.0){ ag=noise2(i.wp.xz*9.0)*fade; ag2=noise2(i.wp.zx*9.0); } let pch=fbm2(i.wp.xz*0.08);
     let crack=(1.0-smoothstep(0.0,0.025,abs(fbm2(i.wp.xz*0.35)-0.5)))*smoothstep(0.5,0.7,pch);
     s.alb=i.col.rgb*(0.75+0.5*ag)*(0.85+0.3*pch)*(1.0-crack*0.6);
     let track=0.0;
     let puddle=smoothstep(0.58,0.66,fbm2(i.wp.xz*0.11+vec2f(3.0,1.0))+wetG*0.12);
     s.wet=max(wetG,0.35); s.rough=mix(mix(0.75,0.35,wetG),0.03,puddle*max(wetG,0.3))*(1.0-track*0.15);
     s.alb*=mix(1.0,0.5,wetG);
-    s.n=flatBump(N,(ag-0.5)*0.04*(1.0-puddle),(noise2(i.wp.zx*9.0)-0.5)*0.04*fade*(1.0-puddle));
+    s.n=flatBump(N,(ag-0.5)*0.04*(1.0-puddle),(ag2-0.5)*0.04*fade*(1.0-puddle));
   }
   else if(mat<8.5){ // car paint with metallic flakes + clearcoat
     let fl=hash3(floor(i.wp*420.0)); let fade=clamp(1.0-fwW*60.0,0.0,1.0);
@@ -284,7 +289,7 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     let slot=i.mat.w; let cell=vec2f(slot%4.0,floor(slot/4.0));
     let uv=(cell+clamp(i.uv,vec2f(0.002),vec2f(0.998)))/vec2f(4.0,8.0);
     let tx=textureSampleLevel(atlas,linSmp,uv,0.0);
-    if(tx.a<0.5){ discard; }
+    cutA=tx.a;
     s.alb=tx.rgb*i.col.rgb; s.rough=0.5; s.em=tx.rgb*i.col.a;
   }
   else if(mat<10.5){ // tyre
@@ -293,12 +298,13 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     s.alb=vec3f(0.035)*(1.0-0.5*clamp(groove,0.0,1.0)); s.rough=0.85;
   }
   else if(mat<11.5){ // foliage
-    let g=noise3(i.wp*2.2); let g2=noise3(i.wp*7.0); let hgt=clamp(i.lp.y/max(i.sc.y,0.01)+0.5,0.0,1.0);
-    let clump=smoothstep(0.2,0.6,g2)*0.35+0.65; let fd=clamp(1.0-fwW*3.0,0.0,1.0);
+    let fd=clamp(1.0-fwW*3.0,0.0,1.0); var g2=0.5; var g3=0.5; var g4=0.5; if(fd>0.0){ g2=noise3(i.wp*7.0); g3=noise3(i.wp*7.0+vec3f(5.0)); g4=noise3(i.wp*7.0+vec3f(9.0)); }
+    let g=noise3(i.wp*2.2); let hgt=clamp(i.lp.y/max(i.sc.y,0.01)+0.5,0.0,1.0);
+    let clump=smoothstep(0.2,0.6,g2)*0.35+0.65;
     s.alb=i.col.rgb*(0.55+0.9*g)*mix(0.5,1.35,hgt)*mix(1.0,clump,fd); s.alb=mix(s.alb,s.alb*vec3f(1.25,1.15,0.6),smoothstep(0.6,0.9,g)*0.5);
     s.rough=0.65; s.wrap=0.6; s.ao=mix(0.4,1.0,hgt);
-    s.n=normalize(N+(vec3f(g2,noise3(i.wp*7.0+vec3f(5.0)),noise3(i.wp*7.0+vec3f(9.0)))-0.5)*0.9*fd);
-    let back=pow(max(dot(-V,S.sunDir.xyz),0.0),4.0); s.em=i.col.rgb*vec3f(1.6,1.9,0.5)*S.sunCol.rgb*back*0.22*shadowAt(i.wp,N);
+    s.n=normalize(N+(vec3f(g2,g3,g4)-0.5)*0.9*fd);
+    let back=pow(max(dot(-V,S.sunDir.xyz),0.0),4.0); leafEm=i.col.rgb*vec3f(1.6,1.9,0.5)*S.sunCol.rgb*back*0.22;
   }
   else if(mat<12.5){ // opaque glass (car windows, shop glass)
     let R=reflect(-V,N); let fres=0.04+0.96*pow(1.0-max(dot(N,V),0.0),5.0);
@@ -325,11 +331,11 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
     s.alb=gcol*(0.7+0.5*f)*(0.8+0.4*f2*fade)*(0.75+0.6*blade*fade)*mow; s.rough=0.95; s.wrap=0.35;
     if(i.col.a>0.5){ let row=fract(q.x*0.5); s.alb*=mix(1.0,0.72,step(0.5,row)*fade); }
   }
-  if(direct){ let sh=shadowAt(i.wp,N); col=shade(i.wp,V,s,sh); }
+  if(direct){ let sh=shadowAt(i.wp,N); s.em+=leafEm*sh; col=shade(i.wp,V,s,sh); }
   // atmosphere: distance + height fog tinted by sky in view direction
   let fogD=S.skyHor.w;
   col=applyFog(col,i.wp,V,dist,1.0);
-  return vec4f(col,1.0);
+  return vec4f(col,cutA);
 }
 @fragment fn fsGlass(i:VO,@builtin(front_facing) ff:bool)->@location(0) vec4f{
   var N=normalize(i.n); if(!ff){ N=-N; }
@@ -338,7 +344,8 @@ fn facade(i:VO,N:vec3f,V:vec3f,fw:f32)->Surf{
   var refl=skyColor(R)*fres;
   let L=S.sunDir.xyz; let H=normalize(L+V); refl+=S.sunCol.rgb*shadowAt(i.wp,N)*Dggx(max(dot(N,H),0.0),0.01)*0.04*max(dot(N,L),0.0);
   let cnt=i32(S.misc.x);
-  for(var k=0;k<${NL};k++){ if(k>=cnt){ break; } let lc=S.lightCol[k]; var Lp=S.lightPos[k].xyz-i.wp; let d=length(Lp); if(d>lc.w){ continue; } Lp/=d;
+  var lm=lightMask(i.wp);
+  while(lm!=0u){ let k=countTrailingZeros(lm); lm&=lm-1u; let lc=S.lightCol[k]; var Lp=S.lightPos[k].xyz-i.wp; let d=length(Lp); if(d>lc.w){ continue; } Lp/=d;
     let Hp=normalize(Lp+V); refl+=lc.rgb*0.04*Dggx(max(dot(N,Hp),0.0),0.01)*max(dot(N,Lp),0.0)/(d*d+0.6); }
   let a=clamp(mix(i.col.a,1.0,fres),0.0,1.0);
   var col=i.col.rgb*hemi(N)*a+refl;
