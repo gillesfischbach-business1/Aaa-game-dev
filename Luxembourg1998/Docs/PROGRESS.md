@@ -138,3 +138,14 @@ der engine-unabhaengige Kern und die Werkzeuge.
 - Eigener Browser-Test `tests/e2e/m08.mjs`: 22 Pruefungen gruen in zwei Spielverlaeufen; Vitest 21.
 
 - Regressionstest nach M08: 80 Pruefungen gruen, Handy-Test gruen; Artifact Version 7.
+
+## 2026-11-28 – Rueckmeldung vom echten Handy (Fehlerbehebung)
+- Schwarzer Himmel auf Handy-Grafikchips: einfacher Farbverlauf-Himmel bei Touch/niedriger Grafik.
+- Schwarze Flaechen: Kamera konnte in Gebaeuden landen (jetzt Sichtlinienpruefung); falsch triangulierte Daecher
+  verwinkelter OSM-Grundrisse (ungueltige Dreiecke werden verworfen); 24 Innenhoefe waren ueberdacht (jetzt offen,
+  mit Hofwaenden); falsch orientierte OSM-Waende (Waende jetzt beidseitig).
+- Neuer historischer Filter: OSM-Objekte mit Baujahr nach 1998 (start_date) werden entfernt (93 Objekte, u. a. ein
+  Vordach von 2012 am Bahnhof); Ueberdachungen ohne Waende.
+- Hochformat: weiterer Bildwinkel, mehr Kameraabstand, kuerzere Geldanzeige, kleinere Touch-Knoepfe, Startpunkt mit
+  4 m Platz ringsum.
+- Tests laufen (Ergebnis folgt).

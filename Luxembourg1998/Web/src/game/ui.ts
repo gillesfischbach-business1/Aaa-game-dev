@@ -18,7 +18,12 @@ export class UI {
   isOpen(id: string): boolean { return !$(id).classList.contains('hidden'); }
 
   setClock(text: string, extra: string): void { $('clock').textContent = text + (extra ? `  ·  ${extra}` : ''); }
-  setMoney(cash: string, bank: string): void { $('money').innerHTML = `Portmonni <b>${cash}</b> &nbsp;·&nbsp; Konto ${bank}`; }
+  setMoney(cash: string, bank: string): void {
+    const narrow = window.innerWidth < 640;
+    const html = narrow ? `<b>${cash}</b> · Kt. ${bank.replace(' LUF', '')}` : `Portmonni <b>${cash}</b> &nbsp;·&nbsp; Konto ${bank}`;
+    const el = $('money');
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }
   setObjective(text: string): void { $('notetext').textContent = text; }
 
   prompt(text: string | null): void {

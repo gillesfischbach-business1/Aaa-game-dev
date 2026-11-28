@@ -16,8 +16,9 @@ export class Environment {
   night = 0;
   sunElevation = 0;
 
-  constructor(private scene: THREE.Scene, private renderer: THREE.WebGLRenderer, shadows: boolean) {
+  constructor(private scene: THREE.Scene, private renderer: THREE.WebGLRenderer, shadows: boolean, private simpleSky = false) {
     this.sky = new Sky();
+    this.sky.visible = !simpleSky;
     this.sky.scale.setScalar(20000);
     scene.add(this.sky);
     const u = this.sky.material.uniforms;
@@ -93,6 +94,14 @@ export class Environment {
     const fogNight = new THREE.Color(0x0b1020);
     const fog = this.scene.fog as THREE.Fog;
     fog.color.copy(fogNight).lerp(fogDay, day).lerp(new THREE.Color(0xe0a070), low * day * 0.25);
+    if (this.simpleSky) {
+      // Himmelsfarbe: Nacht -> Tag, Morgen-/Abendrot, bei Regen grau; Horizont = Nebelfarbe (nahtlos)
+      const sky = new THREE.Color(0x0a0f1e).lerp(new THREE.Color(this.rainOn ? 0x8a949c : 0x8fb8e0), day)
+        .lerp(new THREE.Color(0xe8a070), low * day * 0.35);
+      if (!(this.scene.background instanceof THREE.Color)) this.scene.background = new THREE.Color();
+      (this.scene.background as THREE.Color).copy(sky);
+      fog.color.lerp(sky, 0.5);
+    }
     fog.near = this.rainOn ? 60 : 250;
     fog.far = this.rainOn ? 600 : 1400;
     this.renderer.toneMappingExposure = 0.6 + 0.25 * day;

@@ -174,6 +174,7 @@ export function buildCity(data: WorldData, scene: THREE.Scene, opts: { trees: nu
   const { map: facadeMap, emissive: facadeEmissive } = facadeTextures();
   const walls = new GeoBuilder();
   const roofs = new GeoBuilder();
+  const canopies = new GeoBuilder();
   const footprints: [number, number][][] = [];
   const color = new THREE.Color();
   const FLOOR = 3.3, BAY = 3.4;  // Geschosshoehe und Fensterachse (m)
@@ -182,8 +183,15 @@ export function buildCity(data: WorldData, scene: THREE.Scene, opts: { trees: nu
     if (poly.length < 3) return;
     // Umlaufsinn vereinheitlichen (gegen den Uhrzeigersinn in x/z), damit Normalen nach aussen zeigen
     if (THREE.ShapeUtils.isClockWise(poly.map(([x, z]) => new THREE.Vector2(x, z)))) poly = poly.reverse();
-    footprints.push(poly);
     const top = b.b + b.h;
+    if (b.k === 6) {
+      // Offene Ueberdachung (Vordach, Carport): Dachflaeche auf Hoehe, keine Waende, keine Kollision
+      const v2 = poly.map(([x, z]) => new THREE.Vector2(x, z));
+      const tris = THREE.ShapeUtils.triangulateShape(v2, []);
+      canopies.tri(poly.map(([x, z]) => new THREE.Vector3(x, top, z)), tris.map((t) => [t[0], t[2], t[1]]), new THREE.Color(0xc8ccd0));
+      return;
+    }
+    footprints.push(poly);
     collision.addFootprint(poly, b.b, top);
     const r = pseudoRandom(bi * 3.1);
     const palette = b.k === 1 || b.k === 2 || b.k === 3 ? SANDSTONE : PLASTER;
@@ -205,7 +213,7 @@ export function buildCity(data: WorldData, scene: THREE.Scene, opts: { trees: nu
     }
     // Dach: einfache Rechtecke bekommen ein Satteldach, sonst Flachdach
     const roofColor = new THREE.Color(ROOF[Math.floor(pseudoRandom(bi * 7.7) * ROOF.length)]);
-    if (poly.length === 4 && b.k !== 4 && b.h > 6) {
+    if (poly.length === 4 && b.k !== 4 && b.h > 6 && !b.q?.length) {
       const [p0, p1, p2, p3] = poly.map(([x, z]) => new THREE.Vector3(x, top, z));
       const l01 = p0.distanceTo(p1), l12 = p1.distanceTo(p2);
       const ridgeH = Math.min(Math.min(l01, l12) * 0.45, 5);
@@ -217,13 +225,39 @@ export function buildCity(data: WorldData, scene: THREE.Scene, opts: { trees: nu
       walls.tri([d, a, m1], [[0, 1, 2]], color, new THREE.Vector3().subVectors(a, d).cross(new THREE.Vector3(0, 1, 0)).normalize().negate());
       walls.tri([bb, c, m2], [[0, 1, 2]], color, new THREE.Vector3().subVectors(c, bb).cross(new THREE.Vector3(0, 1, 0)).normalize().negate());
     } else {
+      // Flachdach mit Innenhoefen. Dreiecke, deren Mitte nicht ueber dem Gebaeude liegt, werden verworfen
+      // (bei verwinkelten OSM-Grundrissen liefert die Triangulierung sonst Dachflaechen ueber Plaetzen).
+      const holes = (b.q ?? []).map((h) => {
+        let hp = pairs(h);
+        if (!THREE.ShapeUtils.isClockWise(hp.map(([x, z]) => new THREE.Vector2(x, z)))) hp = hp.reverse();
+        return hp;
+      });
       const v2 = poly.map(([x, z]) => new THREE.Vector2(x, z));
-      const tris = THREE.ShapeUtils.triangulateShape(v2, []);
-      roofs.tri(poly.map(([x, z]) => new THREE.Vector3(x, top, z)), tris.map((t) => [t[0], t[2], t[1]]), roofColor.clone().multiplyScalar(0.85));
+      const h2 = holes.map((h) => h.map(([x, z]) => new THREE.Vector2(x, z)));
+      const all = [...poly, ...holes.flat()];
+      const tris = THREE.ShapeUtils.triangulateShape(v2, h2).filter((t) => {
+        const cx = (all[t[0]][0] + all[t[1]][0] + all[t[2]][0]) / 3, cz = (all[t[0]][1] + all[t[1]][1] + all[t[2]][1]) / 3;
+        return pointInPolygon(cx, cz, poly) && !holes.some((h) => pointInPolygon(cx, cz, h));
+      });
+      roofs.tri(all.map(([x, z]) => new THREE.Vector3(x, top, z)), tris.map((t) => [t[0], t[2], t[1]]), roofColor.clone().multiplyScalar(0.85));
+      // Hofwaende (Normalen zeigen in den Hof)
+      for (const h of holes) {
+        collision.addFootprint(h, b.b, top);
+        let hp = 0;
+        for (let i = 0; i < h.length; i++) {
+          const [ax, az] = h[i], [bx, bz] = h[(i + 1) % h.length];
+          const len = Math.hypot(bx - ax, bz - az);
+          const vTop = (b.h - 0.2) / FLOOR;
+          walls.quad(new THREE.Vector3(ax, b.b, az), new THREE.Vector3(bx, b.b, bz), new THREE.Vector3(bx, top, bz), new THREE.Vector3(ax, top, az),
+            [hp / BAY / 4, 0, (hp + len) / BAY / 4, 0, (hp + len) / BAY / 4, vTop / 4, hp / BAY / 4, vTop / 4], color);
+          hp += len;
+        }
+      }
     }
   });
   const facadeMat = new THREE.MeshStandardMaterial({
-    map: facadeMap, vertexColors: true, roughness: 0.88, emissiveMap: facadeEmissive, emissive: new THREE.Color(0xffffff), emissiveIntensity: 0,
+    // beidseitig: OSM-Grundrisse sind nicht immer korrekt orientiert (sonst Blick durch Waende)
+    map: facadeMap, vertexColors: true, roughness: 0.88, side: THREE.DoubleSide, emissiveMap: facadeEmissive, emissive: new THREE.Color(0xffffff), emissiveIntensity: 0,
   });
   const wallMesh = new THREE.Mesh(walls.build(), facadeMat);
   wallMesh.castShadow = wallMesh.receiveShadow = true;
@@ -232,6 +266,12 @@ export function buildCity(data: WorldData, scene: THREE.Scene, opts: { trees: nu
   const roofMesh = new THREE.Mesh(roofs.build(), roofMat);
   roofMesh.castShadow = roofMesh.receiveShadow = true;
   root.add(wallMesh, roofMesh);
+  if (canopies.pos.length) {
+    const canopyMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.3, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
+    const canopyMesh = new THREE.Mesh(canopies.build(), canopyMat);
+    canopyMesh.name = 'canopies';
+    root.add(canopyMesh);
+  }
 
   // ---------- Strassen, Wege, Bruecken ----------
   const asphalt = new GeoBuilder(), paving = new GeoBuilder(), gravel = new GeoBuilder(), marks = new GeoBuilder(), stone = new GeoBuilder();

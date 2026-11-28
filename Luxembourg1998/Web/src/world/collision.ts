@@ -45,6 +45,33 @@ export class CollisionWorld {
     }
   }
 
+  /**
+   * Erste Wand zwischen zwei Punkten (2D, Hoehe y): Anteil t (0..1) entlang der Strecke, 1 = frei.
+   * Fuer die Kamera: sie darf nicht hinter/in Gebaeuden landen.
+   */
+  firstHit(ax: number, az: number, bx: number, bz: number, y: number): number {
+    let best = 1;
+    const len = Math.hypot(bx - ax, bz - az);
+    const steps = Math.max(1, Math.ceil(len / (CELL * 0.5)));
+    const seen = new Set<Seg>();
+    for (let i = 0; i <= steps; i++) {
+      const px = ax + ((bx - ax) * i) / steps, pz = az + ((bz - az) * i) / steps;
+      for (const s of this.walls.query(px, pz)) {
+        if (seen.has(s)) continue;
+        seen.add(s);
+        if (y > s.top || y < s.base - 0.5) continue;
+        // Schnitt Strecke A-B mit Wandstueck S
+        const rx = bx - ax, rz = bz - az, sx = s.bx - s.ax, sz = s.bz - s.az;
+        const den = rx * sz - rz * sx;
+        if (Math.abs(den) < 1e-9) continue;
+        const qx = s.ax - ax, qz = s.az - az;
+        const t = (qx * sz - qz * sx) / den, u = (qx * rz - qz * rx) / den;
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && t < best) best = t;
+      }
+    }
+    return best;
+  }
+
   addBridge(b: BridgeSeg): void {
     this.bridges.add(Math.min(b.ax, b.bx) - b.half, Math.min(b.az, b.bz) - b.half,
       Math.max(b.ax, b.bx) + b.half, Math.max(b.az, b.bz) + b.half, b);

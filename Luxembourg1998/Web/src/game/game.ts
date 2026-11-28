@@ -114,7 +114,8 @@ export class Game {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.input = new Input(canvas);
     this.city = buildCity(world, this.scene, { trees: quality === 'high' ? 3500 : 900 });
-    this.env = new Environment(this.scene, this.renderer, quality === 'high');
+    const touch = (window.matchMedia?.('(pointer: coarse)').matches ?? false) || new URLSearchParams(location.search).has('touch');
+    this.env = new Environment(this.scene, this.renderer, quality === 'high', quality === 'low' || touch);
     this.traffic = new Traffic(this.city, this.scene, quality === 'high' ? 32 : 14, quality === 'high' ? 80 : 30);
 
     this.player = makePerson(1, { jacket: 0x5a4632 });
@@ -290,7 +291,7 @@ export class Game {
   exitPhotoMode(): void {
     this.photoMode = false;
     this.ui.show('viewfinder', false);
-    this.camera.fov = 65;
+    this.camera.fov = this.baseFov;
     this.camera.updateProjectionMatrix();
   }
 
@@ -367,7 +368,7 @@ export class Game {
   }
 
   // ---------- Aufbau ----------
-  openSpot(target: THREE.Vector3, preferRoad = false, keepClear = 0): THREE.Vector3 {
+  openSpot(target: THREE.Vector3, preferRoad = false, keepClear = 0, wallClear = 0): THREE.Vector3 {
     // naechster freier Punkt (nicht in einem Gebaeude), bevorzugt auf einem Weg/einer Strasse.
     // keepClear > 0: Mindestabstand zu bereits vorhandenen Interaktionspunkten (sonst ueberlagern sich "E"-Ziele)
     const lines = preferRoad ? this.city.drivable : [...this.city.walkways, ...this.city.drivable];
@@ -378,7 +379,14 @@ export class Game {
     }
     cands.sort((a, b) => a.d - b.d);
     const clear = (p: THREE.Vector3) => keepClear <= 0 || this.interactables.every((i) => i.pos.distanceTo(p) >= keepClear);
-    const best = cands.find((c) => clear(c.p) && !this.insideBuilding(c.p.x, c.p.z))?.p ?? target;
+    // wallClear > 0: ringsum so viel Platz bis zur naechsten Wand (z. B. fuer den Startpunkt)
+    const roomy = (p: THREE.Vector3) => {
+      if (wallClear <= 0) return true;
+      const probe = { x: p.x, z: p.z };
+      return !this.city.collision.resolve(probe, wallClear, this.city.terrain.heightAt(p.x, p.z));
+    };
+    const best = cands.find((c) => clear(c.p) && roomy(c.p) && !this.insideBuilding(c.p.x, c.p.z))?.p
+      ?? cands.find((c) => clear(c.p) && !this.insideBuilding(c.p.x, c.p.z))?.p ?? target;
     const b = best.clone();
     b.y = this.city.surfaceAt(b.x, b.z, b.y + 1);
     return b;
@@ -400,7 +408,7 @@ export class Game {
     const P = this.city.places;
     const gare = P.gare ?? new THREE.Vector3(320, 289, 1300);
     // Bahnhofsvorplatz liegt noerdlich des Bahnhofs
-    const forecourt = this.openSpot(gare.clone().add(new THREE.Vector3(-10, 0, -45)));
+    const forecourt = this.openSpot(gare.clone().add(new THREE.Vector3(-10, 0, -45)), false, 0, 4);
     this.pos.copy(forecourt);
     const boothSpots = [forecourt.clone().add(new THREE.Vector3(12, 0, -8)), P.place_de_metz, P.place_guillaume, P.route_esch].filter(Boolean) as THREE.Vector3[];
     for (const s of boothSpots) {
@@ -819,10 +827,16 @@ export class Game {
   }
 
   // ---------- Hauptschleife ----------
+  private portrait = false;
+  private baseFov = 65;
+
   resize(): void {
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
+    this.portrait = w / h < 0.9;
+    this.baseFov = this.portrait ? 78 : 65;
+    if (!this.photoMode) this.camera.fov = this.baseFov;
     this.camera.updateProjectionMatrix();
   }
 
@@ -1030,12 +1044,16 @@ export class Game {
         cam.rotation.set(-this.camPitch * 0.8, this.camYaw, 0);
         return;
       }
-      const dist = 4.2;
+      const dist = this.portrait ? 6.2 : 4.2;
       const off = new THREE.Vector3(Math.sin(this.camYaw) * Math.cos(this.camPitch), Math.sin(this.camPitch), Math.cos(this.camYaw) * Math.cos(this.camPitch)).multiplyScalar(dist);
       const want = head.clone().add(off.multiplyScalar(this.interior ? 0.6 : 1));
+      // Sichtlinie Kopf -> Kamera: liegt eine Wand dazwischen, rueckt die Kamera davor (nie in Gebaeude)
+      const hit = this.city.collision.firstHit(head.x, head.z, want.x, want.z, want.y - 0.5);
+      if (hit < 1) want.lerpVectors(head, want, Math.max(0.12, hit - 0.25 / Math.max(0.5, off.length())));
       const probe = { x: want.x, z: want.z };
       this.city.collision.resolve(probe, 0.3, want.y - 1);
       want.x = probe.x; want.z = probe.z;
+      if (hit < 1) { cam.position.copy(want); }
       if (this.interior) {
         const ib = this.interior.bounds;
         want.x = THREE.MathUtils.clamp(want.x, ib[0], ib[2]);
@@ -1053,10 +1071,12 @@ export class Game {
         cam.rotation.set(-0.06 - (this.camPitch - 0.25) * 0.5, this.camYaw, 0);
         return;
       }
-      const dist = 7.5 + v.kmh * 0.02;
+      const dist = (this.portrait ? 10 : 7.5) + v.kmh * 0.02;
       const off = new THREE.Vector3(Math.sin(this.camYaw) * Math.cos(this.camPitch * 0.6), 0.28 + Math.sin(this.camPitch * 0.6), Math.cos(this.camYaw) * Math.cos(this.camPitch * 0.6)).multiplyScalar(dist);
       const target = v.pos.clone().add(new THREE.Vector3(0, 1.3, 0));
       const want = target.clone().add(off);
+      const hitV = this.city.collision.firstHit(target.x, target.z, want.x, want.z, want.y - 0.5);
+      if (hitV < 1) { want.lerpVectors(target, want, Math.max(0.15, hitV - 0.05)); cam.position.copy(want); }
       want.y = Math.max(want.y, this.city.terrain.heightAt(want.x, want.z) + 0.8);
       cam.position.lerp(want, Math.min(1, dt * 8));
       cam.lookAt(target);

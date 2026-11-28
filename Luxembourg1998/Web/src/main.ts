@@ -34,6 +34,7 @@ function boot(): void {
   $('loading').textContent = `Bereit · Grafik: ${quality === 'high' ? 'hoch' : 'niedrig'}`;
   const btnNew = $<HTMLButtonElement>('btnNew'), btnCont = $<HTMLButtonElement>('btnContinue');
   btnNew.disabled = false;
+  if (isTouchDevice() && window.innerWidth < window.innerHeight) $('rotateHint').classList.remove('hidden');
   btnCont.disabled = !Game.hasSave();
 
   const begin = () => {

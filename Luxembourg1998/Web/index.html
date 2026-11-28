@@ -161,10 +161,10 @@
   #stick { position: absolute; width: 112px; height: 112px; border-radius: 50%; border: 2px solid rgba(236,230,214,.45); background: rgba(14,16,20,.25); display: none; pointer-events: none; }
   #stick.on { display: block; }
   #knob { position: absolute; left: 32px; top: 32px; width: 48px; height: 48px; border-radius: 50%; background: rgba(236,230,214,.55); }
-  .tbtns { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 64px); gap: 8px; pointer-events: auto; }
-  .tbtns button { height: 56px; border-radius: 12px; border: 1px solid rgba(236,230,214,.35); background: rgba(14,16,20,.55); color: var(--hud-text); font: 600 13px 'IBM Plex Sans', sans-serif; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .tbtns { position: absolute; right: max(10px, env(safe-area-inset-right, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 56px); gap: 6px; pointer-events: auto; }
+  .tbtns button { height: 50px; border-radius: 12px; border: 1px solid rgba(236,230,214,.25); background: rgba(14,16,20,.38); outline: none; -webkit-tap-highlight-color: transparent; color: var(--hud-text); font: 600 13px 'IBM Plex Sans', sans-serif; touch-action: none; user-select: none; -webkit-user-select: none; }
   .tbtns button small { font-weight: 400; font-size: 10px; opacity: .8; }
-  .tbtns button.sm { height: 38px; font-size: 11px; }
+  .tbtns button.sm { height: 34px; font-size: 10px; }
   .tbtns button.main { font-size: 22px; background: rgba(224,183,74,.85); color: #1a1a1a; }
   .tbtns button.on { background: rgba(224,183,74,.6); }
   body.touch #money { bottom: auto; top: 50px; }
@@ -351,6 +351,7 @@
     <button class="btn" id="btnNew" disabled>Neues Spiel</button>
     <button class="btn sec" id="btnContinue" disabled>Fortsetzen</button>
     <div id="loading">Stadt wird gebaut …</div>
+    <p id="rotateHint" class="hidden" style="color: var(--accent); font-size: 13px;">Tipp: Im Querformat siehst du mehr von der Stadt.</p>
     <div class="credits">Kartendaten © OpenStreetMap-Mitwirkende (ODbL) · Höhen: EU-DEM v1.1 (Copernicus) · Geometrie von heute, bekannte Bauten nach 1998 entfernt, sonst historisch noch nicht geprüft. Alle Personen, Firmen, Fahrzeuge und Telefonnummern sind erfunden.</div>
   </div>
 </div>

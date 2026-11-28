@@ -10,7 +10,7 @@ export interface WorldData {
     bounds: [number, number, number, number];
   };
   terrain: { x0: number; z0: number; step: number; cols: number; rows: number; dm: number[] };
-  buildings: { p: number[]; b: number; h: number; k: number }[];
+  buildings: { p: number[]; b: number; h: number; k: number; q?: number[][] }[];
   roads: { p: number[]; w: number; t: number; c: 0 | 1; n?: string; y?: number[] }[];
   rails: { p: number[]; br: 0 | 1 }[];
   walls: { p: number[]; h: number; k: 0 | 1 }[];

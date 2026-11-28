@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -32,8 +33,18 @@ GREEN = {("landuse", "grass"): 0, ("leisure", "park"): 1, ("natural", "wood"): 2
          ("natural", "heath"): 3, ("landuse", "allotments"): 1, ("landuse", "flowerbed"): 1}
 WALLS = {("barrier", "city_wall"), ("historic", "citywalls"), ("barrier", "retaining_wall"), ("barrier", "wall")}
 
+def _built_after_1998(t: dict[str, str]) -> bool:
+    """OSM-Baujahr (start_date, z. B. "2012" oder "2012-05") nach 1998?"""
+    for key in ("start_date", "building:start_date", "construction_date"):
+        m = re.match(r"\s*~?(\d{4})", t.get(key, ""))
+        if m and int(m.group(1)) > 1998:
+            return True
+    return False
+
+
 # (Beschreibung, Bedingung) – historisch begruendete Ausschluesse
 EXCLUDE_RULES = [
+    ("Bauwerke mit Baujahr nach 1998 (OSM start_date)", _built_after_1998),
     ("Strassenbahn (Luxtram, ab 2017)", lambda t: t.get("railway") in {"tram", "tram_stop", "platform"}
      and ("tram" in t.get("railway", "") or t.get("tram") == "yes")),
     ("Radweg-Passerelle unter dem Pont Adolphe (nach 1998)",
@@ -126,6 +137,15 @@ def join_rings(segments: list[list[str]]) -> list[list[str]]:
     return rings
 
 
+def _point_in_poly(x: float, z: float, poly: list[tuple[float, float]]) -> bool:
+    c = False
+    for i in range(len(poly)):
+        (x1, z1), (x2, z2) = poly[i], poly[i - 1]
+        if (z1 > z) != (z2 > z) and x < (x2 - x1) * (z - z1) / (z2 - z1) + x1:
+            c = not c
+    return c
+
+
 def building_height(t: dict[str, str]) -> float:
     def num(key: str) -> float | None:
         try:
@@ -151,7 +171,9 @@ def building_kind(t: dict[str, str]) -> int:
         return 2
     if b in {"train_station", "transportation"}:
         return 3
-    if b in {"garage", "garages", "shed", "roof", "kiosk", "hut", "carport"}:
+    if b in {"roof", "carport"}:
+        return 6  # offene Ueberdachung: nur Dach, keine Waende
+    if b in {"garage", "garages", "shed", "kiosk", "hut"}:
         return 4
     if b in {"commercial", "office", "retail", "hotel"}:
         return 5
@@ -260,13 +282,27 @@ def main(argv: list[str]) -> int:
     buildings, roads, rails, walls, green, water = [], [], [], [], [], []
     bridge_ways: list[tuple[list[str], dict]] = []
 
-    def add_building(ring: list[str], t: dict[str, str]) -> None:
-        pts = [local(n) for n in ring[:-1] if n in nodes]
+    def clean(pts):
+        # doppelte/fast gleiche Nachbarpunkte entfernen (sonst scheitert die Dach-Triangulierung)
+        out = []
+        for p in pts:
+            if not out or math.dist(out[-1][:2], p[:2]) > 0.05:
+                out.append(p)
+        if len(out) > 1 and math.dist(out[0][:2], out[-1][:2]) <= 0.05:
+            out.pop()
+        return out
+
+    def add_building(ring: list[str], t: dict[str, str], holes: list[list[str]] | None = None) -> None:
+        pts = clean([local(n) for n in ring[:-1] if n in nodes])
         if len(pts) < 3 or not all(inside(p[0], p[1]) for p in pts):
             return
         base = min(p[2] for p in pts)
-        buildings.append({"p": flat(pts), "b": round(base - 0.5, 1), "h": round(building_height(t) + 0.5, 1),
-                          "k": building_kind(t)})
+        b = {"p": flat(pts), "b": round(base - 0.5, 1), "h": round(building_height(t) + 0.5, 1), "k": building_kind(t)}
+        hole_pts = [clean([local(n) for n in h[:-1] if n in nodes]) for h in (holes or [])]
+        hole_pts = [h for h in hole_pts if len(h) >= 3]
+        if hole_pts:
+            b["q"] = [flat(h) for h in hole_pts]  # Innenhoefe: offen, ohne Dach
+        buildings.append(b)
 
     for wid, (refs, t) in ways.items():
         if not t or any(r not in nodes for r in refs) or is_excluded(t):
@@ -333,9 +369,18 @@ def main(argv: list[str]) -> int:
     for rid, (members, t) in rels.items():
         if t.get("type") == "multipolygon" and "building" in t and not is_excluded(t):
             outers = [ways[ref][0] for typ, ref, role in members if typ == "way" and role == "outer" and ref in ways]
+            inners = [ways[ref][0] for typ, ref, role in members if typ == "way" and role == "inner" and ref in ways]
+            inner_rings = [r for r in join_rings(inners) if all(n in nodes for n in r)]
             for ring in join_rings(outers):
-                if all(n in nodes for n in ring):
-                    add_building(ring, t)
+                if not all(n in nodes for n in ring):
+                    continue
+                outer_xy = [local(n)[:2] for n in ring[:-1]]
+
+                def contains(r):
+                    xs = [local(n)[:2] for n in r[:-1]]
+                    cx, cz = sum(p[0] for p in xs) / len(xs), sum(p[1] for p in xs) / len(xs)
+                    return _point_in_poly(cx, cz, outer_xy)
+                add_building(ring, t, [r for r in inner_rings if contains(r)])
 
     # Benannte Orte (Mittelpunkt der Geometrie)
     places = {}
