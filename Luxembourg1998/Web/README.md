@@ -12,7 +12,8 @@ alles andere zeigt die heutige Geometrie und ist historisch noch nicht geprüft.
 Mission 02 „Eng lescht Chance“ (Anrufbeantworter → Garage Muller in Hollerich, rechtzeitig → ehrlich reparieren mit
 Teilen von Wagner oder Abkürzung → Werkbank → Probefahrt an Pylonen vorbei → Lohn, Ruf, Folgen),
 Mission 03 „D’Nummer an der Zeitung“ (Kiosk → Kleinanzeige → Anruf 18–20 Uhr → Treffen im Pétrusse-Tal →
-richtige von drei Türen finden), Arbeit als Mechaniker (Schichten Mo–Fr), Zuhause (Anrufbeantworter, Telefon,
+richtige von drei Türen finden), Mission 05 „Déi verluer Diskett“ (begehbares Cybercafé, fiktives Offline-Internet
+mit Forum, E-Mail, Chat, Gästebuch; drei Lösungswege), Arbeit als Mechaniker (Schichten Mo–Fr), Zuhause (Anrufbeantworter, Telefon,
 Schlafen), Touch-Steuerung für Handy/Tablet,
 Fußgänger, Verkehr, echter Sonnenstand, Tag/Nacht, Regen mit nassen Straßen, Fahrphysik mit Hangabtrieb, Schaden
 und Verbrauch, Notizbuch mit handgezeichnetem Stadtplan, Telefonbuch, Zeitansage, Speichern/Laden.
@@ -25,7 +26,7 @@ npm test               # Kern-Tests (Vitest)
 npm run build          # Typprüfung + Build nach dist/
 npm run build:single   # alles in eine HTML-Datei (dist-single/)
 npx vite preview --port 4173 &
-node tests/e2e/smoke.mjs http://localhost:4173/ ./shots   # Browser-Test: M01–M03, Arbeit, Speichern (40 Pruefungen)
+node tests/e2e/smoke.mjs http://localhost:4173/ ./shots   # Browser-Test: M01–M03, Arbeit, Speichern (57 Pruefungen)
 node tests/e2e/touch.mjs http://localhost:4173/ ./shots   # Handy-Test (Touch, 390x844)
 ```
 Welt neu erzeugen: `python3 -m lux98.bake_web OSM_ORDNER DEM.json ../Web/src/data/world.json` (aus `Scripts/`),

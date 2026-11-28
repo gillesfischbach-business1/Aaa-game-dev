@@ -146,13 +146,58 @@ await g(() => { const x = window.__lux98; x.clock.setDateTime(x.clock.getDate(),
 await doShift([PLUGS, OIL]);
 const bank2 = await g(() => window.__lux98.wallet.getBank());
 check('Puenktliche Schicht: 2 200 F, Ruf +1, 2 Arbeitstage', bank2 === bank1 + 2200 && (await st()).rep === rep0 && await g(() => window.__lux98.career.daysWorked === 2), `${bank2 - bank1} F`);
+
+// ---------- Mission 05, Weg Forum + E-Mail ----------
+await g(() => window.__lux98.advanceMinutes(90));
+await page.waitForTimeout(500);
+check('M05 aktiv nach M03', (await st()).mission === 'M05_DEI_VERLUER_DISKETT', JSON.stringify(await st()));
+await goTo('x.homeDoor'); await press(); await press('1'); await advance();
+check('Nachricht von Tom abgehoert', (await st()).obj === 'talk_technician');
+// naechster Tag 13 Uhr (Zeit nur vorwaerts): genug Zeit, bevor Sandra die Diskette am Folgemorgen abgibt
+await g(() => { const x = window.__lux98; x.advanceMinutes((24 - x.clock.getHourLocal() + 13) * 60); });
+await goTo('x.m05.door'); await press();
+check('Cybercafe betreten (Innenraum)', await g(() => !!window.__lux98.interior));
+await page.screenshot({ path: `${out}/16_cybercafe.png` });
+await goTo('x.m05.tom.root.position'); await press(); await advance();
+check('Mit Tom gesprochen', (await st()).obj === 'group:find_disk');
+const cash5 = (await st()).cash;
+await goTo('x.m05.computers[0]'); await press(); await page.waitForSelector('#computer .win', { timeout: 20000 });
+check('Computer an (-75 F), Modem-Verbindung', await page.isVisible('#computer .win') && (await st()).cash === cash5 - 75, `${cash5} -> ${(await st()).cash}`);
+await page.click('#computer [data-nav="forum"]'); await page.waitForTimeout(1700);
+await page.click('#computer [data-nav="forum/fund"]'); await page.waitForTimeout(1700);
+await page.screenshot({ path: `${out}/17_forum.png` });
+check('Forum: Fundsaachen gelesen', await g(() => window.__lux98.internet.visitedForumFund));
+await page.click('#computer [data-app="mail"]'); await page.waitForTimeout(200);
+await page.click('#computer [data-act="compose"]'); await page.waitForTimeout(200);
+await page.fill('#computer [name="to"]', 'sandra77@stadnet-fiktiv.lu');
+await page.fill('#computer [name="su"]', 'Diskett TK');
+await page.fill('#computer [name="bo"]', 'Moien Sandra, d Diskett gehéiert dem Tom. Merci!');
+await page.click('#composeform button'); await page.waitForTimeout(1300);
+check('E-Mail an Sandra verschickt', await g(() => window.__lux98.m05.mailedAt >= 0));
+await page.click('#computer [data-act="logoff"]'); await page.waitForTimeout(300);
+check('Abgemeldet, +30 Min.', !(await page.isVisible('#computer')));
+await g(() => window.__lux98.advanceMinutes(70));
+await page.waitForTimeout(500);
+await goTo('x.m05.computers[1]'); await press(); await page.waitForTimeout(300);
+await page.click('#computer [data-app="mail"]'); await page.waitForTimeout(300);
+check('Antwort von Sandra im Posteingang', (await page.textContent('#computer .inbox')).includes('Re: Diskett'));
+await page.screenshot({ path: `${out}/18_mail.png` });
+await page.click('#computer [data-act="logoff"]'); await page.waitForTimeout(300);
+await page.waitForTimeout(400);
+await goTo('x.m05.sandra.root.position'); await press(); await advance();
+check('Diskette von Sandra (Weg: Forum)', await g(() => window.__lux98.missions.isObjectiveDone('M05_DEI_VERLUER_DISKETT', 'find_via_forum')));
+const cash6 = (await st()).cash;
+await goTo('x.m05.tom.root.position'); await press(); await advance();
+check('M05 erfuellt: +2 500 F', await g(() => window.__lux98.missions.getState('M05_DEI_VERLUER_DISKETT') === 'Succeeded') && (await st()).cash === cash6 + 2500);
+await goTo('x.m05.interior.spawn'); await press();
+check('Cybercafe verlassen', await g(() => !window.__lux98.interior));
 await page.keyboard.press('Tab'); await page.waitForTimeout(200);
 await page.click('#nb nav button[data-page="map"]'); await page.waitForTimeout(300);
 await g(() => { const x = window.__lux98; x['mapView'].scale = 0.28; x['mapView'].cx = -500; x['mapView'].cz = 800; x['drawNotebookMap'](); });
 await page.screenshot({ path: `${out}/07_map.png` });
 await page.keyboard.press('Tab'); await page.waitForTimeout(200);
 check('Notizbuch mit Tab geschlossen', !(await page.isVisible('#notebook')));
-check('Speichern/Laden', await g(() => window.__lux98.save() && window.__lux98.load()) && await g(() => window.__lux98.missions.getState('M02_ENG_LESCHT_CHANCE') === 'Succeeded' && window.__lux98.flags['m02.path'] === 'honest' && window.__lux98.missions.getState('M03_DNUMMER_AN_DER_ZEITUNG') === 'Succeeded'));
+check('Speichern/Laden', await g(() => window.__lux98.save() && window.__lux98.load()) && await g(() => window.__lux98.missions.getState('M02_ENG_LESCHT_CHANCE') === 'Succeeded' && window.__lux98.flags['m02.path'] === 'honest' && window.__lux98.missions.getState('M03_DNUMMER_AN_DER_ZEITUNG') === 'Succeeded' && window.__lux98.missions.getState('M05_DEI_VERLUER_DISKETT') === 'Succeeded' && window.__lux98.internet.mails.length >= 3));
 const fps = await g(() => { const f = window.__lux98.frameTimes; return Math.round(1000 / (f.reduce((a, b) => a + b, 0) / f.length)); });
 await page.close();
 
@@ -204,6 +249,51 @@ await page.close();
   await page.close();
 }
 
+
+// ---------- Mission 05, Wege Zeuge und Telefonbuch (Zustand vorbereitet) ----------
+for (const way of ['witness', 'phonebook']) {
+  const { page, g, advance, goTo, press, st } = await open();
+  await advance();
+  await g(() => {
+    const x = window.__lux98;
+    for (const [m, objs] of [['M01_ZERECK_AN_DSTAD', ['call_friend', 'get_key', 'find_car', 'visit_friend']], ['M02_ENG_LESCHT_CHANCE', ['listen_message', 'meet_contact', 'trial_repair_honest', 'test_drive', 'report_to_owner']], ['M03_DNUMMER_AN_DER_ZEITUNG', ['buy_newspaper', 'call_from_home', 'meet_stranger', 'combine_clues']]]) {
+      x.missions.refresh(x.clock.getDate()); x.missions.start(m); for (const o of objs) x.missions.completeObjective(m, o); x.missions.refresh(x.clock.getDate());
+    }
+    x.onMissionSucceeded('M03_DNUMMER_AN_DER_ZEITUNG');
+    x.clock.setDateTime(x.clock.getDate(), 9);
+  });
+  await page.waitForTimeout(400);
+  await goTo('x.m05.door'); await press();
+  await goTo('x.m05.tom.root.position'); await press(); await advance();
+  await goTo('x.m05.interior.spawn'); await press();
+  if (way === 'witness') {
+    await goTo('x.m05.nilles.root.position'); await press(); await advance();
+    check('Zeuge Nilles befragt', await g(() => window.__lux98.m05.witnessHeard));
+    await g(() => { const x = window.__lux98; x.clock.setDateTime(x.clock.getDate(), 15); });
+    await page.waitForTimeout(400);
+    await goTo('x.m05.door'); await press();
+    await goTo('x.m05.sandra.root.position'); await press(); await advance();
+    check('Diskette von Sandra (Weg: Zeuge)', await g(() => window.__lux98.missions.isObjectiveDone('M05_DEI_VERLUER_DISKETT', 'find_via_witness')));
+  } else {
+    const callFund = async () => {
+      await goTo('x.booths[0]'); await press();
+      await page.click('#pcoins button:nth-child(2)');
+      for (const d of '479620') await page.keyboard.press('Digit' + d);
+      await page.click('#pactions .call'); await page.waitForTimeout(300);
+      const text = await page.textContent('#dialogue .lb');
+      await advance();
+      return text;
+    };
+    check('Fundbuero heute: nichts abgegeben', (await callFund()).includes('näischt'));
+    await g(() => { const x = window.__lux98; x.advanceMinutes(60 * 24); x.clock.setDateTime(x.clock.getDate(), 10); });
+    await page.waitForTimeout(400);
+    check('Fundbuero naechster Tag: Diskette da', (await callFund()).includes('ofginn ginn'));
+    const c0 = (await st()).cash;
+    await goTo('x.m05.fundDoor'); await press(); await advance();
+    check('Diskette im Fundbuero abgeholt (-50 F)', await g(() => window.__lux98.missions.isObjectiveDone('M05_DEI_VERLUER_DISKETT', 'find_via_phonebook')) && (await st()).cash === c0 - 50);
+  }
+  await page.close();
+}
 console.log('Bildrate (Software-Rendering, nicht aussagekraeftig):', fps);
 console.log('Konsolenfehler:', errors.length ? errors : 'keine');
 await browser.close();

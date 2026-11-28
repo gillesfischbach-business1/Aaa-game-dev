@@ -79,3 +79,15 @@ der engine-unabhaengige Kern und die Werkzeuge.
 
 ### Nicht geprueft
 - Unreal-Anbindung von Dialog und Notizbuch (noch nicht geschrieben; Unreal hier nicht verfuegbar).
+
+## 2026-11-28 – Sitzung 2: Mission 05 „Déi verluer Diskett“ mit Internetcafe
+
+### Tatsaechlich geprueft
+- Begehbarer Innenraum (Cybercafe Pixel): Roehrenmonitore, Theke, Neonlicht, Preistafel; Ein-/Ausgang.
+- Fiktives Offline-Internet (Spez. Abschnitt 09): LuxOS/NetNavigator/StadMail (fiktiv), Portal, Presse, Forum,
+  Kleinanzeigen, Jobs, Gaestebuch (eintragbar), Chat #lëtzebuerg, private Homepage, E-Mail mit Antwort nach
+  Spielzeit, Modemton (erzeugt), langsames Laden. Keine echte Netzwerkverbindung.
+- Mission 05 mit drei Wegen zu einer Wahrheit: Forum + E-Mail, Zeuge an der Haltestelle, Telefonbuch/Fundbuero.
+- Browser-Test Desktop: 57 Pruefungen gruen (alle drei Wege), Handy-Test gruen, Vitest 20, 0 Konsolenfehler.
+- Behoben: Figuren im Cafe ausserhalb des Raums; Fundbuero konnte auf der Telefonzelle landen (neue Orte halten
+  jetzt Abstand zu Interaktionspunkten); CSS-Namenskollision (Monitorrahmen fehlte); Blickrichtung beim Betreten.

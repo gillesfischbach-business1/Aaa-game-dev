@@ -13,6 +13,8 @@ import { Input } from './input';
 import { Mission01, M01_ID } from './missions/m01';
 import { Mission02, M02_ID } from './missions/m02';
 import { Mission03, M03_ID } from './missions/m03';
+import { Mission05, M05_ID } from './missions/m05';
+import { Internet } from './internet';
 import type { MissionController } from './missions/types';
 import { missionDef } from './missiondata';
 import { animateWalk, makeMarker, makePerson, makePhoneBooth, makeSign, type PersonModel } from './models';
@@ -23,6 +25,9 @@ import { Vehicle } from './vehicle';
 
 export type Quality = 'high' | 'low';
 const SAVE_KEY = 'lux98.slot1';
+
+/** Begehbarer Innenraum (liegt unsichtbar unter dem Gelaende) */
+export interface Interior { floor: number; origin: THREE.Vector3; spawn: THREE.Vector3; exit: THREE.Vector3; bounds: [number, number, number, number]; name: string }
 
 export interface Interactable { pos: THREE.Vector3; radius: number; label: () => string | null; act: () => void }
 interface Drivable { v: Vehicle; canEnter: () => boolean; name: string; introSeen: boolean }
@@ -76,6 +81,10 @@ export class Game {
   readonly m02: Mission02;
   readonly m03: Mission03;
   readonly career: Career;
+  readonly m05: Mission05;
+  readonly internet: Internet;
+  interior: Interior | null = null;
+  private computerOpen = false;
   readonly controllers: MissionController[];
   private messages = new Map<string, Line[]>();
   private phoneFromHome = false;
@@ -118,7 +127,16 @@ export class Game {
     this.m01 = new Mission01(this);
     this.m02 = new Mission02(this, this.m01);
     this.m03 = new Mission03(this);
-    this.controllers = [this.m01, this.m02, this.m03];
+    this.internet = new Internet({
+      now: () => this.absHours(),
+      formatTime: (a) => this.formatAbsHours(a),
+      onMailSent: (to) => this.m05.onMailSent(to),
+      onPageVisited: () => {},
+      playerName: 'kremer',
+    });
+    this.m05 = new Mission05(this);
+    this.controllers = [this.m01, this.m02, this.m03, this.m05];
+    document.addEventListener('lux98-logoff', () => this.closeComputer());
     this.registerMissions();
 
     this.setupPhoneUI();
@@ -130,7 +148,7 @@ export class Game {
 
   private registerMissions(): void {
     this.missions = new MissionTracker();
-    for (const id of [M01_ID, M02_ID, M03_ID]) {
+    for (const id of [M01_ID, M02_ID, M03_ID, M05_ID]) {
       const r = this.missions.register(missionDef(id));
       if (!r.ok) console.error(r.error);
     }
@@ -197,6 +215,46 @@ export class Game {
 
   registerMessage(id: string, lines: Line[]): void { this.messages.set(id, lines); }
 
+  // ---------- Innenraeume ----------
+  enterInterior(i: Interior): void {
+    if (this.veh) return;
+    this.interior = i;
+    this.pos.copy(i.spawn);
+    this.vy = 0;
+    this.heading = 0;  // vom Eingang (Suedwand) in den Raum blicken (-z)
+    this.camYaw = this.heading;
+    this.camPitch = 0.1;  // im Raum flacher schauen
+    this.env.indoor = true;
+    this.camera.position.copy(i.spawn).add(new THREE.Vector3(0, 1.6, 0));
+  }
+
+  leaveInterior(): void {
+    const i = this.interior;
+    if (!i) return;
+    this.interior = null;
+    this.env.indoor = false;
+    this.pos.copy(i.exit);
+    this.pos.y = this.city.surfaceAt(this.pos.x, this.pos.z, this.pos.y + 1);
+    this.camera.position.copy(this.pos).add(new THREE.Vector3(0, 2, 3));
+  }
+
+  // ---------- Computer (Internetcafe) ----------
+  openComputer(): void {
+    this.computerOpen = true;
+    this.input.enabled = false;
+    document.exitPointerLock?.();
+    this.internet.open();
+  }
+
+  closeComputer(): void {
+    if (!this.computerOpen) return;
+    this.computerOpen = false;
+    this.internet.close();
+    this.input.enabled = true;
+    this.advanceMinutes(30);  // eine Sitzung = eine halbe Stunde
+    this.ui.toast(`Ofgemellt · ${this.clock.toString()}`);
+  }
+
   isSummerAbs(abs: number): boolean {
     const day = Math.floor(abs / 24);
     return isSummerTime(addDays({ year: 1998, month: 1, day: 1 }, day), Math.floor(abs - day * 24));
@@ -211,8 +269,9 @@ export class Game {
   }
 
   // ---------- Aufbau ----------
-  openSpot(target: THREE.Vector3, preferRoad = false): THREE.Vector3 {
-    // naechster freier Punkt (nicht in einem Gebaeude), bevorzugt auf einem Weg/einer Strasse
+  openSpot(target: THREE.Vector3, preferRoad = false, keepClear = 0): THREE.Vector3 {
+    // naechster freier Punkt (nicht in einem Gebaeude), bevorzugt auf einem Weg/einer Strasse.
+    // keepClear > 0: Mindestabstand zu bereits vorhandenen Interaktionspunkten (sonst ueberlagern sich "E"-Ziele)
     const lines = preferRoad ? this.city.drivable : [...this.city.walkways, ...this.city.drivable];
     const cands: { p: THREE.Vector3; d: number }[] = [];
     for (const l of lines) for (const p of l.pts) {
@@ -220,7 +279,8 @@ export class Game {
       if (d < 250 * 250) cands.push({ p, d });
     }
     cands.sort((a, b) => a.d - b.d);
-    const best = cands.find((c) => !this.insideBuilding(c.p.x, c.p.z))?.p ?? target;
+    const clear = (p: THREE.Vector3) => keepClear <= 0 || this.interactables.every((i) => i.pos.distanceTo(p) >= keepClear);
+    const best = cands.find((c) => clear(c.p) && !this.insideBuilding(c.p.x, c.p.z))?.p ?? target;
     const b = best.clone();
     b.y = this.city.surfaceAt(b.x, b.z, b.y + 1);
     return b;
@@ -495,7 +555,7 @@ export class Game {
     const L = this.ui.lang;
     if (this.nbPage === 'notes') {
       // Laufende Mission zuerst und ausfuehrlich, erledigte als eine Zeile
-      const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung' };
+      const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung', [M05_ID]: 'Déi verluer Diskett' };
       const active = this.controllers.filter((c) => this.missions.getState(c.id) === 'Active').map((c) => c.notes(L).replace(' style="margin-top:14px"', '')).join('');
       const doneList = this.controllers.filter((c) => this.missions.getState(c.id) === 'Succeeded').map((c) => `<div class="done">✓ ${titles[c.id] ?? c.id}</div>`).join('');
       const missionsHtml = `${active}${this.career.notes(L)}${doneList ? `<h3 style="margin-top:14px">ERLEDIGT</h3>${doneList}` : ''}`;
@@ -574,7 +634,7 @@ export class Game {
       'money.cash': String(this.wallet.getCash()),
       'money.bank': String(this.wallet.getBank()),
       'player.in_car': this.veh === this.car ? '1' : '0',
-      'player.location': `${this.activePos().x},${this.activePos().y},${this.activePos().z}`,
+      'player.location': (() => { const q = this.interior ? this.interior.exit : this.activePos(); return `${q.x},${q.y},${q.z}`; })(),
       'player.yaw': String(this.heading),
       'player.reputation': String(this.reputation),
       'car.location': `${this.car.pos.x},${this.car.pos.y},${this.car.pos.z}`,
@@ -589,6 +649,8 @@ export class Game {
     };
     for (const c of this.controllers) Object.assign(data, c.save());
     Object.assign(data, this.career.save());
+    Object.assign(data, this.internet.save());
+    data['player.interior'] = this.interior ? '1' : '0';
     try {
       const r = writeSaveToStorage(window.localStorage, SAVE_KEY, data);
       this.ui.toast(r.ok ? 'Gespeichert.' : `Speichern fehlgeschlagen: ${r.error}`);
@@ -632,6 +694,8 @@ export class Game {
     this.car.fuel = Number(d['car.fuel']) || this.car.fuel;
     for (const c of this.controllers) c.load(d);
     this.career.load(d);
+    this.internet.load(d);
+    if (this.interior) this.leaveInterior();
     // Aeltere Staende: Mission 01 fertig, Mission 02 noch nicht gestartet
     this.startAvailableMissions();
     const pp = vec(d['player.location']);
@@ -666,7 +730,7 @@ export class Game {
   }
 
   private get blocked(): boolean {
-    return this.ui.isOpen('phone') || this.ui.inChoice || this.ui.inWorkshop || this.ui.isOpen('notebook') || !!this.overlayClose;
+    return this.ui.isOpen('phone') || this.ui.inChoice || this.ui.inWorkshop || this.ui.isOpen('notebook') || !!this.overlayClose || this.computerOpen;
   }
 
   tick(dt: number): void {
@@ -747,10 +811,11 @@ export class Game {
     }
     this.pos.addScaledVector(move, speed * dt);
     const t = this.city.terrain;
-    this.pos.x = THREE.MathUtils.clamp(this.pos.x, t.x0 + 3, t.maxX - 3);
-    this.pos.z = THREE.MathUtils.clamp(this.pos.z, t.z0 + 3, t.maxZ - 3);
+    const b = this.interior?.bounds;
+    this.pos.x = b ? THREE.MathUtils.clamp(this.pos.x, b[0], b[2]) : THREE.MathUtils.clamp(this.pos.x, t.x0 + 3, t.maxX - 3);
+    this.pos.z = b ? THREE.MathUtils.clamp(this.pos.z, b[1], b[3]) : THREE.MathUtils.clamp(this.pos.z, t.z0 + 3, t.maxZ - 3);
     this.city.collision.resolve(this.pos, 0.35, this.pos.y);
-    const ground = this.city.surfaceAt(this.pos.x, this.pos.z, this.pos.y + 0.6);
+    const ground = this.interior ? this.interior.floor : this.city.surfaceAt(this.pos.x, this.pos.z, this.pos.y + 0.6);
     const onGround = this.pos.y <= ground + 0.05;
     if (onGround && inp.held('jump') && this.vy <= 0) this.vy = 4.3;
     this.vy -= 9.81 * dt;
@@ -833,11 +898,16 @@ export class Game {
       }
       const dist = 4.2;
       const off = new THREE.Vector3(Math.sin(this.camYaw) * Math.cos(this.camPitch), Math.sin(this.camPitch), Math.cos(this.camYaw) * Math.cos(this.camPitch)).multiplyScalar(dist);
-      const want = head.clone().add(off);
+      const want = head.clone().add(off.multiplyScalar(this.interior ? 0.6 : 1));
       const probe = { x: want.x, z: want.z };
       this.city.collision.resolve(probe, 0.3, want.y - 1);
       want.x = probe.x; want.z = probe.z;
-      want.y = Math.max(want.y, this.city.terrain.heightAt(want.x, want.z) + 0.5);
+      if (this.interior) {
+        const ib = this.interior.bounds;
+        want.x = THREE.MathUtils.clamp(want.x, ib[0], ib[2]);
+        want.z = THREE.MathUtils.clamp(want.z, ib[1], ib[3]);
+        want.y = THREE.MathUtils.clamp(want.y, this.interior.floor + 0.5, this.interior.floor + 2.8);
+      } else want.y = Math.max(want.y, this.city.terrain.heightAt(want.x, want.z) + 0.5);
       cam.position.lerp(want, Math.min(1, dt * 12));
       cam.lookAt(head);
     } else {

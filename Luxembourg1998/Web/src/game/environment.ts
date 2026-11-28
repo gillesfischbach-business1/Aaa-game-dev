@@ -11,6 +11,7 @@ export class Environment {
   private rain: THREE.LineSegments;
   private rainOn = false;
   wetness = 0;
+  indoor = false;   // im Innenraum: kein Regen, kaum Sonnenlicht
   night = 0;
   sunElevation = 0;
 
@@ -99,7 +100,8 @@ export class Environment {
 
     // Naesse steigt bei Regen langsam, trocknet langsam ab
     this.wetness = THREE.MathUtils.clamp(this.wetness + (this.rainOn ? dt / 40 : -dt / 300), 0, 1);
-    this.rain.visible = this.rainOn;
+    this.rain.visible = this.rainOn && !this.indoor;
+    if (this.indoor) { this.sun.intensity *= 0.05; this.hemi.intensity = 0.35; }
     if (this.rainOn) {
       this.rain.position.set(camera.position.x, camera.position.y - 15, camera.position.z);
       const p = this.rain.geometry.attributes.position as THREE.BufferAttribute;

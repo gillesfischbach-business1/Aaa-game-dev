@@ -21,6 +21,7 @@ export const NUMBERS = {
   parts: '40 77 12',
   jang: '48 61 27',
   reding: '45 19 98',
+  fund: '47 96 20',
   weis: '22 45 90',
   taxi: '48 00 48',
   pizza: '40 12 33',
@@ -38,6 +39,7 @@ export const PHONEBOOK = [
   { number: '22 06 41', name: 'Reding, M.', address: 'Rue fictive 7, Ville Haute', district: 'Ville Haute' },
   { number: '48 32 10', name: 'Reding, J.-P.', address: 'Rue fictive 22, Gare', district: 'Gare' },
   { number: '44 90 57', name: 'Reding, A.', address: 'Rue fictive 5, Hollerich', district: 'Hollerich' },
+  { number: NUMBERS.fund, name: 'Fundbüro / Objets trouvés (fiktiv)', address: 'Rue fictive 1, bei der Place de Metz', district: 'Ville Haute', isBusiness: true },
   { number: NUMBERS.home, name: 'Kremer (eigene Wohnung)', address: 'Avenue de la Liberté, 3. Stock', district: 'Gare' },
 ];
 
@@ -73,6 +75,12 @@ export const OBJECTIVE_TEXT: Record<string, { de: string; fr: string; en: string
   meet_stranger: { de: 'Treffen im Pétrusse-Tal unter dem Pont Adolphe', fr: 'Rendez-vous dans la vallée de la Pétrusse sous le pont Adolphe', en: 'Meeting in the Pétrusse valley below Pont Adolphe' },
   combine_clues: { de: 'Die Kiste zur Schwester bringen – Hinweise im Notizbuch kombinieren, die richtige Tür finden', fr: 'Apporter la boîte à la sœur – combiner les indices du carnet, trouver la bonne porte', en: 'Bring the box to the sister – combine the clues in your notebook, find the right door' },
   done03: { de: 'Freies Spiel – Schichten in der Garage Muller, Stadt erkunden. Weitere Missionen folgen.', fr: 'Jeu libre – postes au garage Muller, explorer la ville. D’autres missions suivront.', en: 'Free roam – shifts at Garage Muller, explore the city. More missions to come.' },
+  // Mission 05
+  listen_tom: { de: 'Neue Nachricht auf dem Anrufbeantworter? Zu Hause nachhören (Avenue de la Liberté)', fr: 'Nouveau message sur le répondeur ? Écouter chez soi (avenue de la Liberté)', en: 'New message on the answering machine? Check at home (Avenue de la Liberté)' },
+  talk_technician: { de: 'Tom Kieffer im Cybercafé Pixel beim Bahnhof besuchen', fr: 'Rendre visite à Tom Kieffer au cybercafé Pixel près de la gare', en: 'Visit Tom Kieffer at Cybercafé Pixel near the station' },
+  'group:find_disk': { de: 'Die blaue Diskette „TK – Diplom“ finden – Internet (Forum), Telefonbuch oder Leute an der Bushaltestelle fragen', fr: 'Retrouver la disquette bleue « TK – Diplom » – Internet (forum), annuaire ou témoins à l’arrêt de bus', en: 'Find the blue disk “TK – Diplom” – internet (forum), phone book or ask people at the bus stop' },
+  return_disk: { de: 'Die Diskette Tom ins Cybercafé zurückbringen', fr: 'Rapporter la disquette à Tom au cybercafé', en: 'Bring the disk back to Tom at the cybercafé' },
+  done05: { de: 'Freies Spiel – Stadt erkunden, im Cybercafé surfen, in der Garage arbeiten. Weitere Missionen folgen.', fr: 'Jeu libre – explorer, surfer au cybercafé, travailler au garage. D’autres missions suivront.', en: 'Free roam – explore, surf at the cybercafé, work at the garage. More missions to come.' },
   done02: { de: 'Probearbeit erledigt. Freies Spiel – weitere Missionen folgen.', fr: 'Essai terminé. Jeu libre – d’autres missions suivront.', en: 'Trial job done. Free roam – more missions to come.' },
 };
 
@@ -189,6 +197,41 @@ export const DIALOGUE03 = {
     { who: 'Madame Marie Reding', lb: 'Dräisseg Joer hu mir net méi mateneen geschwat. … Merci. Wierklech, merci. Huelt dat hei, ech bestinn drop.', de: 'Dreißig Jahre haben wir nicht mehr miteinander gesprochen. … Danke. Wirklich, danke. Nehmen Sie das, ich bestehe darauf.', fr: 'Trente ans que nous ne nous sommes pas parlé. … Merci. Vraiment, merci. Prenez ceci, j’insiste.', en: 'Thirty years we haven’t spoken. … Thank you. Truly, thank you. Take this, I insist.' },
   ] as Line[],
 };
+
+const T = (who: string, lb: string, de: string, fr: string, en: string): Line => ({ who, lb, de, fr, en });
+export const DIALOGUE05 = {
+  tomMessage: [
+    T('Äntwerter', 'Moien, hei ass den Tom Kieffer – de Jang huet mir Är Nummer ginn. Ech brauch dréngend Hëllef.', 'Hallo, hier ist Tom Kieffer – Jang hat mir Ihre Nummer gegeben. Ich brauche dringend Hilfe.', 'Bonjour, ici Tom Kieffer – Jang m’a donné votre numéro. J’ai besoin d’aide d’urgence.', 'Hi, this is Tom Kieffer – Jang gave me your number. I urgently need help.'),
+    T('Äntwerter', 'Kommt w.e.g. an de Cybercafé Pixel bei der Gare. Ech sinn do bis owes.', 'Kommen Sie bitte ins Cybercafé Pixel beim Bahnhof. Ich bin dort bis abends.', 'Venez s’il vous plaît au cybercafé Pixel près de la gare. J’y suis jusqu’au soir.', 'Please come to Cybercafé Pixel near the station. I’m there until the evening.'),
+  ],
+  tomIntro: [
+    T('Tom', 'Gutt, datt Dir do sidd! Ech hunn eng Diskett verluer – meng Diplomaarbecht, d’Backup. Blo, drop steet „TK – Diplom“.', 'Gut, dass Sie da sind! Ich habe eine Diskette verloren – meine Diplomarbeit, die Sicherung. Blau, darauf steht „TK – Diplom“.', 'Heureusement que vous êtes là ! J’ai perdu une disquette – mon mémoire, la sauvegarde. Bleue, avec « TK – Diplom » dessus.', 'Glad you’re here! I lost a floppy disk – my thesis backup. Blue, labelled “TK – Diplom”.'),
+    T('Tom', 'Meng Festplack ass gëschter futti gaangen. Ouni déi Diskett sinn sechs Méint Aarbecht fort. Ech muss se freides ofginn.', 'Meine Festplatte ist gestern kaputtgegangen. Ohne diese Diskette sind sechs Monate Arbeit weg. Ich muss sie Freitag abgeben.', 'Mon disque dur a lâché hier. Sans cette disquette, six mois de travail sont perdus. Je dois la rendre vendredi.', 'My hard drive died yesterday. Without that disk, six months of work are gone. It’s due Friday.'),
+    T('Tom', 'Ech war mam Bus ënnerwee, iwwer d’Place de Paris. Kuckt um Internet – hei sinn d’Computeren – oder am Telefonbuch, oder frot d’Leit um Busarrêt.', 'Ich war mit dem Bus unterwegs, über die Place de Paris. Schauen Sie im Internet – hier sind die Computer – oder im Telefonbuch, oder fragen Sie die Leute an der Bushaltestelle.', 'J’ai pris le bus, par la place de Paris. Cherchez sur Internet – les ordinateurs sont ici – ou dans l’annuaire, ou demandez aux gens à l’arrêt de bus.', 'I took the bus, via Place de Paris. Check the internet – the computers are here – or the phone book, or ask people at the bus stop.'),
+  ],
+  tomWaiting: [T('Tom', 'Hutt Dir eppes fonnt? Ech kann net méi schlofen …', 'Haben Sie etwas gefunden? Ich kann nicht mehr schlafen …', 'Vous avez trouvé quelque chose ? Je n’arrive plus à dormir …', 'Found anything? I can’t sleep anymore …')],
+  tomThanks: [
+    T('Tom', 'Dat ass se! Lo kucken … all d’Fichieren sinn nach do! Dir hutt mech gerett.', 'Das ist sie! Mal sehen … alle Dateien sind noch da! Sie haben mich gerettet.', 'C’est elle ! Voyons … tous les fichiers sont là ! Vous m’avez sauvé.', 'That’s it! Let’s see … all the files are still there! You saved me.'),
+    T('Tom', 'Hei, fir Iech. An d’Computeren hei sinn fir Iech ëmmer gratis – soulaang ech hei schaffen.', 'Hier, für Sie. Und die Computer hier sind für Sie immer gratis – solange ich hier arbeite.', 'Tenez, pour vous. Et les ordinateurs ici sont gratuits pour vous – tant que je travaille ici.', 'Here, for you. And the computers here are always free for you – as long as I work here.'),
+  ],
+  nilles: [
+    T('Här Nilles', 'Eng Diskett? … Jo! Gëschter huet eng jonk Fra eppes Bloes hei vum Buedem opgehuewen. Rouden Rucksak.', 'Eine Diskette? … Ja! Gestern hat eine junge Frau hier etwas Blaues vom Boden aufgehoben. Roter Rucksack.', 'Une disquette ? … Oui ! Hier une jeune femme a ramassé quelque chose de bleu ici. Sac à dos rouge.', 'A floppy disk? … Yes! Yesterday a young woman picked up something blue here. Red backpack.'),
+    T('Här Nilles', 'Ech gesinn se all Dag. Si geet ëmmer an deen Internetcafé bei der Gare, mëttes.', 'Ich sehe sie jeden Tag. Sie geht immer in dieses Internetcafé beim Bahnhof, nachmittags.', 'Je la vois tous les jours. Elle va toujours dans ce café Internet près de la gare, l’après-midi.', 'I see her every day. She always goes to that internet café near the station, afternoons.'),
+  ],
+  nillesIdle: [T('Här Nilles', 'De Bus huet nees Verspéidung …', 'Der Bus hat wieder Verspätung …', 'Le bus est encore en retard …', 'The bus is late again …')],
+  sandraBusy: [T('Sandra', 'Sorry, ech sinn amgaang ze schreiwen.', 'Sorry, ich bin am Schreiben.', 'Désolée, je suis en train d’écrire.', 'Sorry, I’m busy writing.')],
+  sandraGiveForum: [T('Sandra', 'Dir hutt mir gemailt? Super! Hei ass d’Diskett. Vill Gléck dem Tom!', 'Sie haben mir gemailt? Super! Hier ist die Diskette. Viel Glück für Tom!', 'C’est vous qui m’avez écrit ? Super ! Voici la disquette. Bonne chance à Tom !', 'You emailed me? Great! Here’s the disk. Good luck to Tom!')],
+  sandraGiveWitness: [T('Sandra', 'Eng blo Diskett vum Busarrêt? Jo, déi hunn ech! Ech hat se am Forum gemellt. Hei.', 'Eine blaue Diskette von der Bushaltestelle? Ja, die habe ich! Ich hatte sie im Forum gemeldet. Hier.', 'Une disquette bleue de l’arrêt de bus ? Oui, je l’ai ! Je l’avais signalée sur le forum. Tenez.', 'A blue disk from the bus stop? Yes, I have it! I posted about it in the forum. Here.')],
+  sandraHandedIn: [T('Sandra', 'D’Diskett? Déi hunn ech de Moien op d’Fundbüro bruecht – bei der Place de Metz.', 'Die Diskette? Die habe ich heute Morgen ins Fundbüro gebracht – bei der Place de Metz.', 'La disquette ? Je l’ai apportée ce matin aux objets trouvés – près de la place de Metz.', 'The disk? I took it to the lost and found this morning – near Place de Metz.')],
+  fundNothing: [T('Fundbüro', 'Objets trouvés, moien. Eng Diskett? Neen, haut ass näischt ofginn ginn. Probéiert et muer nach eng Kéier.', 'Fundbüro, guten Tag. Eine Diskette? Nein, heute wurde nichts abgegeben. Versuchen Sie es morgen noch einmal.', 'Objets trouvés, bonjour. Une disquette ? Non, rien n’a été déposé aujourd’hui. Rappelez demain.', 'Lost and found, hello. A floppy disk? No, nothing handed in today. Try again tomorrow.')],
+  fundYes: [T('Fundbüro', 'Eng blo Diskett mat „TK“? Jo, déi ass de Moien ofginn ginn. Kommt laanscht – bei der Place de Metz, mat 50 Frang Gebühr.', 'Eine blaue Diskette mit „TK“? Ja, die wurde heute Morgen abgegeben. Kommen Sie vorbei – bei der Place de Metz, 50 Franken Gebühr.', 'Une disquette bleue avec « TK » ? Oui, elle a été déposée ce matin. Passez – près de la place de Metz, 50 francs de frais.', 'A blue disk with “TK”? Yes, handed in this morning. Come by – near Place de Metz, 50 francs fee.')],
+  fundClosed: [T('', 'Op der Dier: „Objets trouvés – Méindeg bis Freideg 8–12 an 14–17 Auer.“', 'An der Tür: „Fundbüro – Montag bis Freitag 8–12 und 14–17 Uhr.“', 'Sur la porte : « Objets trouvés – du lundi au vendredi 8 h–12 h et 14 h–17 h. »', 'On the door: “Lost and found – Mon–Fri 8–12 and 2–5 pm.”')],
+  fundCounter: [T('Fundbüro', 'Hei ass Är Diskett. Dat mécht 50 Frang. Ënnerschreift w.e.g. hei.', 'Hier ist Ihre Diskette. Das macht 50 Franken. Bitte hier unterschreiben.', 'Voici votre disquette. Ça fait 50 francs. Signez ici s’il vous plaît.', 'Here’s your disk. That’s 50 francs. Please sign here.')],
+  fundEmpty: [T('Fundbüro', 'Mir hu keng Diskett hei. Wann eppes ofginn gëtt, rufft eis un.', 'Wir haben keine Diskette hier. Wenn etwas abgegeben wird, rufen Sie uns an.', 'Nous n’avons pas de disquette. Si quelque chose est déposé, appelez-nous.', 'We don’t have a disk here. If something comes in, give us a call.')],
+  sandraMail: { subject: 'Re: Diskett', body: 'Moien!\n\nSuper, datt de Besëtzer sech mellt! Ech sinn all Dag vu 14 bis 20 Auer am Cybercafé Pixel bei der Gare – roude Rucksak. Kommt einfach laanscht.\n\nSandra' },
+};
+
+export const NET_PRICE = 75;  // halbe Stunde Internet (Platzhalter, Kategorie D)
 
 export const SLEEP_LINE: Line = { who: '', lb: 'Bis muer de Moien schlofen?', de: 'Bis morgen früh schlafen?', fr: 'Dormir jusqu’à demain matin ?', en: 'Sleep until tomorrow morning?' };
 

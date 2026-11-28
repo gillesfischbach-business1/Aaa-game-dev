@@ -6,5 +6,5 @@ PRICE_FUEL_DIESEL_L,Kraftstoff,Liter Diesel,,C,true,,
 PRICE_BUS_TICKET,Verkehr,Einzelfahrschein AVL,,C,true,,Tarifheft AVL 1998 suchen
 PRICE_NEWSPAPER,Medien,Tageszeitung,30,D,true,,Spielwert 30 F (Platzhalter) - Preis auf Titelseiten 1998 ablesen (eluxemburgensia)
 PRICE_RENT_STUDIO,Wohnen,Monatsmiete kleine Wohnung,,C,true,,Kleinanzeigen 1998 auswerten
-PRICE_INTERNETCAFE_HOUR,Internet,Eine Stunde Internetcafe,,D,true,,fiktives Geschaeft - plausibler Wert festlegen
+PRICE_INTERNETCAFE_HOUR,Internet,Eine Stunde Internetcafe,150,D,true,,fiktives Geschaeft - Spielwert 150 F (halbe Stunde 75 F)
 PRICE_PAYPHONE_UNIT,Telefon,Gespraechseinheit Telefonzelle,,C,true,,P&T-Tarife 1998 suchen

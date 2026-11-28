@@ -18,3 +18,5 @@ FORBID_PFAFFENTHAL_LIFT,Pfaffenthal,Panoramalift Pfaffenthal,,,2016-07-01,,B,SRC
 FORBID_FUNICULAR_PFAFFENTHAL,Pfaffenthal / Kirchberg,Standseilbahn Pfaffenthal-Kirchberg,,,2017-12-10,,B,SRC_PENDING_TRAM,unverified,keine,darf nicht erscheinen,
 FORBID_COQUE,Kirchberg,d'Coque,,,2002-01-01,,C,,unverified,keine,darf nicht erscheinen,Eroeffnungsjahr pruefen
 SHOP_INTERNETCAFE_01,Gare,Internetcafé (fiktiv),,,,,D,,fictional,eigene Gestaltung,nicht begonnen,Fiktives Geschaeft - keine Behauptung realer Existenz
+SHOP_CYBERCAFE_PIXEL,Gare,Cybercafé Pixel (fiktiv),,,,,D,,fictional,eigene Gestaltung,Browser-Fassung,Fiktives Internetcafe - keine Behauptung realer Existenz; Preise Platzhalter
+OFFICE_FUNDBUERO_FICTIVE,Ville Haute,Fundbüro (fiktiv),,,,,D,,fictional,eigene Gestaltung,Browser-Fassung,Lage und Oeffnungszeiten erfunden; reales Fundbuero 1998 recherchieren

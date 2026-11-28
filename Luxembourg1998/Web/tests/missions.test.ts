@@ -9,6 +9,21 @@ describe('Missionsdaten aus Data/Missions/missions_main.json', () => {
     expect(t.register(missionDef('M02_ENG_LESCHT_CHANCE')).ok).toBe(true);
   });
 
+  it('M05 hat drei alternative Loesungswege', () => {
+    const def = missionDef('M05_DEI_VERLUER_DISKETT');
+    const group = def.objectives.filter((o) => o.alternativeGroup === 'find_disk').map((o) => o.id);
+    expect(group).toEqual(['find_via_forum', 'find_via_phonebook', 'find_via_witness']);
+    for (const path of group) {
+      const t = new MissionTracker();
+      const d = { ...def, prerequisites: [] };
+      t.register(d);
+      t.refresh({ year: 1998, month: 4, day: 22 });
+      t.start(d.id);
+      for (const o of ['listen_tom', 'talk_technician', path, 'return_disk']) t.completeObjective(d.id, o);
+      expect(t.getState(d.id)).toBe('Succeeded');
+    }
+  });
+
   it('M02 erst nach M01 verfuegbar', () => {
     const t = new MissionTracker();
     t.register(missionDef('M01_ZERECK_AN_DSTAD'));

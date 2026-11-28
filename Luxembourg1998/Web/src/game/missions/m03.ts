@@ -229,6 +229,7 @@ export class Mission03 implements MissionController {
       g.reputation += 5 - this.wrongDoors * 2;
       this.hasBox = false;
       this.complete('combine_clues');
+      g.flags['m03.done_at'] = String(g.absHours());
       g.ui.toast(`Mission erfüllt: „D’Nummer an der Zeitung“ · +${formatLuf(pay)}`, 5000);
       g.onMissionSucceeded(this.id);
     });

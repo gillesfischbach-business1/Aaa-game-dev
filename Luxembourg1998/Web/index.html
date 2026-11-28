@@ -62,8 +62,56 @@
   #paper .ad button { margin-top: 4px; font-family: 'Caveat', cursive; font-size: 17px; background: none; border: 1px solid #a33a2c; color: #a33a2c; border-radius: 3px; cursor: pointer; padding: 0 8px; }
   #paper .ad.noted { background: rgba(224, 183, 74, .25); }
   #paper .foot { font-size: 11px; color: #666; margin: 10px 0; font-family: 'IBM Plex Sans', sans-serif; }
+  /* Computer im Internetcafe (fiktives 90er-Internet) */
+  #computer { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); pointer-events: auto; padding: 12px; }
+  #computer .crt { background: #d9d2bd; border-radius: 18px; padding: 22px 22px 34px; box-shadow: 0 10px 40px rgba(0,0,0,.7), inset 0 0 0 2px #bfb79f; width: min(900px, 100%); position: relative; }
+  #computer .brand { position: absolute; bottom: 9px; left: 0; right: 0; text-align: center; font: 600 11px 'IBM Plex Sans', sans-serif; letter-spacing: 2px; color: #8a8470; }
+  #computer .crtscreen { background: #2a7f7f; height: min(560px, calc(100vh - 110px)); border-radius: 10px / 14px; overflow: hidden; display: flex; flex-direction: column; font: 13px Tahoma, Verdana, 'IBM Plex Sans', sans-serif; color: #000; box-shadow: inset 0 0 40px rgba(0,0,0,.35); }
+  #computer .win { flex: 1; margin: 10px; background: #c0c0c0; border: 2px solid; border-color: #fff #555 #555 #fff; display: flex; flex-direction: column; min-height: 0; }
+  #computer .titlebar { background: linear-gradient(90deg, #0a246a, #3a6ea5); color: #fff; font-weight: bold; padding: 3px 6px; display: flex; justify-content: space-between; align-items: center; }
+  #computer button { font: 12px Tahoma, Verdana, sans-serif; background: #c0c0c0; border: 2px solid; border-color: #fff #555 #555 #fff; padding: 2px 8px; cursor: pointer; color: #000; }
+  #computer button:active { border-color: #555 #fff #fff #555; }
+  #computer .toolbar { display: flex; gap: 4px; padding: 4px; align-items: center; border-bottom: 1px solid #888; flex-wrap: wrap; }
+  #computer .addr { flex: 1; min-width: 160px; background: #fff; border: 2px inset #ddd; padding: 2px 6px; font-family: 'Courier New', monospace; font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #computer .content { flex: 1; overflow: auto; background: #fff; margin: 4px; border: 2px inset #ddd; min-height: 0; }
+  #computer .taskbar { background: #c0c0c0; border-top: 2px solid #fff; display: flex; gap: 4px; padding: 3px; align-items: center; }
+  #computer .taskbar .start { font-weight: bold; padding: 2px 8px; border: 2px solid; border-color: #fff #555 #555 #fff; }
+  #computer .taskbar button.on { border-color: #555 #fff #fff #555; background: #d8d8d8; }
+  #computer .taskbar .clock { margin-left: auto; border: 1px inset #ddd; padding: 2px 8px; }
+  #computer .loading { padding: 40px; text-align: center; color: #333; }
+  #computer .loading .bar { width: 260px; max-width: 80%; height: 14px; margin: 12px auto; border: 2px inset #ddd; background: #fff; }
+  #computer .loading .bar i { display: block; height: 100%; width: 0; background: #0a246a; }
+  #computer .site { padding: 10px 16px; font-family: 'Times New Roman', Times, serif; font-size: 15px; line-height: 1.4; }
+  #computer .site a { color: #0000ee; text-decoration: underline; cursor: pointer; }
+  #computer .site h1 { font-size: 34px; margin: 4px 0; color: #800000; font-family: Georgia, serif; }
+  #computer .site h2 { font-size: 22px; margin: 4px 0 10px; color: #000080; }
+  #computer .site h3 { font-size: 16px; margin: 10px 0 2px; }
+  #computer .site .tag { font-style: italic; margin: 0 0 10px; }
+  #computer .site .small { font-size: 12px; color: #555; }
+  #computer .site .counter { font-family: 'Courier New', monospace; background: #000; color: #0f0; padding: 0 4px; }
+  #computer .site table.nav td { padding: 4px 18px 4px 0; }
+  #computer .site table.forum { border-collapse: collapse; width: 100%; }
+  #computer .site table.forum td, #computer .site table.forum th { border: 1px solid #999; padding: 3px 6px; text-align: left; }
+  #computer .site .post, #computer .site .gb, #computer .site .ad { border-bottom: 1px dashed #999; padding: 6px 0; }
+  #computer .site form { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 12px; max-width: 420px; }
+  #computer .site .blink { color: #c00; font-weight: bold; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #computer .site .blink { animation: none; } }
+  #computer .chat .log { background: #000; color: #ccc; font-family: 'Courier New', monospace; font-size: 13px; padding: 6px; height: 220px; overflow: auto; }
+  #computer .chat .log b { color: #6cf; }
+  #computer .chat form { flex-direction: row; max-width: none; }
+  #computer .chat form input { flex: 1; }
+  #computer .mail { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  #computer .mail label { display: flex; gap: 6px; align-items: center; }
+  #computer .mail label input { flex: 1; }
+  #computer .mail pre { white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 13px; background: #f4f4f4; padding: 8px; margin: 0; }
+  #computer .mail .hdr { font-size: 12px; border-bottom: 1px solid #999; padding-bottom: 6px; }
+  #computer .mail .err { color: #c00; font-size: 12px; }
+  #computer table.inbox { border-collapse: collapse; width: 100%; }
+  #computer table.inbox td, #computer table.inbox th { border-bottom: 1px solid #ccc; padding: 4px 6px; text-align: left; cursor: pointer; }
+  #computer table.inbox tr.new td { font-weight: bold; }
   /* Ebenen: Spielbild < Touch-Flaechen (4) < Anzeigen (5) < Fenster (10) < Menues (20) */
-  #dialogue, #choice, #notebook, #phone, #workshop, #paper { z-index: 10; }
+  #dialogue, #choice, #notebook, #phone, #workshop, #paper, #computer { z-index: 10; }
   .screen { z-index: 20; }
   /* Touch */
   #touch { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
@@ -185,6 +233,10 @@
     <div class="foot"></div>
     <button class="btn" id="paperClose">Zuklappen [E]</button>
   </div>
+</div>
+
+<div id="computer" class="hidden">
+  <div class="crt"><div class="crtscreen"></div><div class="brand">PIXEL · 15″ (fiktiv)</div></div>
 </div>
 
 <div id="notebook" class="hidden">

@@ -200,6 +200,10 @@
       ],
       "objectives": [
         {
+          "id": "listen_tom",
+          "checkpoint": true
+        },
+        {
           "id": "talk_technician",
           "checkpoint": true
         },
@@ -219,15 +223,19 @@
           "id": "return_disk"
         }
       ],
-      "fail_conditions": [
-        "disk_destroyed"
-      ],
+      "fail_conditions": [],
       "rewards": {
-        "money_luf": null
+        "money_luf": 2500,
+        "note": "Spielbalance, Kategorie D"
       },
       "teaches": [
-        "internet_cafe"
-      ]
+        "internet_cafe",
+        "email",
+        "forum",
+        "phonebook",
+        "witness"
+      ],
+      "location_note": "Cybercafe Pixel (fiktiv) nahe Bahnhof; Bushaltestelle Place de Paris; Fundbuero (fiktiv) nahe Place de Metz"
     },
     {
       "mission_id": "M06_ENG_NUECHT_AM_GRONN",
