@@ -1,0 +1,365 @@
+{
+  "schema_version": 1,
+  "events": [
+    {
+      "event_id": "EVENT_SCHUEBERFOUER_1998",
+      "name": "Schueberfouer 1998",
+      "start": null,
+      "end": null,
+      "accuracy": "B",
+      "source_ref": "SRC_PENDING_FOUER",
+      "open_question": "Genaue Daten 1998 aus Zeitungen vom August 1998 belegen. Bis dahin ist die Mission gesperrt."
+    },
+    {
+      "event_id": "EVENT_NATIONALFEIERDAG_1998",
+      "name": "Nationalfeiertag",
+      "start": "1998-06-22",
+      "end": "1998-06-23",
+      "accuracy": "C",
+      "source_ref": "",
+      "open_question": "Feierlichkeiten am Vorabend (22.06.) und Ablauf 1998 belegen."
+    }
+  ],
+  "missions": [
+    {
+      "mission_id": "M01_ZERECK_AN_DSTAD",
+      "title_lb": "Zeréck an d'Stad",
+      "title_de": "Zurück in die Stadt",
+      "district": "Gare",
+      "prerequisites": [],
+      "objectives": [
+        {
+          "id": "arrive_station",
+          "checkpoint": true
+        },
+        {
+          "id": "call_friend"
+        },
+        {
+          "id": "get_key",
+          "checkpoint": true
+        },
+        {
+          "id": "find_car"
+        },
+        {
+          "id": "visit_friend"
+        }
+      ],
+      "fail_conditions": [
+        "car_wrecked"
+      ],
+      "rewards": {
+        "money_luf": 2000,
+        "unlocks": [
+          "M02_ENG_LESCHT_CHANCE"
+        ],
+        "note": "Starthilfe von Jang (Spielbalance, Kategorie D)"
+      },
+      "teaches": [
+        "movement",
+        "dialogue",
+        "payphone",
+        "notebook_map",
+        "vehicle"
+      ]
+    },
+    {
+      "mission_id": "M02_ENG_LESCHT_CHANCE",
+      "title_lb": "Eng lescht Chance",
+      "title_de": "Eine letzte Chance",
+      "district": "Hollerich",
+      "prerequisites": [
+        "M01_ZERECK_AN_DSTAD"
+      ],
+      "objectives": [
+        {
+          "id": "listen_message",
+          "checkpoint": true
+        },
+        {
+          "id": "meet_contact",
+          "checkpoint": true
+        },
+        {
+          "id": "trial_repair_honest",
+          "group": "trial"
+        },
+        {
+          "id": "trial_repair_shortcut",
+          "group": "trial"
+        },
+        {
+          "id": "test_drive"
+        },
+        {
+          "id": "report_to_owner"
+        }
+      ],
+      "fail_conditions": [
+        "customer_car_destroyed",
+        "late_for_trial"
+      ],
+      "rewards": {
+        "money_luf": null,
+        "note": "ehrlich: 4 500 F Lohn + 1 800 F Teile zurueck, Ruf +10; Abkuerzung: 2 000 F, Ruf -5 (Spielbalance, Kategorie D)"
+      },
+      "teaches": [
+        "answering_machine",
+        "career",
+        "choices",
+        "consequences",
+        "workshop"
+      ],
+      "location_note": "Garage Muller (fiktiv) in Hollerich, Naehe Rue de l'Abattoir; Teilehaendler (fiktiv) an der Route d'Esch"
+    },
+    {
+      "mission_id": "M03_DNUMMER_AN_DER_ZEITUNG",
+      "title_lb": "D'Nummer an der Zeitung",
+      "title_de": "Die Nummer in der Zeitung",
+      "district": "Gare",
+      "prerequisites": [
+        "M02_ENG_LESCHT_CHANCE"
+      ],
+      "objectives": [
+        {
+          "id": "buy_newspaper",
+          "checkpoint": true
+        },
+        {
+          "id": "call_from_payphone",
+          "group": "contact",
+          "checkpoint": true
+        },
+        {
+          "id": "call_from_home",
+          "group": "contact",
+          "checkpoint": true
+        },
+        {
+          "id": "meet_stranger",
+          "checkpoint": true
+        },
+        {
+          "id": "combine_clues"
+        }
+      ],
+      "fail_conditions": [
+        "missed_meeting"
+      ],
+      "rewards": {
+        "money_luf": 3000,
+        "note": "weniger Ruf bei falschem Klingeln (Spielbalance, Kategorie D)"
+      },
+      "teaches": [
+        "newspaper",
+        "classified_ads",
+        "phone_hours",
+        "deduction",
+        "sleep"
+      ],
+      "location_note": "Kiosk an der Place de Paris (fiktiv); Treffen im Petrusse-Tal unter dem Pont Adolphe; drei moegliche Adressen (Ville Haute, Gare, Hollerich)"
+    },
+    {
+      "mission_id": "M04_UM_GLACIS",
+      "title_lb": "Um Glacis",
+      "title_de": "Auf dem Glacis",
+      "district": "Limpertsberg",
+      "prerequisites": [
+        "M03_DNUMMER_AN_DER_ZEITUNG"
+      ],
+      "event": "EVENT_SCHUEBERFOUER_1998",
+      "objectives": [
+        {
+          "id": "meet_group"
+        },
+        {
+          "id": "ride_or_game",
+          "optional": true
+        },
+        {
+          "id": "choose_side"
+        }
+      ],
+      "fail_conditions": [],
+      "rewards": {
+        "money_luf": null
+      },
+      "teaches": [
+        "events",
+        "relationships"
+      ]
+    },
+    {
+      "mission_id": "M05_DEI_VERLUER_DISKETT",
+      "title_lb": "Déi verluer Diskett",
+      "title_de": "Die verlorene Diskette",
+      "district": "Gare",
+      "prerequisites": [
+        "M03_DNUMMER_AN_DER_ZEITUNG"
+      ],
+      "objectives": [
+        {
+          "id": "listen_tom",
+          "checkpoint": true
+        },
+        {
+          "id": "talk_technician",
+          "checkpoint": true
+        },
+        {
+          "id": "find_via_forum",
+          "group": "find_disk"
+        },
+        {
+          "id": "find_via_phonebook",
+          "group": "find_disk"
+        },
+        {
+          "id": "find_via_witness",
+          "group": "find_disk"
+        },
+        {
+          "id": "return_disk"
+        }
+      ],
+      "fail_conditions": [],
+      "rewards": {
+        "money_luf": 2500,
+        "note": "Spielbalance, Kategorie D"
+      },
+      "teaches": [
+        "internet_cafe",
+        "email",
+        "forum",
+        "phonebook",
+        "witness"
+      ],
+      "location_note": "Cybercafe Pixel (fiktiv) nahe Bahnhof; Bushaltestelle Place de Paris; Fundbuero (fiktiv) nahe Place de Metz"
+    },
+    {
+      "mission_id": "M06_ENG_NUECHT_AM_GRONN",
+      "title_lb": "Eng Nuecht am Gronn",
+      "title_de": "Eine Nacht im Grund",
+      "district": "Grund",
+      "prerequisites": [
+        "M05_DEI_VERLUER_DISKETT"
+      ],
+      "time_window": {
+        "from_hour": 21,
+        "to_hour": 3
+      },
+      "objectives": [
+        {
+          "id": "listen_invite",
+          "checkpoint": true
+        },
+        {
+          "id": "arrive_grund",
+          "checkpoint": true
+        },
+        {
+          "id": "outcome_friendship",
+          "group": "outcome"
+        },
+        {
+          "id": "outcome_conflict",
+          "group": "outcome"
+        },
+        {
+          "id": "outcome_job",
+          "group": "outcome"
+        }
+      ],
+      "fail_conditions": [],
+      "rewards": {
+        "money_luf": null
+      },
+      "teaches": [
+        "night",
+        "choices",
+        "relationships",
+        "consequences"
+      ],
+      "prerequisites_note": "Urspruenglich nach M04 (Schueberfouer). M04 bleibt gesperrt, bis die Termine 1998 belegt sind; daher vorlaeufig nach M05.",
+      "location_note": "Bistro-Terrasse \"Am Pëtz\" (fiktiv) im Grund an der Alzette"
+    },
+    {
+      "mission_id": "M07_DSTAD_AM_WANDEL",
+      "title_lb": "D'Stad am Wandel",
+      "title_de": "Die Stadt im Wandel",
+      "district": "Hollerich",
+      "prerequisites": [
+        "M06_ENG_NUECHT_AM_GRONN"
+      ],
+      "objectives": [
+        {
+          "id": "listen_mia",
+          "checkpoint": true
+        },
+        {
+          "id": "get_camera",
+          "checkpoint": true
+        },
+        {
+          "id": "photograph_old_building"
+        },
+        {
+          "id": "interview_resident"
+        },
+        {
+          "id": "deliver_film",
+          "checkpoint": true
+        },
+        {
+          "id": "decide_story"
+        }
+      ],
+      "fail_conditions": [],
+      "rewards": {
+        "money_luf": 3000,
+        "note": "Spielbalance, Kategorie D"
+      },
+      "teaches": [
+        "camera",
+        "photo_mode",
+        "interview",
+        "editorial_choice",
+        "newspaper"
+      ],
+      "location_note": "Kirchberg liegt ausserhalb des aktuellen Kartenausschnitts; daher Hollerich (fiktive alte Werkstatt an der Route d'Esch), Pont Adolphe und Gare. Fotolabor Mia Feller (fiktiv) nahe Gare."
+    },
+    {
+      "mission_id": "M08_MILLENNIUM",
+      "title_lb": "Millennium",
+      "title_de": "Millennium",
+      "district": "Ville Haute",
+      "prerequisites": [
+        "M07_DSTAD_AM_WANDEL"
+      ],
+      "available_from": "1998-12-01",
+      "available_until": "1998-12-31",
+      "objectives": [
+        {
+          "id": "conversations_future",
+          "checkpoint": true
+        },
+        {
+          "id": "final_choice"
+        }
+      ],
+      "fail_conditions": [],
+      "rewards": {
+        "money_luf": null,
+        "note": "Ende des ersten Kapitels; Epilog aus allen Entscheidungen"
+      },
+      "teaches": [
+        "time_skip",
+        "winter",
+        "consequences",
+        "ending"
+      ],
+      "location_note": "Weihnachtsstaende auf der Place d'Armes sind eine Annaeherung (Kategorie C, nicht belegt); Silvester auf der Place d'Armes"
+    }
+  ]
+}

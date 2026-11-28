@@ -1,0 +1,167 @@
+# Fortschritt
+
+## 2026-11-28 – Sitzung 1 (Phase 0 + Beginn Phase 1)
+
+### Umgebungspruefung (Phase 0) – Ergebnis
+| Pruefpunkt | Ergebnis |
+|---|---|
+| Betriebssystem | Linux x86_64 (Cloud-Container) – **kein Windows** |
+| Grafikkarte | **keine** |
+| Unreal Engine | **nicht installiert** (fuer Linux-Container nicht vorgesehen) |
+| Visual Studio / Windows SDK | **nicht verfuegbar** (nur unter Windows) |
+| C++-Compiler | GCC 13.3, Clang vorhanden |
+| CMake | 3.28 |
+| Python | 3.13 (+ pyproj 3.8, pytest installiert) |
+| Blender | nicht installiert |
+| Git / Git LFS | 2.x / 3.4.1 |
+| Speicher / RAM / CPU | ca. 60 GB frei / 15 GB / 4 Kerne |
+**Folge:** Unreal-Builds, Grafikpruefung und Leistungsmessung sind hier unmoeglich. Gebaut und getestet wird nur
+der engine-unabhaengige Kern und die Werkzeuge.
+
+### Erledigt und tatsaechlich geprueft
+- LuxCore (7 Module) kompiliert mit GCC und Clang, C++20, `-Wall -Wextra -Wpedantic -Werror`: **0 Warnungen**.
+- Kern-Tests: **109 Pruefungen, 0 Fehler**.
+- Python-Tests (Geodaten, Validator): **16 bestanden**.
+- Anachronismus-Pruefer auf allen Daten: **0 Fehler, 21 Warnungen** (offene Quellen/Fragen, Platzhalterpreise).
+  Der Pruefer hat beim ersten Lauf 2 echte Fehler gefunden (Euro-Eintraege nicht als verboten markiert) – behoben.
+
+### Erledigt, aber NICHT geprueft
+- Unreal-Projektdatei, Build-Regeln, Konfiguration, 6 Unreal-Klassen (Figur, Fahrzeug, Uhr, Wirtschaft, Missionen,
+  Spielstaende). Grund: keine Unreal Engine verfuegbar.
+
+## 2026-11-28 – Sitzung 1, Teil 2: spielbare Browser-Fassung (`Web/`)
+
+### Tatsaechlich geprueft
+- TypeScript-Port des Kerns: alle 109 C++-Pruefungen uebernommen, Vitest gruen; `tsc --noEmit` ohne Fehler.
+- Welt aus OSM + EU-DEM gebacken: 2 851 Gebaeude, 2 277 Wege, Bruecken gespannt; 104 Elemente als Nach-1998 entfernt.
+- Browser-Test (Playwright, Software-Rendering): Mission 01 von Anfang bis Ende erfolgreich, Telefonzelle mit
+  Muenzen/Rueckgeld, Fahrt, Speichern/Laden, 0 Konsolenfehler. Bildschirmfotos angesehen.
+- Als privates Artifact veroeffentlicht (eine HTML-Datei, 1,3 MB): https://claude.ai/artifact/K7drvJ9W6rfBKqviY9dpRD
+
+### Nicht geprueft
+- Bildrate auf echter Hardware; Gamepad; Handy-Bedienung (keine Touch-Steuerung).
+
+## 2026-11-28 – Sitzung 1, Teil 3: Mission 02 „Eng lescht Chance“ (Browser-Fassung)
+
+### Tatsaechlich geprueft
+- Karte nach Westen erweitert (Hollerich bis Rond-Point Merl): 2,6 x 1,8 km, 5 606 Gebaeude, 3 685 Wege.
+- Missionsdaten kommen jetzt fuer beide Fassungen aus `Data/Missions/missions_main.json` (Validator: 0 Fehler).
+- Neue Systeme: Anrufbeantworter (Wohnung), Bancomat, Fristen in Spielzeit, Oeffnungszeiten, Ruf-Wert,
+  Auswahl-Dialoge, Werkstatt-Minispiel, mehrere fahrbare Autos, nachlassende Bremsen, Pylonen-Probefahrt.
+- Vitest: 19 Tests (inkl. M01/M02 aus den gemeinsamen Daten). Browser-Test: 24 Pruefungen gruen
+  (M01, M02 ehrlicher Weg, M02 Abkuerzung, zu spaet kommen, Bremsfading, Speichern/Laden), 0 Konsolenfehler.
+- Artifact aktualisiert (Version 2).
+
+### Nicht geprueft
+- Echte Fahrt der Pylonen-Route mit Tastatur (im Test teleportiert, wegen ~5 FPS im Software-Rendering).
+
+## 2026-11-28 – Sitzung 1, Teil 4 (autonom, Nutzer schlaeft): M03, Arbeit, Touch
+
+### Tatsaechlich geprueft
+- Mission 03 „D'Nummer an der Zeitung“: Kiosk, fiktive Zeitung mit Kleinanzeigen, Anruf nur 18–20 Uhr
+  (Telefonzelle oder von zu Hause), Treffen mit Zeitfenster, verpasst -> neuer Termin per Band, drei Tueren.
+- Zuhause-Menue: Anrufbeantworter, Telefon (Telefonrechnung), Schlafen bis 8 Uhr.
+- Karriere Mechaniker: Schichten Mo–Fr, drei Auftragsarten, Lohn aufs Konto, Abzug bei Verspaetung/Fehlern.
+- Touch-Steuerung (Joystick, Wischen, Knoepfe), Handy-Layout, Ebenen-Reihenfolge der Oberflaeche.
+- Browser-Test Desktop: 40 Pruefungen gruen. Handy-Test (390x844, Touch): 8 Pruefungen gruen. 0 Konsolenfehler.
+- Gefundene und behobene Fehler: Kleinanzeigen-Nummer fehlte im Telefonnetz; „Zou“-Knopf gab Steuerung nicht frei;
+  Touch-Flaeche verdeckte Hinweis und Notizbuch.
+
+### Nicht geprueft
+- Echte Handys/Tablets (nur nachgebildet); Bildrate auf echten Geraeten.
+
+## 2026-11-28 – Sitzung 1, Teil 5 (autonom): Dialogsystem und Notizbuch im C++-Kern
+
+### Tatsaechlich geprueft
+- `Dialogue` und `Notebook` im Kern; C++-Tests jetzt 148 Pruefungen, GCC und Clang mit -Werror gruen.
+- `Data/Dialogue/M02_muller.json` als erste Dialogdatei; Pruefer validiert Dialoge (17 Python-Tests gruen).
+- CMake erkennt neue Kerndateien automatisch (CONFIGURE_DEPENDS).
+
+### Nicht geprueft
+- Unreal-Anbindung von Dialog und Notizbuch (noch nicht geschrieben; Unreal hier nicht verfuegbar).
+
+## 2026-11-28 – Sitzung 2: Mission 05 „Déi verluer Diskett“ mit Internetcafe
+
+### Tatsaechlich geprueft
+- Begehbarer Innenraum (Cybercafe Pixel): Roehrenmonitore, Theke, Neonlicht, Preistafel; Ein-/Ausgang.
+- Fiktives Offline-Internet (Spez. Abschnitt 09): LuxOS/NetNavigator/StadMail (fiktiv), Portal, Presse, Forum,
+  Kleinanzeigen, Jobs, Gaestebuch (eintragbar), Chat #lëtzebuerg, private Homepage, E-Mail mit Antwort nach
+  Spielzeit, Modemton (erzeugt), langsames Laden. Keine echte Netzwerkverbindung.
+- Mission 05 mit drei Wegen zu einer Wahrheit: Forum + E-Mail, Zeuge an der Haltestelle, Telefonbuch/Fundbuero.
+- Browser-Test Desktop: 57 Pruefungen gruen (alle drei Wege), Handy-Test gruen, Vitest 20, 0 Konsolenfehler.
+- Behoben: Figuren im Cafe ausserhalb des Raums; Fundbuero konnte auf der Telefonzelle landen (neue Orte halten
+  jetzt Abstand zu Interaktionspunkten); CSS-Namenskollision (Monitorrahmen fehlte); Blickrichtung beim Betreten.
+
+## 2026-11-28 – Sitzung 2, Teil 2: Unreal-Huellen fuer Dialog und Notizbuch
+- Geschrieben: `ULuxDialogueSubsystem` (Dialoge aus Data/Dialogue laden, abspielen, Untertitel, Auswahl, Flags)
+  und `ULuxNotebookSubsystem`; beide im Spielstand (`ULuxSaveSubsystem`).
+- **Nicht kompiliert** (keine Unreal Engine in dieser Umgebung). Der darunterliegende Kern ist getestet.
+
+## 2026-11-28 – Sitzung 2, Teil 3: Mission 06 „Eng Nuecht am Gronn“ und Autoradio
+
+### Tatsaechlich geprueft
+- M06: Einladung per Anrufbeantworter, Terrasse im Grund nur abends (21–3 Uhr) belebt, Entscheidung mit drei
+  Ausgaengen (Freundschaft: Runde ausgeben; Streit: Steve raecht sich ueber Nacht am Auto; Job: Mia bietet
+  Fotoauftraege an). Beziehungs-Flags (rel.jang, rel.mia, rel.steve) fuer spaetere Missionen.
+- M06 haengt vorlaeufig an M05 (statt M04, die bis zur Belegung der Fouer-Termine 1998 gesperrt bleibt).
+- Autoradio: drei fiktive Sender, Musik live erzeugt (WebAudio, eigene Regeln, keine Aufnahmen), Laufschrift mit
+  Uhrzeit, Verkehr (Berufsverkehr), Wetter, Spielereignissen. Taste C bzw. Touch-Knopf.
+- Browser-Test: 70 Pruefungen gruen (alle drei M06-Ausgaenge, Radio), Handy-Test gruen, Vitest 20.
+
+### Nicht geprueft
+- Klang des Radios (im Test nur Zustand und Laufschrift; Audio ohne Lautsprecher nicht beurteilbar).
+
+## 2026-11-28 – Sitzung 2, Teil 4: Mission 07 „D'Stad am Wandel“, Kamera, Fotoauftraege
+
+### Tatsaechlich geprueft
+- Analoge Kamera: Sucher (F), 24 Aufnahmen, echte Bilder der Szene, Bewertung (Motiv im Bild, Entfernung, Licht).
+- M07: Kamera von Mia, drei Motive (Pont Adolphe, fiktive Schlosserei an einem echten OSM-Gebaeude nahe der
+  Route d'Esch, Gare), Gespraech mit Madame Thill, Film entwickeln (Kontaktbogen), Blickwinkel waehlen,
+  Reportage mit eigenem Foto am naechsten Tag in der Zeitung. Kirchberg liegt ausserhalb der Karte -> Hollerich.
+- Fotoauftraege bei Mia als zweiter Beruf (800 F je Auftragsfoto, Platzhalter).
+- Browser-Test: 80 Pruefungen gruen (laeuft inzwischen > 10 Minuten), Handy-Test gruen, Vitest 20.
+
+### Nicht geprueft
+- Ob ein Motiv durch Gebaeude verdeckt ist (die Bewertung prueft nur Bildausschnitt, Entfernung und Licht).
+- Fotos werden nicht im Spielstand gespeichert (zu gross); nach dem Laden bleiben nur die Beschreibungen.
+
+## 2026-11-28 – Sitzung 2, Teil 5: Mission 08 „Millennium“ – Ende des ersten Kapitels
+
+### Tatsaechlich geprueft
+- Zeitsprung ueber das Zuhause-Menue (nach M07): Rueckblende, Ersparnisse je nach Beruf (Spielbalance), 1.12.1998.
+- Winter: kahle Laubbaeume (Laub nur April–Oktober), Schneefall, verschneite Daecher/Gelaende (einfache Naeherung),
+  kuerzere Tage durch das Sonnenmodell; Weihnachtsstaende auf der Place d'Armes (Kategorie C, nicht belegt).
+- Gespraeche ueber Euro, Millennium-Bug und Plaene mit Jang, Tom, Mia, Herrn Muller (3 von 4).
+- Silvester: Optionen abhaengig von bisherigen Entscheidungen (Werkstatt nur mit Stelle bei Muller, Fotostudio
+  nur als Fotograf), Mitternacht, Feuerwerk, Abspann mit Epilog aus allen Flags; verpasstes Silvester -> eigener Epilog.
+- Spielzeit-Berechnung jetzt jahresuebergreifend (vorher waere sie am 1.1.1999 auf 0 gesprungen).
+- Eigener Browser-Test `tests/e2e/m08.mjs`: 22 Pruefungen gruen in zwei Spielverlaeufen; Vitest 21.
+
+- Regressionstest nach M08: 80 Pruefungen gruen, Handy-Test gruen; Artifact Version 7.
+
+## 2026-11-28 – Rueckmeldung vom echten Handy (Fehlerbehebung)
+- Schwarzer Himmel auf Handy-Grafikchips: einfacher Farbverlauf-Himmel bei Touch/niedriger Grafik.
+- Schwarze Flaechen: Kamera konnte in Gebaeuden landen (jetzt Sichtlinienpruefung); falsch triangulierte Daecher
+  verwinkelter OSM-Grundrisse (ungueltige Dreiecke werden verworfen); 24 Innenhoefe waren ueberdacht (jetzt offen,
+  mit Hofwaenden); falsch orientierte OSM-Waende (Waende jetzt beidseitig).
+- Neuer historischer Filter: OSM-Objekte mit Baujahr nach 1998 (start_date) werden entfernt (93 Objekte, u. a. ein
+  Vordach von 2012 am Bahnhof); Ueberdachungen ohne Waende.
+- Hochformat: weiterer Bildwinkel, mehr Kameraabstand, kuerzere Geldanzeige, kleinere Touch-Knoepfe, Startpunkt mit
+  4 m Platz ringsum.
+- Tests danach: vitest 21/21, Touch 8/8, M08 gruen, Smoke 80/80 (Lauf auf dem Stand vor dem Council).
+
+## 2026-11-28 – Council-Pruefung (4 unabhaengige Pruef-Agenten) und Busbahnhof Aldringen
+Bericht und Status aller Befunde: `Docs/COUNCIL_REVIEW_2026-11-28.md`.
+- Ursache "eingesperrt im Hof": Startpunkt lag genau auf einer Ecke des Bahnhofsgrundrisses; die Kollision ignorierte
+  Abstand 0, der erste Schritt fuehrte ins Gebaeude. Behoben (Abstandspruefung, Wand-Ueberquerung, Rettung
+  "Festgesteckt?" im Pausenmenue, Pruefung beim Laden/Aussteigen) + Regressionstest `tests/reach.test.ts`.
+- Busbahnhof Aldringen mit unterirdischer Galerie (nach Nutzerfotos, Kategorie C/D, unbelegt).
+- Spielablauf: Film-Sackgasse M07, Anrufbeantworter im Spielstand, Uhr beim Laden (Sommerzeit), Schlafen nach
+  Mitternacht, Missionen beim Tageswechsel, Laden bei offenem Dialog, M02-Frist, Kleinigkeiten.
+- Kern (C++ + TS): `SetStandardDateTime`, Missionen transaktional einlesen; Unreal-Huellen: Freischaltung,
+  Unity-Build-Namen, `Instigator` (alles ungebaut, kein UBT verfuegbar).
+- Geschichte/Daten: 15 Eintraege von B auf C (keine Quelle eingesehen), Validator verlangt fuer A/B eingesehene
+  Quellen; Nach-1998-Wege per Namensliste entfernt; Sprachfehler und echte Marken korrigiert.
+- Tests nach allen Council-Fixes: vitest 27/27 (inkl. Erreichbarkeit), Touch 8/8, M08 22/22, Smoke 80/80, Kern 151; Artifact Version 8.
+- Welt: hohe Mauern sperren Strassen nicht mehr (Durchgaenge, Kollision nur bis Mauerhoehe); Innenraum-Lampen nur an,
+  wenn man drin ist; Touch: kein Herunterziehen-Neuladen/Zoomen.

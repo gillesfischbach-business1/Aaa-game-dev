@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Luxembourg 1998</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Special+Elite&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root { color-scheme: dark;
+    --paper: #f3ecd9; --ink: #1f2a44; --ink-soft: #44506b; --red: #a33a2c; --hud: rgba(14, 16, 20, 0.62);
+    --hud-text: #ece6d6; --accent: #e0b74a; --line: rgba(31, 42, 68, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #0d0f12; overflow: hidden; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: var(--hud-text);
+    overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  canvas#game { display: block; width: 100%; height: 100%; touch-action: none; }  /* kein Zoomen/Herunterziehen-zum-Neuladen */
+  input, textarea { -webkit-user-select: text; user-select: text; }
+  .hidden { display: none !important; }
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  #clock { position: absolute; top: 14px; left: 16px; background: var(--hud); padding: 6px 12px; border-radius: 4px; font-family: 'Special Elite', monospace; font-size: 15px; letter-spacing: .5px; }
+  #money { position: absolute; bottom: 16px; left: 16px; background: var(--hud); padding: 6px 12px; border-radius: 4px; font-size: 14px; }
+  #money b { color: var(--accent); font-weight: 600; }
+  #note { position: absolute; top: 14px; right: 16px; max-width: min(340px, 60vw); background: var(--paper); color: var(--ink); padding: 10px 14px 12px; border-radius: 2px; font-family: 'Caveat', cursive; font-size: 20px; line-height: 1.15; box-shadow: 0 3px 10px rgba(0,0,0,.35); transform: rotate(0.8deg); }
+  #note small { display: block; font-family: 'IBM Plex Sans', sans-serif; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 2px; }
+  #prompt { position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%); background: var(--hud); padding: 7px 14px; border-radius: 4px; font-size: 15px; }
+  #prompt kbd { display: inline-block; border: 1px solid var(--hud-text); border-radius: 3px; padding: 0 6px; margin-right: 6px; font-family: inherit; }
+  #toast { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); background: var(--hud); padding: 7px 16px; border-radius: 4px; font-size: 14px; transition: opacity .4s; }
+  #speedo { position: absolute; bottom: 16px; right: 16px; width: 150px; height: 150px; }
+  #carinfo { position: absolute; bottom: 172px; right: 16px; background: var(--hud); padding: 4px 10px; border-radius: 4px; font-size: 12px; text-align: right; }
+  #radio { position: absolute; bottom: 222px; right: 16px; width: min(320px, 60vw); background: rgba(14,16,20,.72); border: 1px solid #3a3f48; border-radius: 4px; padding: 5px 10px; font-family: 'Special Elite', monospace; font-size: 12px; color: #9fe0a0; overflow: hidden; white-space: nowrap; }
+  #radio b { color: #e0b74a; margin-right: 8px; font-weight: normal; }
+  #radio span { display: inline-block; animation: radioscroll 12s linear infinite; }
+  @keyframes radioscroll { from { transform: translateX(40%); } to { transform: translateX(-100%); } }
+  @media (prefers-reduced-motion: reduce) { #radio span { animation: none; white-space: normal; } }
+  body.touch #radio { bottom: 312px; }
+  #dialogue { position: fixed; left: 50%; bottom: 7%; transform: translateX(-50%); width: min(760px, calc(100vw - 32px)); background: rgba(10, 12, 16, 0.78); padding: 14px 18px; border-radius: 6px; pointer-events: auto; }
+  #dialogue .who { color: var(--accent); font-weight: 600; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
+  #dialogue .lb { font-size: 18px; line-height: 1.35; }
+  #dialogue .sub { font-size: 14px; color: #b9b3a5; margin-top: 6px; font-style: italic; }
+  #dialogue .next { font-size: 12px; color: #8f897c; text-align: right; margin-top: 6px; }
+  #choice { position: fixed; left: 50%; bottom: 7%; transform: translateX(-50%); width: min(760px, calc(100vw - 32px)); background: rgba(10, 12, 16, 0.84); padding: 14px 18px; border-radius: 6px; pointer-events: auto; }
+  #choice .who { color: var(--accent); font-weight: 600; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
+  #choice .lb { font-size: 18px; line-height: 1.35; }
+  #choice .sub { font-size: 14px; color: #b9b3a5; margin-top: 6px; font-style: italic; }
+  #choice .opts { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  #choice .opts button { text-align: left; background: #262a31; color: var(--hud-text); border: 1px solid #3a3f48; border-radius: 4px; padding: 9px 12px; font-size: 15px; cursor: pointer; font-family: inherit; }
+  #choice .opts button:hover, #choice .opts button:focus-visible { border-color: var(--accent); outline: none; }
+  #choice kbd { font-family: inherit; border: 1px solid #77705f; border-radius: 3px; padding: 0 6px; margin-right: 8px; color: var(--accent); }
+  #workshop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); pointer-events: auto; padding: 16px; }
+  #workshop .wbox { width: min(720px, 100%); background: #2b2f34; border: 3px solid #5a5f66; border-radius: 6px; padding: 16px 18px; box-shadow: 0 10px 40px rgba(0,0,0,.6);
+        background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.02) 0 8px, transparent 8px 16px); }
+  #workshop h3 { margin: 0 0 4px; font-family: 'Special Elite', monospace; font-weight: normal; font-size: 20px; color: var(--accent); }
+  #workshop .hint { font-size: 13px; color: #c9c3b4; line-height: 1.45; margin: 0 0 12px; }
+  #workshop .tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+  #workshop .tools button { background: #3c4148; color: #eee; border: 1px solid #1f2226; border-radius: 4px; padding: 10px; font-size: 14px; cursor: pointer; font-family: inherit; text-align: left; }
+  #workshop .tools button:disabled { opacity: .35; cursor: default; }
+  #workshop .log { margin-top: 12px; max-height: 120px; overflow: auto; font-family: 'Caveat', cursive; font-size: 20px; color: #9fb08a; }
+  #workshop .log .bad { color: #e08a6a; }
+  #paper { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); pointer-events: auto; padding: 16px; }
+  #paper .sheet { width: min(860px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: #ece6d6; color: #1d1d1b; padding: 18px 22px; box-shadow: 0 10px 40px rgba(0,0,0,.6); font-family: Georgia, 'Times New Roman', serif; }
+  #paper .mast { font-family: 'Special Elite', Georgia, serif; font-size: clamp(28px, 5vw, 44px); text-align: center; border-bottom: 3px double #1d1d1b; padding-bottom: 4px; }
+  #paper .sub { text-align: center; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 12px; color: #555; }
+  #paper .cols { display: grid; grid-template-columns: 3fr 2fr; gap: 18px; }
+  @media (max-width: 640px) { #paper .cols { grid-template-columns: 1fr; } }
+  #paper h3 { font-size: 19px; margin: 0 0 4px; }
+  #paper p { font-size: 14px; line-height: 1.45; margin: 0 0 12px; }
+  #paper h4 { font-family: 'IBM Plex Sans', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 12px; border-bottom: 1px solid #1d1d1b; margin: 0 0 8px; }
+  #paper .ad { font-size: 13px; line-height: 1.4; border-bottom: 1px dotted #888; padding: 6px 0; }
+  #paper .ad button { margin-top: 4px; font-family: 'Caveat', cursive; font-size: 17px; background: none; border: 1px solid #a33a2c; color: #a33a2c; border-radius: 3px; cursor: pointer; padding: 0 8px; }
+  #paper .ad.noted { background: rgba(224, 183, 74, .25); }
+  #paper .foot { font-size: 11px; color: #666; margin: 10px 0; font-family: 'IBM Plex Sans', sans-serif; }
+  /* Computer im Internetcafe (fiktives 90er-Internet) */
+  #computer { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); pointer-events: auto; padding: 12px; }
+  #computer .crt { background: #d9d2bd; border-radius: 18px; padding: 22px 22px 34px; box-shadow: 0 10px 40px rgba(0,0,0,.7), inset 0 0 0 2px #bfb79f; width: min(900px, 100%); position: relative; }
+  #computer .brand { position: absolute; bottom: 9px; left: 0; right: 0; text-align: center; font: 600 11px 'IBM Plex Sans', sans-serif; letter-spacing: 2px; color: #8a8470; }
+  #computer .crtscreen { background: #2a7f7f; height: min(560px, calc(100vh - 110px)); border-radius: 10px / 14px; overflow: hidden; display: flex; flex-direction: column; font: 13px Tahoma, Verdana, 'IBM Plex Sans', sans-serif; color: #000; box-shadow: inset 0 0 40px rgba(0,0,0,.35); }
+  #computer .win { flex: 1; margin: 10px; background: #c0c0c0; border: 2px solid; border-color: #fff #555 #555 #fff; display: flex; flex-direction: column; min-height: 0; }
+  #computer .titlebar { background: linear-gradient(90deg, #0a246a, #3a6ea5); color: #fff; font-weight: bold; padding: 3px 6px; display: flex; justify-content: space-between; align-items: center; }
+  #computer button { font: 12px Tahoma, Verdana, sans-serif; background: #c0c0c0; border: 2px solid; border-color: #fff #555 #555 #fff; padding: 2px 8px; cursor: pointer; color: #000; }
+  #computer button:active { border-color: #555 #fff #fff #555; }
+  #computer .toolbar { display: flex; gap: 4px; padding: 4px; align-items: center; border-bottom: 1px solid #888; flex-wrap: wrap; }
+  #computer .addr { flex: 1; min-width: 160px; background: #fff; border: 2px inset #ddd; padding: 2px 6px; font-family: 'Courier New', monospace; font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #computer .content { flex: 1; overflow: auto; background: #fff; margin: 4px; border: 2px inset #ddd; min-height: 0; }
+  #computer .taskbar { background: #c0c0c0; border-top: 2px solid #fff; display: flex; gap: 4px; padding: 3px; align-items: center; }
+  #computer .taskbar .start { font-weight: bold; padding: 2px 8px; border: 2px solid; border-color: #fff #555 #555 #fff; }
+  #computer .taskbar button.on { border-color: #555 #fff #fff #555; background: #d8d8d8; }
+  #computer .taskbar .clock { margin-left: auto; border: 1px inset #ddd; padding: 2px 8px; }
+  #computer .loading { padding: 40px; text-align: center; color: #333; }
+  #computer .loading .bar { width: 260px; max-width: 80%; height: 14px; margin: 12px auto; border: 2px inset #ddd; background: #fff; }
+  #computer .loading .bar i { display: block; height: 100%; width: 0; background: #0a246a; }
+  #computer .site { padding: 10px 16px; font-family: 'Times New Roman', Times, serif; font-size: 15px; line-height: 1.4; }
+  #computer .site a { color: #0000ee; text-decoration: underline; cursor: pointer; }
+  #computer .site h1 { font-size: 34px; margin: 4px 0; color: #800000; font-family: Georgia, serif; }
+  #computer .site h2 { font-size: 22px; margin: 4px 0 10px; color: #000080; }
+  #computer .site h3 { font-size: 16px; margin: 10px 0 2px; }
+  #computer .site .tag { font-style: italic; margin: 0 0 10px; }
+  #computer .site .small { font-size: 12px; color: #555; }
+  #computer .site .counter { font-family: 'Courier New', monospace; background: #000; color: #0f0; padding: 0 4px; }
+  #computer .site table.nav td { padding: 4px 18px 4px 0; }
+  #computer .site table.forum { border-collapse: collapse; width: 100%; }
+  #computer .site table.forum td, #computer .site table.forum th { border: 1px solid #999; padding: 3px 6px; text-align: left; }
+  #computer .site .post, #computer .site .gb, #computer .site .ad { border-bottom: 1px dashed #999; padding: 6px 0; }
+  #computer .site form { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 12px; max-width: 420px; }
+  #computer .site .blink { color: #c00; font-weight: bold; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #computer .site .blink { animation: none; } }
+  #computer .chat .log { background: #000; color: #ccc; font-family: 'Courier New', monospace; font-size: 13px; padding: 6px; height: 220px; overflow: auto; }
+  #computer .chat .log b { color: #6cf; }
+  #computer .chat form { flex-direction: row; max-width: none; }
+  #computer .chat form input { flex: 1; }
+  #computer .mail { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  #computer .mail label { display: flex; gap: 6px; align-items: center; }
+  #computer .mail label input { flex: 1; }
+  #computer .mail pre { white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 13px; background: #f4f4f4; padding: 8px; margin: 0; }
+  #computer .mail .hdr { font-size: 12px; border-bottom: 1px solid #999; padding-bottom: 6px; }
+  #computer .mail .err { color: #c00; font-size: 12px; }
+  #computer table.inbox { border-collapse: collapse; width: 100%; }
+  #computer table.inbox td, #computer table.inbox th { border-bottom: 1px solid #ccc; padding: 4px 6px; text-align: left; cursor: pointer; }
+  #computer table.inbox tr.new td { font-weight: bold; }
+  /* Kamera: Sucher, Blitz, Kontaktbogen */
+  #viewfinder { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+  #viewfinder .frame { position: absolute; inset: 8% 10%; }
+  #viewfinder .frame i { position: absolute; width: 40px; height: 40px; border: 0 solid rgba(255,255,255,.85); }
+  #viewfinder .c1 { left: 0; top: 0; border-left-width: 2px; border-top-width: 2px; }
+  #viewfinder .c2 { right: 0; top: 0; border-right-width: 2px; border-top-width: 2px; }
+  #viewfinder .c3 { left: 0; bottom: 0; border-left-width: 2px; border-bottom-width: 2px; }
+  #viewfinder .c4 { right: 0; bottom: 0; border-right-width: 2px; border-bottom-width: 2px; }
+  #viewfinder .cross { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; border: 1px solid rgba(255,255,255,.6); border-radius: 50%; }
+  #viewfinder::before { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 160px 60px rgba(0,0,0,.75); }
+  #vfinfo { position: absolute; bottom: 3%; left: 0; right: 0; text-align: center; font-family: 'Special Elite', monospace; font-size: 13px; color: #f2d27a; }
+  #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 7; }
+  #flash.go { animation: flash .35s ease-out; }
+  @keyframes flash { 0% { opacity: .9; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #flash.go { animation: none; } }
+  #photos { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); pointer-events: auto; padding: 16px; }
+  #photos .sheet2 { width: min(900px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: #1d1d1b; padding: 16px; border-radius: 4px; color: #e8e0c8; }
+  #photos h3 { margin: 0 0 10px; font-family: 'Special Elite', monospace; font-weight: normal; color: #f2d27a; }
+  #photos .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  #photos figure { margin: 0; background: #2b2a26; padding: 6px; }
+  #photos img { width: 100%; display: block; }
+  #photos .noimg { aspect-ratio: 16 / 9; display: grid; place-items: center; font-size: 12px; color: #888; }
+  #photos figcaption { font-family: 'Special Elite', monospace; font-size: 11px; margin-top: 4px; color: #c8c0a8; }
+  #paper .feature { border-bottom: 2px solid #1d1d1b; margin-bottom: 12px; padding-bottom: 8px; }
+  #paper .feature img { width: 100%; filter: grayscale(1) contrast(1.15); display: block; margin-bottom: 6px; }
+  #paper .feature h3 { font-size: 24px; }
+  #paper .credit { font-size: 11px; color: #666; font-style: italic; }
+  #ending { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(14,16,20,.75), rgba(4,5,7,.96)); pointer-events: auto; padding: 16px; }
+  #ending .endcard { max-width: 640px; width: 100%; max-height: calc(100vh - 32px); overflow: auto; }
+  #ending .kicker { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #8f897c; margin: 0; }
+  #ending h1 { font-family: 'Special Elite', monospace; font-weight: normal; font-size: clamp(28px, 5vw, 44px); margin: 6px 0 16px; color: var(--hud-text); text-wrap: balance; }
+  #ending .text p { font-size: 15px; line-height: 1.6; color: #d8d2c2; margin: 0 0 10px; }
+  #ending .stats { list-style: none; padding: 10px 0; margin: 14px 0; border-top: 1px solid #3a3f48; border-bottom: 1px solid #3a3f48; font-size: 13px; color: #c9c3b4; display: grid; gap: 4px; }
+  #ending .motto { font-family: 'Caveat', cursive; font-size: 22px; color: var(--accent); }
+  /* Ebenen: Spielbild < Touch-Flaechen (4) < Anzeigen (5) < Fenster (10) < Menues (20) */
+  #dialogue, #choice, #notebook, #phone, #workshop, #paper, #computer, #photos, #ending { z-index: 10; }
+  .screen { z-index: 20; }
+  /* Touch */
+  #touch { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
+  #movezone, #lookzone { position: absolute; top: 18%; bottom: 0; pointer-events: auto; touch-action: none; }
+  #movezone { left: 0; width: 45%; }
+  #lookzone { right: 0; width: 55%; }
+  #stick { position: absolute; width: 112px; height: 112px; border-radius: 50%; border: 2px solid rgba(236,230,214,.45); background: rgba(14,16,20,.25); display: none; pointer-events: none; }
+  #stick.on { display: block; }
+  #knob { position: absolute; left: 32px; top: 32px; width: 48px; height: 48px; border-radius: 50%; background: rgba(236,230,214,.55); }
+  .tbtns { position: absolute; right: max(10px, env(safe-area-inset-right, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 56px); gap: 6px; pointer-events: auto; }
+  .tbtns button { height: 50px; border-radius: 12px; border: 1px solid rgba(236,230,214,.25); background: rgba(14,16,20,.38); outline: none; -webkit-tap-highlight-color: transparent; color: var(--hud-text); font: 600 13px 'IBM Plex Sans', sans-serif; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .tbtns button small { font-weight: 400; font-size: 10px; opacity: .8; }
+  .tbtns button.sm { height: 34px; font-size: 10px; }
+  .tbtns button.main { font-size: 22px; background: rgba(224,183,74,.85); color: #1a1a1a; }
+  .tbtns button.on { background: rgba(224,183,74,.6); }
+  body.touch #money { bottom: auto; top: 50px; }
+  body.touch #speedo { bottom: 150px; width: 110px; height: 110px; }
+  body.touch #carinfo { bottom: 266px; }
+  body.touch #prompt { bottom: 36%; font-size: 17px; padding: 10px 18px; }
+  body.touch #note { max-width: min(260px, 50vw); font-size: 16px; }
+  @media (max-width: 640px) {
+    #clock { font-size: 12px; padding: 5px 8px; max-width: 44vw; }
+    #money { font-size: 12px; max-width: 44vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toast { top: auto; bottom: 46%; max-width: calc(100vw - 32px); text-align: center; }
+  }
+  body.touch #dialogue, body.touch #choice { bottom: 150px; }
+  /* Notizbuch */
+  #notebook { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); pointer-events: auto; }
+  #nb { width: min(980px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px)); background: var(--paper); color: var(--ink); border-radius: 6px 10px 10px 6px; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 14px 0 0 #2a2f3a; display: flex; flex-direction: column; padding: 14px 18px 14px 34px;
+        background-image: repeating-linear-gradient(transparent 0 27px, var(--line) 27px 28px); }
+  #nb nav { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  #nb nav button { font-family: 'Special Elite', monospace; font-size: 14px; background: #e6dcc2; color: var(--ink); border: 1px solid #c9bd9f; border-radius: 3px 3px 0 0; padding: 5px 12px; cursor: pointer; }
+  #nb nav button.on { background: var(--ink); color: var(--paper); }
+  #nb nav .close { margin-left: auto; }
+  #nbbody { flex: 1; overflow: auto; font-family: 'Caveat', cursive; font-size: 22px; line-height: 28px; }
+  #nbbody h3 { font-family: 'Special Elite', monospace; font-size: 16px; margin: 4px 0 6px; font-weight: normal; letter-spacing: 1px; }
+  #nbbody .done { text-decoration: line-through; color: var(--ink-soft); }
+  #nbbody .cur { color: var(--red); }
+  #nbbody table { border-collapse: collapse; }
+  #nbbody td { padding: 0 18px 0 0; vertical-align: top; }
+  #nbbody .small { font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; line-height: 1.4; color: var(--ink-soft); }
+  #mapcanvas { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  /* Telefonzelle */
+  #phone { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.4); pointer-events: auto; }
+  #phonebox { background: #2d3136; border: 3px solid #d8b52a; border-radius: 10px; padding: 16px; width: 300px; color: #ddd; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+  #phonebox .title { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #d8b52a; margin-bottom: 8px; }
+  #pdisplay { background: #9fb08a; color: #1a2410; font-family: 'Special Elite', monospace; font-size: 20px; padding: 8px 10px; border-radius: 3px; min-height: 64px; margin-bottom: 10px; white-space: pre-line; }
+  #pkeys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  #pkeys button, #pcoins button, #pactions button { background: #4a4f56; color: #eee; border: 1px solid #222; border-radius: 4px; padding: 10px 0; font-size: 17px; cursor: pointer; font-family: inherit; }
+  #pkeys button:active { background: #666; }
+  #pcoins, #pactions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  #pcoins button { background: #8a7a3a; font-size: 13px; }
+  #pactions { grid-template-columns: 1fr 1fr; }
+  #pactions .call { background: #3d6b3d; }
+  #pactions .hang { background: #7a3030; }
+  /* Menues */
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(14,16,20,.55), rgba(8,9,11,.92)); pointer-events: auto; padding: 16px; }
+  .card { max-width: 620px; width: 100%; }
+  .card h1 { font-family: 'Special Elite', monospace; font-weight: normal; font-size: clamp(30px, 6vw, 52px); margin: 0; letter-spacing: 2px; }
+  .card h2 { font-weight: 400; font-size: 16px; margin: 4px 0 18px; color: #b9b3a5; letter-spacing: 3px; text-transform: uppercase; }
+  .card p { color: #c9c3b4; line-height: 1.5; font-size: 14px; }
+  .card .motto { font-family: 'Caveat', cursive; font-size: 22px; color: var(--accent); }
+  .btn { background: var(--accent); color: #1a1a1a; border: none; padding: 11px 26px; font-size: 16px; font-weight: 600; border-radius: 4px; cursor: pointer; margin: 4px 8px 4px 0; font-family: inherit; }
+  .btn.sec { background: transparent; color: var(--hud-text); border: 1px solid #77705f; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-size: 13px; color: #c9c3b4; margin: 14px 0; }
+  .keys kbd { font-family: inherit; color: var(--hud-text); background: #2a2d33; border-radius: 3px; padding: 0 6px; }
+  .opts { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #c9c3b4; margin: 10px 0 16px; }
+  .opts select, .opts input { margin-left: 6px; }
+  #loading { font-size: 13px; color: #8f897c; margin-top: 10px; }
+  .credits { font-size: 11px; color: #77705f; margin-top: 18px; line-height: 1.5; }
+  @media (max-width: 640px) { #speedo { width: 110px; height: 110px; } #note { font-size: 17px; } .keys { font-size: 12px; } }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="clock">—</div>
+  <div id="money">—</div>
+  <div id="note"><small>Notizbuch</small><span id="notetext"></span></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="toast" class="hidden"></div>
+  <canvas id="speedo" class="hidden" width="300" height="300"></canvas>
+  <div id="carinfo" class="hidden"></div>
+  <div id="radio" class="hidden"></div>
+</div>
+
+<div id="touch" class="hidden">
+  <div id="movezone"></div>
+  <div id="lookzone"></div>
+  <div id="stick"><div id="knob"></div></div>
+  <div class="tbtns">
+    <button data-tap="notebook" class="sm">Notizbuch</button>
+    <button data-tap="view" class="sm">Ansicht</button>
+    <button data-tap="pause" class="sm">Pause</button>
+    <button data-tap="radio" class="sm">Radio</button>
+    <button data-tap="lights" class="sm">Licht</button>
+    <button data-tap="time" class="sm">Zeit</button>
+    <button data-tap="foto" class="sm">Foto</button>
+    <button data-hold="sprint">Rennen</button>
+    <button data-hold="jump">Springen<br/><small>Handbremse</small></button>
+    <button data-tap="interact" class="main">E</button>
+  </div>
+</div>
+
+<div id="dialogue" class="hidden"><div class="who"></div><div class="lb"></div><div class="sub"></div><div class="next">[E] / Klick – weiter</div></div>
+
+<div id="choice" class="hidden"><div class="who"></div><div class="lb"></div><div class="sub"></div><div class="opts"></div></div>
+
+<div id="workshop" class="hidden">
+  <div class="wbox">
+    <h3></h3>
+    <p class="hint"></p>
+    <div class="tools"></div>
+    <div class="log"></div>
+  </div>
+</div>
+
+<div id="paper" class="hidden">
+  <div class="sheet">
+    <div class="mast"></div>
+    <div class="sub"></div>
+    <div class="cols"><div class="news"></div><div class="ads"><h4>Kleinannoncen</h4></div></div>
+    <div class="foot"></div>
+    <button class="btn" id="paperClose">Zuklappen [E]</button>
+  </div>
+</div>
+
+<div id="computer" class="hidden">
+  <div class="crt"><div class="crtscreen"></div><div class="brand">PIXEL · 15″ (fiktiv)</div></div>
+</div>
+
+<div id="viewfinder" class="hidden"><div class="frame"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><b class="cross"></b></div><div id="vfinfo"></div></div>
+<div id="flash"></div>
+<div id="photos" class="hidden"><div class="sheet2"><h3>Kontaktofzich · Fotolabo Feller</h3><div class="grid"></div><button class="btn" id="photosClose">Weider [E]</button></div></div>
+
+<div id="ending" class="hidden">
+  <div class="endcard">
+    <p class="kicker">LUXEMBOURG 1998 · Echoes of a City</p>
+    <h1></h1>
+    <div class="text"></div>
+    <ul class="stats"></ul>
+    <p class="motto">A city before the digital age. A life before everything changed.</p>
+    <button class="btn" id="endingClose">Weiter spielen (1999) [E]</button>
+  </div>
+</div>
+
+<div id="notebook" class="hidden">
+  <div id="nb">
+    <nav>
+      <button data-page="notes" class="on">Notizen</button>
+      <button data-page="contacts">Adressen &amp; Nummern</button>
+      <button data-page="map">Stadtplan</button>
+      <button data-page="calendar">Kalenner</button>
+      <button data-page="about">Iwwer d’Spill</button>
+      <button class="close" data-close="1">Zou [Tab]</button>
+    </nav>
+    <div id="nbbody"></div>
+  </div>
+</div>
+
+<div id="phone" class="hidden">
+  <div id="phonebox">
+    <div class="title">Telefonzelle · Ortsgespräch</div>
+    <div id="pdisplay"></div>
+    <div id="pkeys"></div>
+    <div id="pcoins"></div>
+    <div id="pactions"><button class="call">Wählen</button><button class="hang">Auflegen</button></div>
+  </div>
+</div>
+
+<div id="start" class="screen">
+  <div class="card">
+    <h1>LUXEMBOURG 1998</h1>
+    <h2>Echoes of a City · Browser-Fassung</h2>
+    <p class="motto">A city before the digital age. A life before everything changed.</p>
+    <p>Gare, Avenue de la Liberté, Pétrusse-Tal und Oberstadt – gebaut aus echten Karten- und Höhendaten. Kein Handy, kein Navi: Orientierung über Notizbuch und Stadtplan.</p>
+    <div class="keys">
+      <kbd>W A S D</kbd><span>Gehen · Fahren</span>
+      <kbd>Maus</kbd><span>Umsehen (Klick ins Bild)</span>
+      <kbd>Shift</kbd><span>Rennen</span>
+      <kbd>Leertaste</kbd><span>Springen · Handbremse</span>
+      <kbd>E</kbd><span>Sprechen · Telefonieren · Einsteigen/Aussteigen</span>
+      <kbd>Tab</kbd><span>Notizbuch &amp; Stadtplan</span>
+      <kbd>V</kbd><span>Erste / dritte Person</span>
+      <kbd>L · R · T</kbd><span>Licht · Regen · Zeit schneller</span>
+      <kbd>C</kbd><span>Autoradio: Sender wechseln / aus</span>
+      <kbd>F</kbd><span>Kamera: Sucher (wenn du eine hast)</span>
+      <kbd>N</kbd><span>Navigationshilfe (Barrierefreiheit)</span>
+      <kbd>F5 · F9</kbd><span>Speichern · Laden</span>
+    </div>
+    <div class="opts">
+      <label>Untertitel <select id="optLang"><option value="de">Deutsch</option><option value="fr">Français</option><option value="en">English</option></select></label>
+      <label>Grafik <select id="optQuality"><option value="auto">Automatisch</option><option value="high">Hoch</option><option value="low">Niedrig</option></select></label>
+      <label><input type="checkbox" id="optNav" /> Navigationshilfe</label>
+    </div>
+    <button class="btn" id="btnNew" disabled>Neues Spiel</button>
+    <button class="btn sec" id="btnContinue" disabled>Fortsetzen</button>
+    <div id="loading">Stadt wird gebaut …</div>
+    <p id="rotateHint" class="hidden" style="color: var(--accent); font-size: 13px;">Tipp: Im Querformat siehst du mehr von der Stadt.</p>
+    <div class="credits">Kartendaten © OpenStreetMap-Mitwirkende (ODbL) · Höhen: EU-DEM v1.1 (Copernicus) · Geometrie von heute, bekannte Bauten nach 1998 entfernt, sonst historisch noch nicht geprüft. Alle Personen, Firmen, Fahrzeuge und Telefonnummern sind erfunden.</div>
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div class="card">
+    <h1>Paus</h1>
+    <p>Spiel angehalten.</p>
+    <button class="btn" id="btnResume">Weiter</button>
+    <button class="btn sec" id="btnSave">Speichern</button>
+    <button class="btn sec" id="btnLoad">Laden</button>
+    <button class="btn sec" id="btnUnstuck" title="Bringt die Figur an den nächsten freien Platz">Festgesteckt?</button>
+  </div>
+</div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
