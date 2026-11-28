@@ -10,8 +10,9 @@
 
 ## B – hier sofort weitermachbar
 0. Browser-Fassung: Rueckmeldung des Nutzers einholen (M01–M03, M05, Arbeit, Touch, Internetcafe sind fertig).
-   Fertig ausserdem: M06 (drei Ausgaenge), Autoradio. Danach: M07 „D'Stad am Wandel“ (Fotografie, Kirchberg;
-   Fotoauftraege von Mia als Karriere); Wohnung als Innenraum; bessere Figuren (CC0-Modelle).
+   Fertig ausserdem: M06 (drei Ausgaenge), Autoradio, M07 mit Kamera und Fotoauftraegen. Danach: M08 „Millennium“
+   (Dezember 1998, Abschluss der ersten Geschichte, Folgen aus allen Entscheidungen); Verdeckungspruefung fuer Fotos;
+   Wohnung als Innenraum; bessere Figuren (CC0-Modelle); Browser-Test in mehrere Dateien teilen (Laufzeit).
    M04 bleibt gesperrt, bis Fouer-Termine 1998 belegt.
 1. (erledigt) Dialogsystem und Notizbuch im Kern + Unreal-Huellen – Unreal-Huellen beim ersten Windows-Build pruefen.
 2. Weitere Dialoge aus der Browser-Fassung nach Data/Dialogue uebertragen, damit beide Fassungen sie teilen.

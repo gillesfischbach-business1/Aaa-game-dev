@@ -14,7 +14,8 @@ Teilen von Wagner oder Abkürzung → Werkbank → Probefahrt an Pylonen vorbei 
 Mission 03 „D’Nummer an der Zeitung“ (Kiosk → Kleinanzeige → Anruf 18–20 Uhr → Treffen im Pétrusse-Tal →
 richtige von drei Türen finden), Mission 05 „Déi verluer Diskett“ (begehbares Cybercafé, fiktives Offline-Internet
 mit Forum, E-Mail, Chat, Gästebuch; drei Lösungswege), Mission 06 „Eng Nuecht am Gronn“ (abends im Grund, drei
-Ausgänge mit Folgen), Autoradio mit drei fiktiven Sendern (live erzeugte Musik), Arbeit als Mechaniker (Schichten Mo–Fr), Zuhause (Anrufbeantworter, Telefon,
+Ausgänge mit Folgen), Mission 07 „D’Stad am Wandel“ (analoge Kamera mit Sucher, Kontaktbogen, eigene Reportage
+in der Zeitung), Fotoaufträge, Autoradio mit drei fiktiven Sendern (live erzeugte Musik), Arbeit als Mechaniker (Schichten Mo–Fr), Zuhause (Anrufbeantworter, Telefon,
 Schlafen), Touch-Steuerung für Handy/Tablet,
 Fußgänger, Verkehr, echter Sonnenstand, Tag/Nacht, Regen mit nassen Straßen, Fahrphysik mit Hangabtrieb, Schaden
 und Verbrauch, Notizbuch mit handgezeichnetem Stadtplan, Telefonbuch, Zeitansage, Speichern/Laden.
@@ -27,7 +28,7 @@ npm test               # Kern-Tests (Vitest)
 npm run build          # Typprüfung + Build nach dist/
 npm run build:single   # alles in eine HTML-Datei (dist-single/)
 npx vite preview --port 4173 &
-node tests/e2e/smoke.mjs http://localhost:4173/ ./shots   # Browser-Test: M01–M03, Arbeit, Speichern (70 Pruefungen)
+node tests/e2e/smoke.mjs http://localhost:4173/ ./shots   # Browser-Test: M01–M03, Arbeit, Speichern (80 Pruefungen, ca. 12 Minuten)
 node tests/e2e/touch.mjs http://localhost:4173/ ./shots   # Handy-Test (Touch, 390x844)
 ```
 Welt neu erzeugen: `python3 -m lux98.bake_web OSM_ORDNER DEM.json ../Web/src/data/world.json` (aus `Scripts/`),

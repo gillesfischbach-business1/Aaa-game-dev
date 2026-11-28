@@ -110,3 +110,17 @@ der engine-unabhaengige Kern und die Werkzeuge.
 
 ### Nicht geprueft
 - Klang des Radios (im Test nur Zustand und Laufschrift; Audio ohne Lautsprecher nicht beurteilbar).
+
+## 2026-11-28 – Sitzung 2, Teil 4: Mission 07 „D'Stad am Wandel“, Kamera, Fotoauftraege
+
+### Tatsaechlich geprueft
+- Analoge Kamera: Sucher (F), 24 Aufnahmen, echte Bilder der Szene, Bewertung (Motiv im Bild, Entfernung, Licht).
+- M07: Kamera von Mia, drei Motive (Pont Adolphe, fiktive Schlosserei an einem echten OSM-Gebaeude nahe der
+  Route d'Esch, Gare), Gespraech mit Madame Thill, Film entwickeln (Kontaktbogen), Blickwinkel waehlen,
+  Reportage mit eigenem Foto am naechsten Tag in der Zeitung. Kirchberg liegt ausserhalb der Karte -> Hollerich.
+- Fotoauftraege bei Mia als zweiter Beruf (800 F je Auftragsfoto, Platzhalter).
+- Browser-Test: 80 Pruefungen gruen (laeuft inzwischen > 10 Minuten), Handy-Test gruen, Vitest 20.
+
+### Nicht geprueft
+- Ob ein Motiv durch Gebaeude verdeckt ist (die Bewertung prueft nur Bildausschnitt, Entfernung und Licht).
+- Fotos werden nicht im Spielstand gespeichert (zu gross); nach dem Laden bleiben nur die Beschreibungen.
