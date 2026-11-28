@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)  # wie Unreal Engine 5
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(LUXCORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Source/Luxembourg1998/Core)
-file(GLOB LUXCORE_SOURCES ${LUXCORE_DIR}/Private/LuxCore/*.cpp)
+file(GLOB LUXCORE_SOURCES CONFIGURE_DEPENDS ${LUXCORE_DIR}/Private/LuxCore/*.cpp)
 
 add_library(LuxCore STATIC ${LUXCORE_SOURCES})
 target_include_directories(LuxCore PUBLIC ${LUXCORE_DIR}/Public)

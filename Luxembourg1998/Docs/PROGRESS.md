@@ -69,3 +69,13 @@ der engine-unabhaengige Kern und die Werkzeuge.
 
 ### Nicht geprueft
 - Echte Handys/Tablets (nur nachgebildet); Bildrate auf echten Geraeten.
+
+## 2026-11-28 – Sitzung 1, Teil 5 (autonom): Dialogsystem und Notizbuch im C++-Kern
+
+### Tatsaechlich geprueft
+- `Dialogue` und `Notebook` im Kern; C++-Tests jetzt 148 Pruefungen, GCC und Clang mit -Werror gruen.
+- `Data/Dialogue/M02_muller.json` als erste Dialogdatei; Pruefer validiert Dialoge (17 Python-Tests gruen).
+- CMake erkennt neue Kerndateien automatisch (CONFIGURE_DEPENDS).
+
+### Nicht geprueft
+- Unreal-Anbindung von Dialog und Notizbuch (noch nicht geschrieben; Unreal hier nicht verfuegbar).

@@ -9,6 +9,8 @@
 
 #include "LuxCore/Calendar1998.h"
 #include "LuxCore/Communication.h"
+#include "LuxCore/Dialogue.h"
+#include "LuxCore/Notebook.h"
 #include "LuxCore/Economy.h"
 #include "LuxCore/HistoricalRules.h"
 #include "LuxCore/MissionSystem.h"
@@ -266,11 +268,138 @@ static void TestHistorical() {
     CHECK(CheckAsset(unknown, {1998, 1, 1}).size() == 2);
 }
 
+
+static LocalizedText T(const char* lb, const char* de, const char* fr = "", const char* en = "") {
+    LocalizedText t;
+    t.text[Lang::LB] = lb;
+    t.text[Lang::DE] = de;
+    if (*fr) t.text[Lang::FR] = fr;
+    if (*en) t.text[Lang::EN] = en;
+    return t;
+}
+
+static void TestDialogue() {
+    // Gespraech mit Herrn Muller (Mission 02), verkuerzt
+    DialogueGraph g;
+    DialogueNode start;
+    start.id = "muller.start";
+    start.speaker = "Här Muller";
+    start.text = T("Dee roude Kombi do – d'Bremse virun quietschen.", "Der rote Kombi da – die Vorderbremsen quietschen.", "Ce break rouge – les freins grincent.");
+    start.next = "muller.choice";
+    DialogueNode choice;
+    choice.id = "muller.choice";
+    choice.speaker = "Här Muller";
+    choice.text = T("Wéi wëllt Dir et maachen?", "Wie wollen Sie es machen?");
+    DialogueChoice honest;
+    honest.text = T("Richteg reparéieren", "Richtig reparieren");
+    honest.next = "muller.honest";
+    honest.setFlags = {"m02.path_honest"};
+    DialogueChoice quick;
+    quick.text = T("Séier nastellen", "Schnell nachstellen");
+    quick.next = "muller.quick";
+    quick.setFlags = {"m02.path_shortcut"};
+    DialogueChoice bribe;  // nur sichtbar mit hohem Ruf (Bedingung)
+    bribe.text = T("Ech kennen e beschtere Wee", "Ich kenne einen besseren Weg");
+    bribe.condition.requireSet = {"rep.high"};
+    choice.choices = {honest, quick, bribe};
+    DialogueNode h;
+    h.id = "muller.honest";
+    h.speaker = "Här Muller";
+    h.text = T("Richteg esou.", "Richtig so.");
+    DialogueNode q;
+    q.id = "muller.quick";
+    q.speaker = "Här Muller";
+    q.text = T("Hm. Séier geet et.", "Hm. Schnell geht es.");
+    q.next = "muller.warn";
+    DialogueNode w;  // wird uebersprungen, wenn schon gewarnt
+    w.id = "muller.warn";
+    w.speaker = "Här Muller";
+    w.text = T("Passt op mat de Bremsen!", "Passen Sie auf mit den Bremsen!");
+    w.condition.requireUnset = {"m02.warned"};
+    w.setFlags = {"m02.warned"};
+    CHECK(g.Add(start) && g.Add(choice) && g.Add(h) && g.Add(q) && g.Add(w));
+    CHECK(!g.Add(h));  // doppelt
+    CHECK(g.Validate("muller.start").empty());
+
+    std::set<std::string> flags;
+    DialogueRunner r(g, flags);
+    CHECK(r.Start("muller.start"));
+    CHECK(r.Speaker() == "Här Muller");
+    CHECK(r.Spoken().find("Kombi") != std::string::npos);
+    CHECK(r.Subtitle(Lang::FR).find("break") != std::string::npos);
+    CHECK(r.Subtitle(Lang::EN) == r.Subtitle(Lang::DE));  // Fallback auf Deutsch
+    CHECK(r.Advance());
+    auto vis = r.VisibleChoices(Lang::DE);
+    CHECK(vis.size() == 2);                 // Bestechung unsichtbar
+    CHECK(!r.Choose(2));                    // unsichtbare Auswahl nicht waehlbar
+    CHECK(!r.Advance());                    // bei Auswahl kein einfaches Weiter
+    CHECK(r.Choose(1));
+    CHECK(flags.count("m02.path_shortcut") == 1);
+    CHECK(r.Advance());                     // -> Warnung
+    CHECK(r.Current()->id == "muller.warn" && flags.count("m02.warned"));
+    CHECK(!r.Advance() && !r.IsActive());   // Ende
+    // zweiter Durchlauf: Warnung wird uebersprungen (skipTo leer = Ende)
+    CHECK(r.Start("muller.quick"));
+    CHECK(!r.Advance() && !r.IsActive());
+    flags.insert("rep.high");
+    r.Start("muller.choice");
+    CHECK(r.VisibleChoices(Lang::DE).size() == 3);
+
+    // Pruefung findet Datenfehler
+    DialogueGraph bad;
+    DialogueNode b1;
+    b1.id = "a";
+    b1.text = T("", "nur Deutsch");
+    b1.next = "fehlt";
+    DialogueNode b2;
+    b2.id = "waise";
+    b2.text = T("lb", "de");
+    bad.Add(b1);
+    bad.Add(b2);
+    auto issues = bad.Validate("a");
+    bool missingLb = false, missingTarget = false, orphan = false;
+    for (const auto& i : issues) {
+        missingLb |= i.message.find("luxemburgisch") != std::string::npos;
+        missingTarget |= i.message.find("Ziel fehlt") != std::string::npos;
+        orphan |= i.message.find("nicht erreichbar") != std::string::npos;
+    }
+    CHECK(missingLb && missingTarget && orphan);
+}
+
+static void TestNotebook() {
+    Notebook nb;
+    nb.Write({"phone.jang", NoteKind::Phone, "Jang: 48 61 27", "M01_ZERECK_AN_DSTAD"});
+    nb.Write({"clue.reding.street", NoteKind::Clue, "Schwester wohnt in der Oberstadt | Kirche", "M03_DNUMMER_AN_DER_ZEITUNG"});
+    nb.Write({"appt.reding", NoteKind::Appointment, "Treffen Petrusse-Tal", "M03_DNUMMER_AN_DER_ZEITUNG", 2650.0, 2652.0});
+    nb.Write({"phone.jang", NoteKind::Phone, "Jang Hoffmann: 48 61 27", "M01_ZERECK_AN_DSTAD"});  // ersetzt, kein Doppel
+    CHECK(nb.Size() == 3);
+    CHECK(nb.Find("phone.jang")->text == "Jang Hoffmann: 48 61 27");
+    CHECK(nb.ByKind(NoteKind::Phone).size() == 1);
+    CHECK(nb.ForMission("M03_DNUMMER_AN_DER_ZEITUNG").size() == 2);
+    CHECK(nb.UpcomingAppointments(2640.0, 12.0).size() == 1);
+    CHECK(nb.UpcomingAppointments(2600.0, 12.0).empty());
+    CHECK(nb.MissedAppointments(2651.0).empty());
+    CHECK(nb.MissedAppointments(2653.0).size() == 1);
+    CHECK(nb.Strike("appt.reding"));
+    CHECK(nb.MissedAppointments(2653.0).empty());  // erledigte Termine zaehlen nicht als verpasst
+    CHECK(!nb.Strike("gibt.es.nicht"));
+    auto data = nb.Serialize();
+    Notebook nb2;
+    CHECK(nb2.Deserialize(data));
+    CHECK(nb2.Size() == 3);
+    CHECK(nb2.Find("clue.reding.street")->text == "Schwester wohnt in der Oberstadt | Kirche");  // '|' im Text
+    CHECK(nb2.Find("appt.reding")->struck && nb2.Find("appt.reding")->untilHours == 2652.0);
+    CHECK(nb2.ByKind(NoteKind::Phone, true)[0].id == "phone.jang");
+    CHECK(!nb2.Deserialize({{"note.0000", "kaputt"}}));
+    CHECK(nb.Remove("phone.jang") && nb.Size() == 2);
+}
+
 int main() {
     const std::vector<std::pair<const char*, std::function<void()>>> suites = {
         {"Kalender", TestCalendar}, {"Spieluhr", TestGameClock},        {"Sonne", TestSun},
         {"Wirtschaft", TestEconomy}, {"Missionen", TestMissions},       {"Kommunikation", TestCommunication},
-        {"Spielstaende", TestSaves}, {"Historische Regeln", TestHistorical},
+        {"Spielstaende", TestSaves}, {"Historische Regeln", TestHistorical}, {"Dialoge", TestDialogue},
+        {"Notizbuch", TestNotebook},
     };
     for (const auto& [name, fn] : suites) {
         const int before = g_failures;

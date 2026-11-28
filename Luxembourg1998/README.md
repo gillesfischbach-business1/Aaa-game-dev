@@ -14,14 +14,16 @@ Details: `Web/README.md`.
 
 | Teil | Ort | Geprueft |
 |---|---|---|
-| Kalender 1998, Spieluhr (12 min = 1 h), Sommerzeit | `Source/.../Core/LuxCore/Calendar1998.*` | 109 C++-Pruefungen (GCC + Clang) |
+| Kalender 1998, Spieluhr (12 min = 1 h), Sommerzeit | `Source/.../Core/LuxCore/Calendar1998.*` | 148 C++-Pruefungen (GCC + Clang) |
 | Sonnenstand fuer Luxemburg | `SolarModel.*` | gegen Referenz-Sonnenzeiten |
 | Geld in LUF (Bargeld, Konto, Dispo) | `Economy.*` | ja |
 | Missionen mit alternativen Loesungswegen, Checkpoints | `MissionSystem.*` | ja |
 | Telefonbuch, Telefonnetz, Anrufbeantworter, Telefonzelle | `Communication.*` | ja |
 | Spielstaende mit Version, Pruefsumme, Sicherungskopie | `SaveFormat.*` | ja |
 | Anachronismus-Pruefung zur Laufzeit | `HistoricalRules.*` | ja |
-| Anachronismus-Pruefer fuer alle Daten | `Scripts/lux98/validate_history.py` | 16 Python-Tests |
+| Dialogsystem (Graph, Auswahl, Bedingungen, 4 Sprachen) | `Dialogue.*` | ja |
+| Notizbuch (Adressen, Nummern, Termine, Hinweise) | `Notebook.*` | ja |
+| Pruefer fuer alle Daten (Anachronismen, Missionen, Dialoge) | `Scripts/lux98/validate_history.py` | 17 Python-Tests |
 | Koordinaten WGS84 / LUREF (EPSG:2169) / Unreal | `Scripts/lux98/geo.py` | ja |
 
 ## Was geschrieben, aber noch NICHT kompiliert ist

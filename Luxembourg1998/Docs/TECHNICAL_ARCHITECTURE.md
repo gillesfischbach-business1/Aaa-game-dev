@@ -28,11 +28,17 @@ bleiben duenn und austauschbar.
 | Communication | Telefonbuch, Netz mit Erreichbarkeitsregeln, Anrufbeantworter, Telefonzelle |
 | SaveFormat | Text-Spielstand mit Version, CRC32, atomarem Schreiben, .bak-Rueckfall |
 | HistoricalRules | Laufzeitpruefung "darf dieses Objekt an diesem Tag existieren?" |
+| Dialogue | Dialoggraph: Sprecher, Text lb/de/fr/en mit Fallback, Auswahl mit Bedingungen, Flags, Ueberspringen, Pruefung |
+| Notebook | Notizbuch: Adressen, Nummern, Termine (bald faellig/verpasst), Hinweise je Mission, Serialisierung |
 
 ## Unreal-Klassen (Phase 1, noch nicht kompiliert)
 `ALuxGameMode`, `ALuxCharacter` (3rd/1st Person, Interaktion), `ILuxInteractable`, `ALuxVehiclePawn` (Chaos),
 `ULuxWorldClockSubsystem` (dreht DirectionalLight mit Tag `Sun`), `ULuxEconomySubsystem`, `ULuxMissionSubsystem`
 (laedt `Data/Missions/*.json`), `ULuxSaveSubsystem` (Slots unter `Saved/SaveGames/slotNN.lux98`).
+
+## Daten
+- `Data/Missions/missions_main.json` – Missionen (beide Fassungen lesen dieselbe Datei)
+- `Data/Dialogue/*.json` – Dialoge im Format des Dialogsystems (Knoten, Auswahl, Flags); vom Pruefer validiert
 
 ## Koordinaten
 LUREF / Luxembourg TM (EPSG:2169) als Quellsystem. Unreal: 1 uu = 1 cm, X = Ost, Y = Sued, Z = Hoehe,

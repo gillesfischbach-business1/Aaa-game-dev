@@ -291,6 +291,55 @@ def check_missions(data: Path, report: Report) -> None:
             report.error(path.name, f"Voraussetzungen bilden einen Kreis (bei {cyc})")
 
 
+def check_dialogues(data: Path, report: Report) -> None:
+    """Dialogdateien: eindeutige Knoten, Ziele vorhanden, Luxemburgisch + Deutsch, alles erreichbar."""
+    for path in sorted((data / "Dialogue").glob("*.json")):
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            report.error(path.name, f"kein gueltiges JSON: {e}")
+            continue
+        nodes = doc.get("nodes", [])
+        ids = [n.get("id", "") for n in nodes]
+        for dup in {x for x in ids if ids.count(x) > 1}:
+            report.error(path.name, f"Knoten doppelt: {dup}")
+        known = set(ids)
+        start = doc.get("start", "")
+        if start not in known:
+            report.error(path.name, f"Startknoten '{start}' fehlt")
+            continue
+        edges: dict[str, list[str]] = {}
+        for n in nodes:
+            nid = n.get("id", "?")
+            where = f"{path.name} {nid}"
+            text = n.get("text", {})
+            if not text.get("lb"):
+                report.error(where, "luxemburgischer Text fehlt")
+            if not text.get("de"):
+                report.error(where, "deutscher Untertitel fehlt")
+            for lang in ("fr", "en"):
+                if not text.get(lang):
+                    report.warn(where, f"Untertitel '{lang}' fehlt")
+            outs = [n.get("next", ""), n.get("skip_to", "")] + [c.get("next", "") for c in n.get("choices", [])]
+            if n.get("choices") and n.get("next"):
+                report.error(where, "Knoten hat Auswahl UND Folgeknoten")
+            for c in n.get("choices", []):
+                if not c.get("text", {}).get("de"):
+                    report.error(where, "Auswahltext ohne Deutsch")
+            for o in outs:
+                if o and o not in known:
+                    report.error(where, f"Ziel fehlt: {o}")
+            edges[nid] = [o for o in outs if o in known]
+        seen, stack = {start}, [start]
+        while stack:
+            for o in edges.get(stack.pop(), []):
+                if o not in seen:
+                    seen.add(o)
+                    stack.append(o)
+        for orphan in sorted(known - seen):
+            report.error(f"{path.name} {orphan}", "nicht erreichbar")
+
+
 def validate(data: Path) -> Report:
     report = Report()
     sources = check_sources(data, report)
@@ -299,6 +348,7 @@ def validate(data: Path) -> Report:
     check_districts(data, report)
     check_prices(data, report)
     check_missions(data, report)
+    check_dialogues(data, report)
     return report
 
 

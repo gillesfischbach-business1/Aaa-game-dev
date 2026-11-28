@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "dialogue_id": "M02_MULLER_JOB",
+  "mission_id": "M02_ENG_LESCHT_CHANCE",
+  "start": "job.1",
+  "note": "Alle Personen fiktiv. Luxemburgische Saetze vor Veroeffentlichung von Muttersprachlern pruefen lassen.",
+  "nodes": [
+    {"id": "job.1", "speaker": "Här Muller",
+     "text": {"lb": "Dir sidd dem Jang säi Frënd? Gutt. Ech hu keng Zäit fir vill Gespréich.", "de": "Sie sind Jangs Freund? Gut. Ich habe keine Zeit für lange Gespräche.", "fr": "Vous êtes l’ami de Jang ? Bien. Je n’ai pas le temps pour de longues discussions.", "en": "You’re Jang’s friend? Good. I don’t have time for long chats."},
+     "next": "job.2"},
+    {"id": "job.2", "speaker": "Här Muller",
+     "text": {"lb": "Dee roude Kombi do – d’Bremse virun quietschen a ruppen. D’Madame Schroeder brauch en den Owend.", "de": "Der rote Kombi da – die Vorderbremsen quietschen und rubbeln. Frau Schroeder braucht ihn heute Abend.", "fr": "Ce break rouge là – les freins avant grincent et broutent. Madame Schroeder en a besoin ce soir.", "en": "That red estate car – the front brakes squeal and judder. Mrs Schroeder needs it tonight."},
+     "next": "job.choice"},
+    {"id": "job.choice", "speaker": "Här Muller",
+     "text": {"lb": "Wéi wëllt Dir et maachen?", "de": "Wie wollen Sie es machen?", "fr": "Comment voulez-vous faire ?", "en": "How do you want to do it?"},
+     "choices": [
+       {"text": {"de": "Beläge und Scheiben richtig tauschen (Teile kaufen, ca. 1 800 F)", "fr": "Changer correctement plaquettes et disques", "en": "Replace pads and discs properly"}, "next": "job.honest", "set_flags": ["m02.path_honest"]},
+       {"text": {"de": "Nur ausblasen und nachstellen – geht schnell, keine Teile", "fr": "Juste souffler et régler", "en": "Just blow out and adjust"}, "next": "job.shortcut", "set_flags": ["m02.path_shortcut"]}
+     ]},
+    {"id": "job.honest", "speaker": "Här Muller",
+     "text": {"lb": "Richteg esou. D’Deeler kritt Dir beim Wagner op der Route d’Esch. Ech bezuelen se Iech zeréck.", "de": "Richtig so. Die Teile bekommen Sie bei Wagner an der Route d’Esch. Ich erstatte sie Ihnen.", "fr": "C’est bien. Les pièces, vous les trouverez chez Wagner, route d’Esch. Je vous les rembourserai.", "en": "Good. You’ll get the parts at Wagner’s on Route d’Esch. I’ll pay you back."}},
+    {"id": "job.shortcut", "speaker": "Här Muller",
+     "text": {"lb": "Hm. Séier geet et, dat stëmmt. Et ass Är Prouf – Dir musst wëssen, wat Dir maacht.", "de": "Hm. Schnell geht es, das stimmt. Es ist Ihre Probe – Sie müssen wissen, was Sie tun.", "fr": "Hm. C’est rapide, c’est vrai. C’est votre essai – à vous de savoir ce que vous faites.", "en": "Hm. It’s quick, that’s true. It’s your trial – you need to know what you’re doing."}}
+  ]
+}

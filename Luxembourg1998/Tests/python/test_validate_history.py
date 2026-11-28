@@ -91,3 +91,16 @@ def test_district_count(data):
 def test_cli_exit_codes(data, capsys):
     assert vh.main(["--data", str(data), "--quiet"]) == 0
     assert vh.main(["--data", str(data), "--quiet", "--strict"]) == 1  # es gibt offene Warnungen
+
+
+def test_dialogue_errors_detected(data):
+    path = data / "Dialogue/M02_muller.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["nodes"][0]["text"]["lb"] = ""
+    doc["nodes"][1]["next"] = "gibt.es.nicht"
+    doc["nodes"].append({"id": "waise", "text": {"lb": "x", "de": "x"}})
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    errors = vh.validate(data).errors
+    assert any("luxemburgischer Text fehlt" in e for e in errors)
+    assert any("Ziel fehlt" in e for e in errors)
+    assert any("nicht erreichbar" in e for e in errors)
