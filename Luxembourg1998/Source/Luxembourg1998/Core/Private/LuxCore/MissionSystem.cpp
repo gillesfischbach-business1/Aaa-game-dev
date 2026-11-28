@@ -1,3 +1,4 @@
+#include <utility>
 #include "LuxCore/MissionSystem.h"
 
 #include <algorithm>
@@ -155,15 +156,24 @@ std::map<std::string, std::string> MissionTracker::Serialize() const {
 }
 
 bool MissionTracker::Deserialize(const std::map<std::string, std::string>& data) {
+    // In eine Kopie lesen und nur bei Erfolg uebernehmen; Missionen ohne Eintrag starten frisch (gesperrt).
+    auto next = missions_;
+    for (auto& [id, inst] : next) {
+        inst.state = MissionState::Locked;
+        inst.done.clear();
+        inst.checkpointDone.clear();
+        inst.failReason.clear();
+    }
     for (const auto& [key, value] : data) {
         if (key.rfind("mission.", 0) != 0) continue;
-        auto it = missions_.find(key.substr(8));
-        if (it == missions_.end()) continue;  // Mission existiert in dieser Version nicht mehr
+        auto it = next.find(key.substr(8));
+        if (it == next.end()) continue;  // Mission existiert in dieser Version nicht mehr
         std::vector<std::string> parts;
         std::stringstream ss(value);
         std::string part;
         while (std::getline(ss, part, ';')) parts.push_back(part);
         while (parts.size() < 4) parts.emplace_back();
+        for (std::size_t i = 4; i < parts.size(); ++i) parts[3] += ";" + parts[i];  // Grund darf ';' enthalten
         static const MissionState kAll[] = {MissionState::Locked, MissionState::Available, MissionState::Active,
                                             MissionState::Succeeded, MissionState::Failed};
         bool known = false;
@@ -174,6 +184,7 @@ bool MissionTracker::Deserialize(const std::map<std::string, std::string>& data)
         it->second.checkpointDone = Split(parts[2], ',');
         it->second.failReason = parts[3];
     }
+    missions_ = std::move(next);
     return true;
 }
 

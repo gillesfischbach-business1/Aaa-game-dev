@@ -78,7 +78,7 @@ export class UI {
     (box.querySelector('.sub') as HTMLElement).textContent = prompt[this.lang];
     const list = box.querySelector('.opts') as HTMLElement;
     list.innerHTML = '';
-    const pick = (v: string) => { this.show('choice', false); window.removeEventListener('keydown', onKey); done(v); };
+    const pick = (v: string) => { this.show('choice', false); window.removeEventListener('keydown', onKey); this.choiceKey = null; done(v); };
     const onKey = (e: KeyboardEvent) => {
       const n = Number(e.key);
       if (n >= 1 && n <= options.length) { e.preventDefault(); pick(options[n - 1].value); }
@@ -90,7 +90,18 @@ export class UI {
       list.appendChild(b);
     });
     window.addEventListener('keydown', onKey);
+    this.choiceKey = onKey;
     this.show('choice', true);
+  }
+
+  private choiceKey: ((e: KeyboardEvent) => void) | null = null;
+  /** Alle offenen Dialoge/Auswahlen/Werkstatt schliessen, ohne deren Rueckrufe auszufuehren (z. B. beim Laden) */
+  cancelAll(): void {
+    this.dialogueQueue = [];
+    this.dialogueDone = null;
+    if (this.choiceKey) window.removeEventListener('keydown', this.choiceKey);
+    this.choiceKey = null;
+    for (const id of ['dialogue', 'choice', 'workshop']) this.show(id, false);
   }
 
   // ---- Werkstatt: Arbeitsschritte in der richtigen Reihenfolge waehlen ----

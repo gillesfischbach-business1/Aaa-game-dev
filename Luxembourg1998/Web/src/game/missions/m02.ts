@@ -212,8 +212,12 @@ export class Mission02 implements MissionController {
     if (dialogueId !== MSG_ID || this.current() !== 'listen_message') return;
     this.complete('listen_message');
     // "Gëff séier laanscht": drei Stunden – ausserhalb der Oeffnungszeiten bis zum naechsten Arbeitstag 10 Uhr
-    const now = this.g.absHours();
-    this.deadline = this.openNow() && this.g.clock.getHourLocal() < 15 ? now + 3 : this.g.nextWorkdayAt(10);
+    // Frist nie nach Ladenschluss (Sa 12 Uhr, sonst 18 Uhr); vor 8 Uhr an einem Werktag: heute 10 Uhr
+    const g = this.g, now = g.absHours(), h = g.clock.getHourLocal(), wd = dayOfWeek(g.clock.getDate());
+    const close = wd === 5 ? 12 : 18;
+    if (this.openNow() && h + 1 <= close) this.deadline = now + Math.min(3, close - h);
+    else if (wd < 6 && h < 8) this.deadline = now + (10 - h);
+    else this.deadline = g.nextWorkdayAt(10);
   }
 
   private talkMuller(): void {
@@ -234,7 +238,7 @@ export class Mission02 implements MissionController {
       if (this.deadline >= 0 && g.absHours() > this.deadline) {
         g.missions.fail(this.id, 'late_for_trial');
         g.missions.restartFromCheckpoint(this.id);
-        this.deadline = g.nextWorkdayAt(9);
+        this.deadline = g.nextWorkdayAt(12);  // neuer Termin: der ganze naechste Vormittag
         say(DIALOGUE02.mullerLate, () => g.ui.toast(`Neuer Termin: ${g.formatAbsHours(this.deadline)}`, 4000));
         return;
       }

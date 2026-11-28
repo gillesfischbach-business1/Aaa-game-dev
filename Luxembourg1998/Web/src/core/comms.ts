@@ -117,6 +117,8 @@ export class PhoneNetwork {
     };
     const key = normalizeNumber(toNumber);
     const list = this.machines.get(key);
+    // dieselbe noch ungehoerte Nachricht nicht doppelt ablegen (z. B. nach dem Laden)
+    if (list?.some((x) => !x.heard && x.dialogueId === m.dialogueId)) return;
     if (list) list.push(m);
     else this.machines.set(key, [m]);
   }
@@ -124,6 +126,28 @@ export class PhoneNetwork {
   unheardMessages(number: string): AnsweringMachineMessage[] {
     const list = this.machines.get(normalizeNumber(number)) ?? [];
     return list.filter((m) => !m.heard).map(copyMessage);
+  }
+
+  /** Ungehoerte Nachrichten aller Anrufbeantworter als Text (nur Web-Fassung; fuer den Spielstand) */
+  serializeMachines(): string {
+    const out: [string, AnsweringMachineMessage[]][] = [];
+    for (const [k, list] of this.machines) {
+      const open = list.filter((m) => !m.heard);
+      if (open.length) out.push([k, open]);
+    }
+    return JSON.stringify(out);
+  }
+
+  /** Anrufbeantworter leeren und aus serializeMachines() wiederherstellen; fehlerhafte Daten -> leer */
+  loadMachines(text: string | undefined): void {
+    this.machines.clear();
+    if (!text) return;
+    try {
+      const data = JSON.parse(text) as [string, AnsweringMachineMessage[]][];
+      for (const [k, list] of data) for (const m of list) {
+        if (typeof m.dialogueId === 'string' && m.date) this.leaveMessage(k, m);
+      }
+    } catch { this.machines.clear(); }
   }
 
   markAllHeard(number: string): void {

@@ -66,6 +66,15 @@ static void TestGameClock() {
     late.Advance(12 * 60);
     CHECK(late.GetDate() == (Date{1998, 7, 11}) && late.GetHour() == 0);
 
+    // Speichern/Laden ueber Normalzeit: 00:30 MESZ im Sommer und die doppelte Stunde am 25.10.
+    for (const auto& [d, wall] : {std::pair<Date, double>{{1998, 7, 10}, 0.5}, {{1998, 10, 25}, 2.5}, {{1998, 10, 24}, 23.5}}) {
+        GameClock a(d, wall);
+        a.Advance(5 * 12 * 60);
+        GameClock b({1998, 1, 1}, 0.0);
+        b.SetStandardDateTime(a.GetStandardDate(), a.GetStandardHour());
+        CHECK(b.ToString() == a.ToString() && b.GetStandardDate() == a.GetStandardDate());
+    }
+
     c.SetTimeScale(0.0);
     const double h = c.GetHourLocal();
     c.Advance(1000);

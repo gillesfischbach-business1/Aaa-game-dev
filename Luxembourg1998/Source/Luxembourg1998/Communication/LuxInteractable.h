@@ -21,5 +21,5 @@ public:
 	FText GetInteractionPrompt() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LUX98|Interaction")
-	void Interact(APawn* Instigator);
+	void Interact(APawn* InstigatorPawn);  // nicht "Instigator": verdeckt sonst AActor::Instigator (C4458)
 };

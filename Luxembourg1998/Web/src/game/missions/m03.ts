@@ -219,9 +219,10 @@ export class Mission03 implements MissionController {
 
   private ring(d: Door): void {
     const g = this.g;
-    if (!this.visited.includes(d.label)) this.visited.push(d.label);
+    const firstVisit = !this.visited.includes(d.label);
+    if (firstVisit) this.visited.push(d.label);
     if (!d.correct) {
-      this.wrongDoors++;
+      if (firstVisit) this.wrongDoors++;  // dieselbe Tuer zweimal zaehlt nicht doppelt
       g.ui.dialogue(DIALOGUE03.wrongDoor(d.resident));
       return;
     }

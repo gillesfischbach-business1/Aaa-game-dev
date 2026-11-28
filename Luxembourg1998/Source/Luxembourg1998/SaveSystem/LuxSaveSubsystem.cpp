@@ -96,10 +96,9 @@ bool ULuxSaveSubsystem::LoadFromSlot(int32 Slot)
 		lux98::Date D;
 		if (lux98::Date::FromIso(TCHAR_TO_UTF8(*Get("clock.std_date")), D))
 		{
-			// gespeichert wird Normalzeit; SetDateTime erwartet Wanduhrzeit
+			// gespeichert wird Normalzeit -> direkt so setzen (keine Umrechnung ueber die Wanduhr)
 			const double StdHour = FCString::Atod(*Get("clock.std_hour"));
-			const double Wall = StdHour + (lux98::IsSummerTime(D, static_cast<int>(StdHour)) ? 1.0 : 0.0);
-			Clock->GetMutableClock().SetDateTime(D, Wall);
+			Clock->GetMutableClock().SetStandardDateTime(D, StdHour);
 		}
 	}
 	if (ULuxEconomySubsystem* Eco = GetGameInstance()->GetSubsystem<ULuxEconomySubsystem>())
@@ -108,7 +107,13 @@ bool ULuxSaveSubsystem::LoadFromSlot(int32 Slot)
 	}
 	if (ULuxMissionSubsystem* Missions = GetGameInstance()->GetSubsystem<ULuxMissionSubsystem>())
 	{
-		Missions->GetTracker().Deserialize(*Data);
+		if (!Missions->GetTracker().Deserialize(*Data))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("LUX98: Missionsdaten im Spielstand unlesbar - Missionen unveraendert"));
+		}
+		lux98::Date Today{1998, 1, 1};
+		if (ULuxWorldClockSubsystem* C = World ? World->GetSubsystem<ULuxWorldClockSubsystem>() : nullptr) Today = C->GetClock().GetDate();
+		Missions->RefreshAvailability(Today);
 	}
 	if (ULuxDialogueSubsystem* Dlg = GetGameInstance()->GetSubsystem<ULuxDialogueSubsystem>())
 	{

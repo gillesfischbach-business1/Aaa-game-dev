@@ -142,6 +142,7 @@ export class Career {
     this.daysWorked = Number(d['career.days'] ?? 0) || 0;
     this.lastDay = Number(d['career.last_day'] ?? -1);
     this.totalEarned = Number(d['career.total'] ?? 0) || 0;
-    this.offerSent = d['career.offer_sent'] === '1';
+    // Alte Spielstaende ohne gespeicherten Anrufbeantworter: Angebot erneut ablegen, sonst ginge es verloren
+    this.offerSent = d['career.offer_sent'] === '1' && d['phone.machines'] !== undefined;
   }
 }

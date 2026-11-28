@@ -59,6 +59,19 @@ describe('Kalender', () => {
   });
 });
 
+describe('Spieluhr: Speichern/Laden ueber Normalzeit', () => {
+  it('stellt 00:30 MESZ und die doppelte Stunde am 25.10. genau wieder her', () => {
+    for (const [d, wall] of [[D(1998, 7, 10), 0.5], [D(1998, 10, 25), 2.5], [D(1998, 10, 24), 23.5]] as const) {
+      const a = new GameClock(d, wall);
+      a.advance(5 * 12 * 60);
+      const b = new GameClock(D(1998, 1, 1), 0);
+      b.setStandardDateTime(a.getStandardDate(), a.getStandardHour());
+      expect(b.toString()).toBe(a.toString());
+      expect(b.getStandardDate()).toEqual(a.getStandardDate());
+    }
+  });
+});
+
 describe('Spieluhr', () => {
   it('laeuft, springt bei Sommerzeit und haelt an', () => {
     const c = new GameClock(D(1998, 1, 1), 8.0);

@@ -26,10 +26,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "LUX98|Missions")
 	FString GetMissionState(const FString& MissionId) const;
 
-	void RefreshAvailability(const lux98::Date& Today) { Tracker.Refresh(Today); }
+	// Freischaltung neu pruefen: bei Tageswechsel (Weltuhr), nach dem Laden und nach jedem Missionserfolg
+	void RefreshAvailability(const lux98::Date& Today) { LastDate = Today; Tracker.Refresh(Today); }
+
+	UFUNCTION(BlueprintCallable, Category = "LUX98|Missions")
+	void RefreshForDate(int32 Year, int32 Month, int32 Day) { RefreshAvailability(lux98::Date{Year, Month, Day}); }
 	lux98::MissionTracker& GetTracker() { return Tracker; }
 
 private:
 	void LoadMissionFile(const FString& Path);
 	lux98::MissionTracker Tracker;
+	lux98::Date LastDate{1998, 1, 1};
 };

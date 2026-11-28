@@ -99,6 +99,13 @@ void GameClock::SetDateTime(const Date& d, double hourLocal) {
     stdSeconds_ = h * 3600.0;
 }
 
+void GameClock::SetStandardDateTime(const Date& d, double stdHour) {
+    stdDate_ = IsValid(d) ? d : Date{};
+    double h = std::isfinite(stdHour) ? std::fmod(stdHour, 24.0) : 0.0;
+    if (h < 0) h += 24.0;
+    stdSeconds_ = h * 3600.0;
+}
+
 void GameClock::Advance(double realSeconds) {
     if (realSeconds <= 0.0) return;
     stdSeconds_ += realSeconds * timeScale_;

@@ -11,8 +11,8 @@ DEFINE_LOG_CATEGORY_STATIC(LogLuxDialogue, Log, All);
 
 namespace
 {
-std::string ToStd(const FString& S) { return std::string(TCHAR_TO_UTF8(*S)); }
-FString FromStd(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
+std::string DialogueToStd(const FString& S) { return std::string(TCHAR_TO_UTF8(*S)); }
+FString DialogueFromStd(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
 
 lux98::LocalizedText ReadText(const TSharedPtr<FJsonObject>& Obj)
 {
@@ -22,7 +22,7 @@ lux98::LocalizedText ReadText(const TSharedPtr<FJsonObject>& Obj)
 	for (const auto& K : Keys)
 	{
 		FString V;
-		if (Obj->TryGetStringField(K.Key, V)) T.text[K.Value] = ToStd(V);
+		if (Obj->TryGetStringField(K.Key, V)) T.text[K.Value] = DialogueToStd(V);
 	}
 	return T;
 }
@@ -32,7 +32,7 @@ std::vector<std::string> ReadStrings(const TSharedPtr<FJsonObject>& Obj, const T
 	std::vector<std::string> Out;
 	const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
 	if (Obj->TryGetArrayField(Field, Arr))
-		for (const TSharedPtr<FJsonValue>& V : *Arr) Out.push_back(ToStd(V->AsString()));
+		for (const TSharedPtr<FJsonValue>& V : *Arr) Out.push_back(DialogueToStd(V->AsString()));
 	return Out;
 }
 
@@ -67,12 +67,12 @@ void ULuxDialogueSubsystem::LoadFile(const FString& Path)
 	{
 		const TSharedPtr<FJsonObject> N = NV->AsObject();
 		lux98::DialogueNode Node;
-		Node.id = ToStd(N->GetStringField(TEXT("id")));
+		Node.id = DialogueToStd(N->GetStringField(TEXT("id")));
 		FString Tmp;
-		if (N->TryGetStringField(TEXT("speaker"), Tmp)) Node.speaker = ToStd(Tmp);
+		if (N->TryGetStringField(TEXT("speaker"), Tmp)) Node.speaker = DialogueToStd(Tmp);
 		Node.text = ReadText(N->GetObjectField(TEXT("text")));
-		if (N->TryGetStringField(TEXT("next"), Tmp)) Node.next = ToStd(Tmp);
-		if (N->TryGetStringField(TEXT("skip_to"), Tmp)) Node.skipTo = ToStd(Tmp);
+		if (N->TryGetStringField(TEXT("next"), Tmp)) Node.next = DialogueToStd(Tmp);
+		if (N->TryGetStringField(TEXT("skip_to"), Tmp)) Node.skipTo = DialogueToStd(Tmp);
 		Node.setFlags = ReadStrings(N, TEXT("set_flags"));
 		ReadCondition(N, Node.condition);
 		const TArray<TSharedPtr<FJsonValue>>* Choices = nullptr;
@@ -83,20 +83,20 @@ void ULuxDialogueSubsystem::LoadFile(const FString& Path)
 				const TSharedPtr<FJsonObject> C = CV->AsObject();
 				lux98::DialogueChoice Choice;
 				Choice.text = ReadText(C->GetObjectField(TEXT("text")));
-				if (C->TryGetStringField(TEXT("next"), Tmp)) Choice.next = ToStd(Tmp);
+				if (C->TryGetStringField(TEXT("next"), Tmp)) Choice.next = DialogueToStd(Tmp);
 				Choice.setFlags = ReadStrings(C, TEXT("set_flags"));
 				ReadCondition(C, Choice.condition);
 				Node.choices.push_back(Choice);
 			}
 		}
 		std::string Error;
-		if (!Graph->Add(Node, &Error)) UE_LOG(LogLuxDialogue, Error, TEXT("%s: %s"), *Path, *FromStd(Error));
+		if (!Graph->Add(Node, &Error)) UE_LOG(LogLuxDialogue, Error, TEXT("%s: %s"), *Path, *DialogueFromStd(Error));
 	}
 	const FString Id = Root->GetStringField(TEXT("dialogue_id"));
 	const FString Start = Root->GetStringField(TEXT("start"));
-	for (const lux98::DialogueIssue& I : Graph->Validate(ToStd(Start)))
+	for (const lux98::DialogueIssue& I : Graph->Validate(DialogueToStd(Start)))
 	{
-		UE_LOG(LogLuxDialogue, Warning, TEXT("%s [%s]: %s"), *Id, *FromStd(I.nodeId), *FromStd(I.message));
+		UE_LOG(LogLuxDialogue, Warning, TEXT("%s [%s]: %s"), *Id, *DialogueFromStd(I.nodeId), *DialogueFromStd(I.message));
 	}
 	Graphs.Add(Id, Graph);
 	StartNodes.Add(Id, Start);
@@ -119,14 +119,14 @@ bool ULuxDialogueSubsystem::StartDialogue(const FString& DialogueId)
 	if (!G) return false;
 	ActiveGraph = *G;
 	Runner = MakeUnique<lux98::DialogueRunner>(*ActiveGraph, Flags);
-	const bool bOk = Runner->Start(ToStd(StartNodes[DialogueId]));
+	const bool bOk = Runner->Start(DialogueToStd(StartNodes[DialogueId]));
 	OnDialogueChanged.Broadcast();
 	return bOk;
 }
 
-FString ULuxDialogueSubsystem::GetSpeaker() const { return Runner.IsValid() ? FromStd(Runner->Speaker()) : FString(); }
-FString ULuxDialogueSubsystem::GetSpoken() const { return Runner.IsValid() ? FromStd(Runner->Spoken()) : FString(); }
-FString ULuxDialogueSubsystem::GetSubtitle() const { return Runner.IsValid() ? FromStd(Runner->Subtitle(ToLang())) : FString(); }
+FString ULuxDialogueSubsystem::GetSpeaker() const { return Runner.IsValid() ? DialogueFromStd(Runner->Speaker()) : FString(); }
+FString ULuxDialogueSubsystem::GetSpoken() const { return Runner.IsValid() ? DialogueFromStd(Runner->Spoken()) : FString(); }
+FString ULuxDialogueSubsystem::GetSubtitle() const { return Runner.IsValid() ? DialogueFromStd(Runner->Subtitle(ToLang())) : FString(); }
 
 void ULuxDialogueSubsystem::GetChoices(TArray<FString>& Texts, TArray<int32>& ChoiceIndices) const
 {
@@ -136,7 +136,7 @@ void ULuxDialogueSubsystem::GetChoices(TArray<FString>& Texts, TArray<int32>& Ch
 	for (const auto& C : Runner->VisibleChoices(ToLang()))
 	{
 		ChoiceIndices.Add(static_cast<int32>(C.first));
-		Texts.Add(FromStd(C.second));
+		Texts.Add(DialogueFromStd(C.second));
 	}
 }
 

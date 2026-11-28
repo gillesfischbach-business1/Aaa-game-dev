@@ -47,6 +47,8 @@ public:
 
     // Kontrolliertes Setzen fuer Missionen/Intro.
     void SetDateTime(const Date& d, double hourLocal);
+    // Direkt in Normalzeit (MEZ) setzen, z. B. beim Laden eines Spielstands (eindeutig, auch am 25.10.)
+    void SetStandardDateTime(const Date& d, double stdHour);
 
     // Wanduhrzeit (inkl. Sommerzeit), so wie sie auf jeder Uhr in der Stadt steht.
     Date GetDate() const;

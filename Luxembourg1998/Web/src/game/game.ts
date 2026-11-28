@@ -97,6 +97,8 @@ export class Game {
   readonly m07: Mission07;
   readonly m08: Mission08;
   photoMode = false;
+  private overlayId: string | null = null;
+  private lastMissionDay = -1;
   private shutterQueued = false;
   /** Eigene Reportage in der Zeitung (ab Tag `day`) */
   paperFeature: { h: string; t: string; img: string; day: number } | null = null;
@@ -138,6 +140,8 @@ export class Game {
     this.phoneNet.setAnswerRule(NUMBERS.parts, (d, h) => dayOfWeek(d) < 6 && h >= 8 && h < 18);
     this.phoneNet.setAnswerRule(NUMBERS.home, () => false);  // man selbst ist nicht zu Hause
     this.phoneNet.setAnswerRule(NUMBERS.reding, (_d, h) => h >= 18 && h < 20);  // laut Kleinanzeige
+    // Fundbuero: Mo-Fr 8-12 und 14-17 Uhr (fiktive Oeffnungszeiten, wie am Schalter)
+    this.phoneNet.setAnswerRule(NUMBERS.fund, (d, h) => dayOfWeek(d) < 5 && ((h >= 8 && h < 12) || (h >= 14 && h < 17)));
 
     this.placeWorldObjects();
     this.career = new Career(this);
@@ -367,7 +371,8 @@ export class Game {
     this.ui.show(id, true);
     this.input.enabled = false;
     document.exitPointerLock?.();
-    this.overlayClose = () => { this.ui.show(id, false); this.input.enabled = true; this.overlayClose = null; onClose?.(); };
+    this.overlayId = id;
+    this.overlayClose = () => { this.ui.show(id, false); this.input.enabled = true; this.overlayClose = null; this.overlayId = null; onClose?.(); };
   }
 
   // ---------- Aufbau ----------
@@ -480,8 +485,10 @@ export class Game {
   }
 
   private sleep(): void {
-    const next = addDays(this.clock.getDate(), 1);
+    // vor 8 Uhr (nach Mitternacht) bis heute 8 Uhr schlafen, sonst bis morgen 8 Uhr – nie einen Tag ueberspringen
+    const next = this.clock.getHourLocal() < 8 ? this.clock.getDate() : addDays(this.clock.getDate(), 1);
     this.clock.setDateTime(next, 8);
+    this.startAvailableMissions();
     if (this.veh) this.leaveVehicle(true);
     this.ui.toast(`Gut geschlafen. ${this.clock.toString()}`, 3500);
     this.save();
@@ -620,7 +627,9 @@ export class Game {
     if (!this.session) return;
     if (!this.dialed) { this.renderPhone('Bitte Nummer wählen.'); return; }
     if (!this.phoneFromHome && !this.session.tick(0.01)) { this.renderPhone(`Bitte mindestens ${PAYPHONE_TARIFF.pricePerUnit} F einwerfen.`); return; }
-    if (this.phoneFromHome) this.wallet.payFromBank(PAYPHONE_TARIFF.pricePerUnit, this.clock.getDate(), 'Telefonrechnung', 'Bill');
+    if (this.phoneFromHome && !this.wallet.payFromBank(PAYPHONE_TARIFF.pricePerUnit, this.clock.getDate(), 'Telefonrechnung', 'Bill')) {
+      this.renderPhone('Konto leer – kein Freizeichen.'); return;
+    }
     const num = normalizeNumber(this.dialed);
     const d = this.clock.getDate(), h = this.clock.getHour();
     const result = this.phoneNet.dial(num, d, h);
@@ -763,6 +772,7 @@ export class Game {
       ...Object.fromEntries(Object.entries(this.flags).map(([k, v]) => [`flag.${k}`, v])),
       ...this.missions.serialize(),
     };
+    data['phone.machines'] = this.phoneNet.serializeMachines();
     for (const c of this.controllers) Object.assign(data, c.save());
     Object.assign(data, this.career.save());
     Object.assign(data, this.internet.save());
@@ -788,11 +798,19 @@ export class Game {
     try { res = readSaveFromStorage(window.localStorage, SAVE_KEY); } catch { this.ui.toast('Browser-Speicher gesperrt.'); return false; }
     if (!res.data) { this.ui.toast('Kein lesbarer Spielstand.'); return false; }
     const d = res.data;
+    // Offene Fenster der alten Spielsituation schliessen, ohne ihre Rueckrufe auszufuehren
+    this.ui.cancelAll();
+    if (this.ui.isOpen('phone')) { this.session = null; this.ui.show('phone', false); }
+    if (this.computerOpen) { this.computerOpen = false; this.internet.close(); }
+    if (this.overlayId) this.ui.show(this.overlayId, false);
+    this.overlayClose = null; this.overlayId = null;
+    if (this.ui.isOpen('notebook')) this.ui.show('notebook', false);
+    if (this.photoMode) this.exitPhotoMode();
+    this.input.enabled = true;
     const vec = (s: string | undefined) => { const p = (s ?? '').split(',').map(Number); return p.length === 3 && p.every(Number.isFinite) ? new THREE.Vector3(p[0], p[1], p[2]) : null; };
     const date: LuxDate | null = fromIso(d['clock.std_date'] ?? '');
     if (date) {
-      const std = Number(d['clock.std_hour']);
-      this.clock.setDateTime(date, std + (isSummerTime(date, Math.floor(std)) ? 1 : 0));
+      this.clock.setStandardDateTime(date, Number(d['clock.std_hour']));
     }
     this.wallet = new Wallet(Math.round(Number(d['money.cash']) || 0), Math.round(Number(d['money.bank']) || 0));
     this.registerMissions();
@@ -809,7 +827,9 @@ export class Game {
     const cp = vec(d['car.location']);
     if (cp) this.car.placeAt(cp, Number(d['car.heading']) || 0, this.city);
     this.car.damage = Number(d['car.damage']) || 0;
-    this.car.fuel = Number(d['car.fuel']) || this.car.fuel;
+    const fuel = Number(d['car.fuel']);
+    if (d['car.fuel'] !== undefined && Number.isFinite(fuel)) this.car.fuel = fuel;  // auch ein leerer Tank (0)
+    this.phoneNet.loadMachines(d['phone.machines']);  // vor den Missionen: diese legen Pflichtnachrichten ggf. neu ab
     for (const c of this.controllers) c.load(d);
     this.career.load(d);
     this.internet.load(d);
@@ -866,6 +886,8 @@ export class Game {
     if (this.running && !this.ui.isOpen('pause')) {
       if (this.ui.inDialogue) {
         if (inp.consume('interact') || inp.consume('jump')) this.ui.advanceDialogue();
+      } else if (this.ui.inChoice) {
+        inp.clearPressed();  // Tasten waehrend einer Auswahl nicht spaeter ausloesen
       } else if (!this.blocked) {
         if (this.photoMode) {
           this.clock.advance(dt);
@@ -878,6 +900,9 @@ export class Game {
         }
         for (const c of this.controllers) c.update(dt);
         this.career.update();
+        // Tageswechsel: neu freigeschaltete Missionen starten (z. B. Mission 08 im Dezember)
+        const day = Math.floor(this.absHours() / 24);
+        if (day !== this.lastMissionDay) { this.lastMissionDay = day; this.startAvailableMissions(); }
       }
     }
     this.traffic.update(dt, this.camera.position, this.veh ? this.veh.pos : null, this.pos, this.env.night > 0.5);

@@ -187,6 +187,14 @@ export class GameClock {
     this.stdSeconds = h * 3600.0;
   }
 
+  /** Direkt in Normalzeit (MEZ) setzen, z. B. beim Laden eines Spielstands (eindeutig, auch am 25.10.) */
+  setStandardDateTime(d: LuxDate, stdHour: number): void {
+    this.stdDate = isValid(d) ? copyDate(d) : makeDate();
+    let h = Number.isFinite(stdHour) ? stdHour % 24.0 : 0;
+    if (h < 0) h += 24.0;
+    this.stdSeconds = h * 3600.0;
+  }
+
   isSummerTimeNow(): boolean {
     return isSummerTime(this.stdDate, Math.trunc(this.stdSeconds / 3600.0));
   }

@@ -4,10 +4,21 @@
 #include "Engine/DirectionalLight.h"
 #include "EngineUtils.h"
 #include "LuxCore/SolarModel.h"
+#include "LuxMissionSubsystem.h"
+#include "Engine/GameInstance.h"
 
 void ULuxWorldClockSubsystem::Tick(float DeltaTime)
 {
+	const lux98::Date Before = Clock.GetDate();
 	Clock.Advance(DeltaTime);
+	if (!(Clock.GetDate() == Before))
+	{
+		// Tageswechsel: Missionen mit Datumsfenster freischalten
+		if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+		{
+			if (ULuxMissionSubsystem* M = GI->GetSubsystem<ULuxMissionSubsystem>()) M->RefreshAvailability(Clock.GetDate());
+		}
+	}
 	UpdateSun();
 }
 

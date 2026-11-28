@@ -77,6 +77,9 @@ export class Input {
   }
 
   /** Einmaliger Tastendruck von aussen (Touch-Knopf, Klick auf den Hinweis) */
+  /** Vorgemerkte Tastendruecke verwerfen (z. B. waehrend einer Auswahl) */
+  clearPressed(): void { this.pressed.clear(); }
+
   press(action: Action): void { if (this.enabled) this.pressed.add(action); }
 
   axis(neg: Action, pos: Action): number {

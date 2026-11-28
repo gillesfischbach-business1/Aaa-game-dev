@@ -117,6 +117,12 @@ export class Mission07 implements MissionController {
       });
       return;
     }
+    if ((c === 'photograph_old_building' || c === 'interview_resident') && cam.film <= 0) {
+      // Film voll, aber noch nicht alle Motive: neuen Film geben (sonst Sackgasse)
+      cam.film = FILM_SIZE;
+      g.ui.dialogue([{ who: 'Mia', lb: 'De Film ass voll? Hei ass en neien. Denk un d’Motiver op der Lëscht – a bei Dag.', de: 'Der Film ist voll? Hier ist ein neuer. Denk an die Motive auf der Liste – und bei Tag.', fr: 'La pellicule est pleine ? En voici une nouvelle. Pense aux sujets de la liste – et de jour.', en: 'Roll full? Here’s a new one. Remember the subjects on the list – and in daylight.' }]);
+      return;
+    }
     if (c === 'photograph_old_building' || c === 'interview_resident') { g.ui.dialogue(MISSION_SUBJECTS.every((s) => cam.hasGood(s)) ? DIALOGUE07.waiting : DIALOGUE07.missing); return; }
     if (c === 'deliver_film') {
       g.ui.dialogue(DIALOGUE07.deliver, () => {
@@ -166,6 +172,7 @@ export class Mission07 implements MissionController {
     }
     if (this.job) {
       const name = this.subjectName(this.job.subject);
+      if (cam.film <= 0) cam.film = FILM_SIZE;  // sonst kann der Auftrag nie erfuellt werden
       g.ui.dialogue([{ who: 'Mia', lb: `Ech waarden nach op d’Bild vun ${name}.`, de: `Ich warte noch auf das Bild von ${name}.`, fr: `J’attends encore la photo de ${name}.`, en: `Still waiting for the shot of ${name}.` }]);
       return;
     }

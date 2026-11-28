@@ -200,14 +200,18 @@ export class MissionTracker {
     return out;
   }
 
-  // false bei unbekanntem Zustand (wie C++: bis dahin gelesene Missionen bleiben uebernommen).
+  // false bei unbekanntem Zustand; dann bleibt alles unveraendert (wie C++: Kopie lesen, nur bei Erfolg uebernehmen).
+  // Missionen ohne Eintrag im Spielstand starten frisch (gesperrt).
   deserialize(data: Readonly<Record<string, string>>): boolean {
+    const next = new Map<string, Instance>();
+    for (const [id, inst] of this.missions) next.set(id, { def: inst.def, state: 'Locked', done: [], checkpointDone: [], failReason: '' });
     for (const key of Object.keys(data).sort(compareBytes)) {
       if (!key.startsWith('mission.')) continue;
-      const inst = this.missions.get(key.substring(8));
+      const inst = next.get(key.substring(8));
       if (!inst) continue; // Mission existiert in dieser Version nicht mehr
       const parts = getlineSplit(data[key] ?? '', ';');
       while (parts.length < 4) parts.push('');
+      if (parts.length > 4) parts[3] = parts.slice(3).join(';');  // Grund darf ';' enthalten
       const state = MISSION_STATES.find((s) => s === parts[0]);
       if (state === undefined) return false;
       inst.state = state;
@@ -215,6 +219,7 @@ export class MissionTracker {
       inst.checkpointDone = splitList(parts[2] ?? '');
       inst.failReason = parts[3] ?? '';
     }
+    this.missions = next;
     return true;
   }
 }

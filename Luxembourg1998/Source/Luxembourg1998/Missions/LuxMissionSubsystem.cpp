@@ -11,13 +11,13 @@ DEFINE_LOG_CATEGORY_STATIC(LogLuxMissions, Log, All);
 
 namespace
 {
-std::string ToStd(const FString& S) { return std::string(TCHAR_TO_UTF8(*S)); }
+std::string MissionToStd(const FString& S) { return std::string(TCHAR_TO_UTF8(*S)); }
 
 TOptional<lux98::Date> ReadDate(const TSharedPtr<FJsonObject>& Obj, const FString& Field)
 {
 	FString Text;
 	lux98::Date D;
-	if (Obj->TryGetStringField(Field, Text) && lux98::Date::FromIso(ToStd(Text), D))
+	if (Obj->TryGetStringField(Field, Text) && lux98::Date::FromIso(MissionToStd(Text), D))
 	{
 		return D;
 	}
@@ -65,22 +65,22 @@ void ULuxMissionSubsystem::LoadMissionFile(const FString& Path)
 	{
 		const TSharedPtr<FJsonObject> M = V->AsObject();
 		lux98::MissionDef Def;
-		Def.id = ToStd(M->GetStringField(TEXT("mission_id")));
+		Def.id = MissionToStd(M->GetStringField(TEXT("mission_id")));
 		for (const TSharedPtr<FJsonValue>& P : M->GetArrayField(TEXT("prerequisites")))
 		{
-			Def.prerequisites.push_back(ToStd(P->AsString()));
+			Def.prerequisites.push_back(MissionToStd(P->AsString()));
 		}
 		for (const TSharedPtr<FJsonValue>& F : M->GetArrayField(TEXT("fail_conditions")))
 		{
-			Def.failConditions.push_back(ToStd(F->AsString()));
+			Def.failConditions.push_back(MissionToStd(F->AsString()));
 		}
 		for (const TSharedPtr<FJsonValue>& O : M->GetArrayField(TEXT("objectives")))
 		{
 			const TSharedPtr<FJsonObject> Obj = O->AsObject();
 			lux98::ObjectiveDef Od;
-			Od.id = ToStd(Obj->GetStringField(TEXT("id")));
+			Od.id = MissionToStd(Obj->GetStringField(TEXT("id")));
 			FString Group;
-			if (Obj->TryGetStringField(TEXT("group"), Group)) Od.alternativeGroup = ToStd(Group);
+			if (Obj->TryGetStringField(TEXT("group"), Group)) Od.alternativeGroup = MissionToStd(Group);
 			Obj->TryGetBoolField(TEXT("optional"), Od.optional);
 			Obj->TryGetBoolField(TEXT("checkpoint"), Od.isCheckpoint);
 			Def.objectives.push_back(Od);
@@ -109,19 +109,21 @@ void ULuxMissionSubsystem::LoadMissionFile(const FString& Path)
 	}
 }
 
-bool ULuxMissionSubsystem::StartMission(const FString& MissionId) { return Tracker.Start(ToStd(MissionId)); }
+bool ULuxMissionSubsystem::StartMission(const FString& MissionId) { return Tracker.Start(MissionToStd(MissionId)); }
 
 bool ULuxMissionSubsystem::CompleteObjective(const FString& MissionId, const FString& ObjectiveId)
 {
-	return Tracker.CompleteObjective(ToStd(MissionId), ToStd(ObjectiveId));
+	const bool bOk = Tracker.CompleteObjective(MissionToStd(MissionId), MissionToStd(ObjectiveId));
+	if (bOk) Tracker.Refresh(LastDate);  // Folgemissionen freischalten
+	return bOk;
 }
 
 bool ULuxMissionSubsystem::FailMission(const FString& MissionId, const FString& Reason)
 {
-	return Tracker.Fail(ToStd(MissionId), ToStd(Reason));
+	return Tracker.Fail(MissionToStd(MissionId), MissionToStd(Reason));
 }
 
 FString ULuxMissionSubsystem::GetMissionState(const FString& MissionId) const
 {
-	return UTF8_TO_TCHAR(lux98::ToString(Tracker.GetState(ToStd(MissionId))));
+	return UTF8_TO_TCHAR(lux98::ToString(Tracker.GetState(MissionToStd(MissionId))));
 }
