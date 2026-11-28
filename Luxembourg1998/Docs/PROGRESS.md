@@ -136,3 +136,5 @@ der engine-unabhaengige Kern und die Werkzeuge.
   nur als Fotograf), Mitternacht, Feuerwerk, Abspann mit Epilog aus allen Flags; verpasstes Silvester -> eigener Epilog.
 - Spielzeit-Berechnung jetzt jahresuebergreifend (vorher waere sie am 1.1.1999 auf 0 gesprungen).
 - Eigener Browser-Test `tests/e2e/m08.mjs`: 22 Pruefungen gruen in zwei Spielverlaeufen; Vitest 21.
+
+- Regressionstest nach M08: 80 Pruefungen gruen, Handy-Test gruen; Artifact Version 7.
