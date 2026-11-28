@@ -87,6 +87,8 @@ def check_sources(data: Path, report: Report) -> set[str]:
 
 
 def check_history(data: Path, source_ids: set[str], report: Report) -> None:
+    pending = {r["source_id"] for r in _read_csv(data / "HistoricalSources" / "sources.csv", ["source_id", "status"], report)
+               if r["status"].strip() == "zu beschaffen"}
     fname = "historical_accuracy.csv"
     cols = ["asset_id", "historical_name", "lat", "lon", "exists_from", "exists_until", "accuracy",
             "source_ref", "verification_status", "license_status", "reconstruction_status", "open_questions"]
@@ -107,6 +109,8 @@ def check_history(data: Path, source_ids: set[str], report: Report) -> None:
                 report.error(where, "Kategorie A/B ohne Quellenangabe")
             elif r["source_ref"] not in source_ids:
                 report.error(where, f"Quelle {r['source_ref']} nicht in sources.csv")
+            elif r["source_ref"] in pending:
+                report.error(where, "Kategorie A/B verlangt eine eingesehene Quelle (Status 'zu beschaffen' reicht nicht)")
         if r["source_ref"] and r["source_ref"] not in source_ids:
             report.error(where, f"Quelle {r['source_ref']} nicht in sources.csv")
         if r["verification_status"] == "unverified" and acc != "D":

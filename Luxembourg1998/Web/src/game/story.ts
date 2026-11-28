@@ -115,10 +115,10 @@ export const DIALOGUE = {
     { who: 'Madame Weis', lb: 'Fuert virsiichteg. D’Stad ass net méi déi selwecht wéi fréier – iwwerall gëtt gebaut.', de: 'Fahren Sie vorsichtig. Die Stadt ist nicht mehr dieselbe wie früher – überall wird gebaut.', fr: 'Conduisez prudemment. La ville n’est plus la même qu’avant – on construit partout.', en: 'Drive carefully. The city isn’t what it used to be – they’re building everywhere.' },
   ] as Line[],
   car: [
-    { who: '', lb: 'De Monni säin ale Won. Silwer, e bëssen Rascht, awer hie leeft nach.', de: 'Der alte Wagen des Onkels. Silbern, etwas Rost, aber er läuft noch.', fr: 'La vieille voiture de l’oncle. Argentée, un peu rouillée, mais elle roule encore.', en: 'Your uncle’s old car. Silver, a little rust, but it still runs.' },
+    { who: '', lb: 'De Monni säin ale Won. Silwer, e bësse Rascht, awer hie leeft nach.', de: 'Der alte Wagen des Onkels. Silbern, etwas Rost, aber er läuft noch.', fr: 'La vieille voiture de l’oncle. Argentée, un peu rouillée, mais elle roule encore.', en: 'Your uncle’s old car. Silver, a little rust, but it still runs.' },
   ] as Line[],
   jangMeet: [
-    { who: 'Jang', lb: 'Do bass de jo! Lass mech dech kucken – du hues dech guer net verännert.', de: 'Da bist du ja! Lass dich ansehen – du hast dich gar nicht verändert.', fr: 'Te voilà ! Laisse-moi te regarder – tu n’as pas changé du tout.', en: 'There you are! Let me look at you – you haven’t changed a bit.' },
+    { who: 'Jang', lb: 'Do bass de jo! Looss dech kucken – du hues dech guer net verännert.', de: 'Da bist du ja! Lass dich ansehen – du hast dich gar nicht verändert.', fr: 'Te voilà ! Laisse-moi te regarder – tu n’as pas changé du tout.', en: 'There you are! Let me look at you – you haven’t changed a bit.' },
     { who: 'Jang', lb: 'Hei, fir den Ufank: zweedausend Frang. Du gëss se mer zeréck, wann s de eng Aarbecht hues.', de: 'Hier, für den Anfang: zweitausend Franken. Du gibst sie mir zurück, wenn du Arbeit hast.', fr: 'Tiens, pour commencer : deux mille francs. Tu me les rendras quand tu auras du travail.', en: 'Here, to get started: two thousand francs. Pay me back once you’ve found work.' },
     { who: 'Jang', lb: 'Ech kennen een an enger Garage zu Hollerich. Ech ruff dech un. Elo gi mer awer fir d’éischt e Kaffi drénken.', de: 'Ich kenne jemanden in einer Werkstatt in Hollerich. Ich ruf dich an. Aber jetzt trinken wir erst mal einen Kaffee.', fr: 'Je connais quelqu’un dans un garage à Hollerich. Je t’appellerai. Mais d’abord, allons boire un café.', en: 'I know someone at a garage in Hollerich. I’ll call you. But first, let’s grab a coffee.' },
   ] as Line[],
@@ -153,7 +153,7 @@ export const DIALOGUE02 = {
   wagner: [
     { who: 'Här Wagner', lb: 'Bremsbeleeg a Scheiwe fir e Kombi? Hunn ech hei. Dat mécht eedausendaachthonnert Frang.', de: 'Bremsbeläge und Scheiben für einen Kombi? Habe ich hier. Das macht eintausendachthundert Franken.', fr: 'Plaquettes et disques pour un break ? J’ai ça. Ça fait mille huit cents francs.', en: 'Pads and discs for an estate? Got them. That’s eighteen hundred francs.' },
   ] as Line[],
-  wagnerNoMoney: [{ who: 'Här Wagner', lb: 'Dat geet net duer. Bancomat ass um Gare – oder kommt méi spéit erëm.', de: 'Das reicht nicht. Ein Geldautomat ist am Bahnhof – oder kommen Sie später wieder.', fr: 'Ça ne suffit pas. Il y a un distributeur à la gare – ou revenez plus tard.', en: 'That’s not enough. There’s a cash machine at the station – or come back later.' }] as Line[],
+  wagnerNoMoney: [{ who: 'Här Wagner', lb: 'Dat geet net duer. Bancomat ass op der Gare – oder kommt méi spéit erëm.', de: 'Das reicht nicht. Ein Geldautomat ist am Bahnhof – oder kommen Sie später wieder.', fr: 'Ça ne suffit pas. Il y a un distributeur à la gare – ou revenez plus tard.', en: 'That’s not enough. There’s a cash machine at the station – or come back later.' }] as Line[],
   brakesFade: { who: '', lb: 'D’Bremse gi mëll – de Pedal geet bal bis op de Buedem!', de: 'Die Bremsen werden weich – das Pedal geht fast bis zum Boden!', fr: 'Les freins deviennent mous – la pédale va presque au plancher !', en: 'The brakes are going soft – the pedal almost hits the floor!' } as Line,
   reportHonest: [
     { who: 'Här Muller', lb: 'Ech hunn d’Bremse gekuckt. Proper Aarbecht. Esou eppes gesinn ech net all Dag.', de: 'Ich habe mir die Bremsen angesehen. Saubere Arbeit. So etwas sehe ich nicht jeden Tag.', fr: 'J’ai regardé les freins. Du travail propre. Je ne vois pas ça tous les jours.', en: 'I checked the brakes. Clean work. I don’t see that every day.' },
@@ -180,7 +180,7 @@ export const NEWSPAPER = {
   ],
   ads: [
     { id: 'flat', t: 'Zu vermieten: 2-Zi.-Wohnung, Bonnevoie, 3. Stock, ruhig. Tel. 49 12 77 (abends).' },
-    { id: 'car', t: 'Verk. Kompaktwagen, Bj. 1991, 120 000 km, TÜV neu. Preis VB. Tel. 40 55 31.' },
+    { id: 'car', t: 'Verk. Kompaktwagen, Bj. 1991, 120 000 km, Contrôle technique neu. Preis VB. Tel. 40 55 31.' },
     { id: 'reding', t: 'Suche ehrlichen Menschen mit Auto für einen kleinen Botengang. Kein Risiko, gute Belohnung. Chiffre 4711 – Tel. 45 19 98, nur zwischen 18 und 20 Uhr.', special: true },
     { id: 'piano', t: 'Gebe Klavierunterricht für Kinder und Erwachsene, Limpertsberg. Tel. 47 08 26.' },
     { id: 'dog', t: 'Entlaufen: brauner Mischlingshund „Bosco“, hört auf seinen Namen. Belohnung! Tel. 43 21 65.' },
@@ -208,7 +208,7 @@ export const DIALOGUE03 = {
   wrongDoor: (who: string): Line[] => [{ who, lb: 'Neen, hei wunnt keng Marie Reding. Dir sidd falsch.', de: 'Nein, hier wohnt keine Marie Reding. Sie sind falsch.', fr: 'Non, il n’y a pas de Marie Reding ici. Vous vous êtes trompé.', en: 'No, no Marie Reding here. Wrong door.' }],
   rightDoor: [
     { who: 'Madame Marie Reding', lb: 'Jo? … Bréiwer? Vu mengem Brudder?', de: 'Ja? … Briefe? Von meinem Bruder?', fr: 'Oui ? … Des lettres ? De mon frère ?', en: 'Yes? … Letters? From my brother?' },
-    { who: 'Madame Marie Reding', lb: 'Dräisseg Joer hu mir net méi mateneen geschwat. … Merci. Wierklech, merci. Huelt dat hei, ech bestinn drop.', de: 'Dreißig Jahre haben wir nicht mehr miteinander gesprochen. … Danke. Wirklich, danke. Nehmen Sie das, ich bestehe darauf.', fr: 'Trente ans que nous ne nous sommes pas parlé. … Merci. Vraiment, merci. Prenez ceci, j’insiste.', en: 'Thirty years we haven’t spoken. … Thank you. Truly, thank you. Take this, I insist.' },
+    { who: 'Madame Marie Reding', lb: 'Drësseg Joer hu mir net méi mateneen geschwat. … Merci. Wierklech, merci. Huelt dat hei, ech bestinn drop.', de: 'Dreißig Jahre haben wir nicht mehr miteinander gesprochen. … Danke. Wirklich, danke. Nehmen Sie das, ich bestehe darauf.', fr: 'Trente ans que nous ne nous sommes pas parlé. … Merci. Vraiment, merci. Prenez ceci, j’insiste.', en: 'Thirty years we haven’t spoken. … Thank you. Truly, thank you. Take this, I insist.' },
   ] as Line[],
 };
 
@@ -229,7 +229,7 @@ export const DIALOGUE05 = {
     T('Tom', 'Hei, fir Iech. An d’Computeren hei sinn fir Iech ëmmer gratis – soulaang ech hei schaffen.', 'Hier, für Sie. Und die Computer hier sind für Sie immer gratis – solange ich hier arbeite.', 'Tenez, pour vous. Et les ordinateurs ici sont gratuits pour vous – tant que je travaille ici.', 'Here, for you. And the computers here are always free for you – as long as I work here.'),
   ],
   nilles: [
-    T('Här Nilles', 'Eng Diskett? … Jo! Gëschter huet eng jonk Fra eppes Bloes hei vum Buedem opgehuewen. Rouden Rucksak.', 'Eine Diskette? … Ja! Gestern hat eine junge Frau hier etwas Blaues vom Boden aufgehoben. Roter Rucksack.', 'Une disquette ? … Oui ! Hier une jeune femme a ramassé quelque chose de bleu ici. Sac à dos rouge.', 'A floppy disk? … Yes! Yesterday a young woman picked up something blue here. Red backpack.'),
+    T('Här Nilles', 'Eng Diskett? … Jo! Gëschter huet eng jonk Fra eppes Bloes hei vum Buedem opgehuewen. Roude Rucksak.', 'Eine Diskette? … Ja! Gestern hat eine junge Frau hier etwas Blaues vom Boden aufgehoben. Roter Rucksack.', 'Une disquette ? … Oui ! Hier une jeune femme a ramassé quelque chose de bleu ici. Sac à dos rouge.', 'A floppy disk? … Yes! Yesterday a young woman picked up something blue here. Red backpack.'),
     T('Här Nilles', 'Ech gesinn se all Dag. Si geet ëmmer an deen Internetcafé bei der Gare, mëttes.', 'Ich sehe sie jeden Tag. Sie geht immer in dieses Internetcafé beim Bahnhof, nachmittags.', 'Je la vois tous les jours. Elle va toujours dans ce café Internet près de la gare, l’après-midi.', 'I see her every day. She always goes to that internet café near the station, afternoons.'),
   ],
   nillesIdle: [T('Här Nilles', 'De Bus huet nees Verspéidung …', 'Der Bus hat wieder Verspätung …', 'Le bus est encore en retard …', 'The bus is late again …')],
@@ -294,7 +294,7 @@ export const DIALOGUE07 = {
   deliver: [T('Mia', 'Super! Ech entwéckelen de Film direkt. … Hei sinn d’Kontaktofzich.', 'Super! Ich entwickle den Film sofort. … Hier sind die Kontaktabzüge.', 'Super ! Je développe la pellicule tout de suite. … Voici les planches-contacts.', 'Great! I’ll develop the film right away. … Here are the contact sheets.')],
   missing: [T('Mia', 'Mir feelen nach Biller. Ech brauch de Pont Adolphe, d’Schlosserei an d’Gare – gutt belicht, net ze wäit ewech.', 'Mir fehlen noch Bilder. Ich brauche den Pont Adolphe, die Schlosserei und den Bahnhof – gut belichtet, nicht zu weit weg.', 'Il me manque des photos. Il me faut le pont Adolphe, la serrurerie et la gare – bien exposés, pas trop loin.', 'I’m still missing photos. I need Pont Adolphe, the workshop and the station – well exposed, not too far away.')],
   choice: T('Mia', 'Wéi eng Geschicht erzielen mir?', 'Welche Geschichte erzählen wir?', 'Quelle histoire raconte-t-on ?', 'Which story do we tell?'),
-  after: [T('Mia', 'Muer steet et an der Zeitung! Kaaf der eng um Kiosk. A wann s de méi Aufträg wëlls – komm laanscht.', 'Morgen steht es in der Zeitung! Kauf dir eine am Kiosk. Und wenn du mehr Aufträge willst – komm vorbei.', 'Demain ce sera dans le journal ! Achètes-en un au kiosque. Et si tu veux d’autres commandes – passe.', 'It’ll be in the paper tomorrow! Get one at the kiosk. And if you want more jobs – drop by.')],
+  after: [T('Mia', 'Muer steet et an der Zeitung! Kaaf der eng um Kiosk. A wann s de méi Opträg wëlls – komm laanscht.', 'Morgen steht es in der Zeitung! Kauf dir eine am Kiosk. Und wenn du mehr Aufträge willst – komm vorbei.', 'Demain ce sera dans le journal ! Achètes-en un au kiosque. Et si tu veux d’autres commandes – passe.', 'It’ll be in the paper tomorrow! Get one at the kiosk. And if you want more jobs – drop by.')],
 };
 
 export const STORY_ANGLES = {

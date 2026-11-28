@@ -30,7 +30,7 @@ export const TALK = {
     T('Mia', 'Ech dreemen vun engem eegene Studio. Mee eleng? Schwiereg.', 'Ich träume von einem eigenen Studio. Aber allein? Schwierig.', 'Je rêve d’un studio à moi. Mais seule ? Difficile.', 'I dream of my own studio. But alone? Hard.'),
   ],
   muller: [
-    T('Här Muller', 'Den Euro? Ech muss all meng Präislëschte nei maachen. Véierzeg Frang, dräihonnertdräizeg … wien soll dat rechnen!', 'Der Euro? Ich muss alle meine Preislisten neu machen. Vierzig Franken, dreihundertdreißig … wer soll das rechnen!', 'L’euro ? Je dois refaire toutes mes listes de prix. Quarante francs, trois cent trente … qui va calculer ça !', 'The euro? I have to redo all my price lists. Forty francs, three hundred thirty … who’s going to work that out!'),
+    T('Här Muller', 'Den Euro? Ech muss all meng Präislëschte nei maachen. Véierzeg Frang, dräihonnertdrësseg … wien soll dat rechnen!', 'Der Euro? Ich muss alle meine Preislisten neu machen. Vierzig Franken, dreihundertdreißig … wer soll das rechnen!', 'L’euro ? Je dois refaire toutes mes listes de prix. Quarante francs, trois cent trente … qui va calculer ça !', 'The euro? I have to redo all my price lists. Forty francs, three hundred thirty … who’s going to work that out!'),
     T('Här Muller', 'Ech ginn net méi jonk. Iergendwann brauch d’Garage een, deen se iwwerhëlt.', 'Ich werde nicht jünger. Irgendwann braucht die Werkstatt jemanden, der sie übernimmt.', 'Je ne rajeunis pas. Un jour, le garage aura besoin de quelqu’un pour le reprendre.', 'I’m not getting any younger. Someday the garage will need someone to take it over.'),
   ],
   notYet: [T('Jang', 'Silvester, Place d’Armes, ab zéng Auer. Vergiess et net!', 'Silvester, Place d’Armes, ab zehn Uhr. Vergiss es nicht!', 'Saint-Sylvestre, place d’Armes, dès dix heures. N’oublie pas !', 'New Year’s Eve, Place d’Armes, from ten. Don’t forget!')],
@@ -39,7 +39,7 @@ export const TALK = {
     T('Jang', 'Mäi Plang: ech wëll eppes Eegenes ufänken. Mat dir. Wat mengs du – wat maache mir am nächste Joer?', 'Mein Plan: Ich will etwas Eigenes anfangen. Mit dir. Was meinst du – was machen wir nächstes Jahr?', 'Mon plan : je veux lancer quelque chose à moi. Avec toi. Qu’en penses-tu – que fait-on l’an prochain ?', 'My plan: I want to start something of my own. With you. What do you think – what do we do next year?'),
   ],
   choice: T('Jang', 'Also?', 'Also?', 'Alors ?', 'So?'),
-  midnight: [T('', 'Zéng … néng … aacht … – Gudde Rutsch! Äddi 1998.', 'Zehn … neun … acht … – Guten Rutsch! Adieu 1998.', 'Dix … neuf … huit … – Bonne année ! Adieu 1998.', 'Ten … nine … eight … – Happy New Year! Goodbye 1998.')],
+  midnight: [T('', 'Zéng … néng … aacht … – Prost Neijoer! Äddi 1998.', 'Zehn … neun … acht … – Frohes neues Jahr! Adieu 1998.', 'Dix … neuf … huit … – Bonne année ! Adieu 1998.', 'Ten … nine … eight … – Happy New Year! Goodbye 1998.')],
   missed: [T('Äntwerter', 'Jang hei … Du waars net do, Silvester. Ech hunn op dech gewaart. Melle dech, wann s de wëlls.', 'Jang hier … Du warst nicht da, an Silvester. Ich habe auf dich gewartet. Melde dich, wenn du willst.', 'Ici Jang … Tu n’étais pas là à la Saint-Sylvestre. Je t’ai attendu. Appelle-moi si tu veux.', 'Jang here … You weren’t there on New Year’s Eve. I waited for you. Call me if you want.')],
 };
 

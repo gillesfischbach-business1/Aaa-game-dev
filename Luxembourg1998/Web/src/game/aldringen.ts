@@ -3,10 +3,11 @@ import type { Game, Interior } from './game';
 import { makePerson, makeSign } from './models';
 
 // Busbahnhof Aldringen (Place Hamilius) mit der unterirdischen Ladengalerie, Stand 1998.
-// Vorlage: Fotos der Galerie kurz vor dem Abriss (2010er Jahre, Wikimedia Commons / Presse) – daraus stammen
+// Gestaltungsvorlage: Fotos des Nutzers (Zustand der 2010er Jahre, laut Bildunterschrift u. a. Wikimedia Commons;
+// Quelle SRC_PENDING_ALDRINGEN, noch nicht ausgewertet) – daraus stammen
 // Terrazzoboden, achteckige Lichtfelder, gruen geflieste Rundpfeiler, breite Treppen mit gelben Handlaeufen und
-// blau gerahmte Schaufenster. 1998 waren die Laeden noch geoeffnet; Graffiti und Bretterverschlaege der Fotos
-// gehoeren in die Zeit der Schliessung und fehlen deshalb. Laeden, Namen und Busse sind erfunden (Kategorie D),
+// blau gerahmte Schaufenster. Annahme (unbelegt): 1998 waren die Laeden geoeffnet; Graffiti und Bretterverschlaege
+// der Fotos gehoeren in die Zeit der Schliessung und fehlen deshalb. Laeden, Namen und Busse sind erfunden (Kategorie D),
 // die Lage ist Kategorie C (siehe historical_accuracy.csv, LM_ALDRINGEN_*).
 
 const W = 44, D = 26, H = 3.3;  // Halle der Galerie
@@ -261,7 +262,7 @@ export class Aldringen {
     const shops: [string, string, string][] = [
       ['TABAC – PRESSE', 'Zeitungen · Zigaretten · Lotto', '#7a1c1c'],
       ['FOTO EXPRESS', 'Filmer an 1 Stonn', '#1c3a7a'],
-      ['BÄCKEREI KREMER', 'Croissants · Boxemännercher', '#6a4a20'],
+      ['BÄCKEREI KREMER', 'Croissants · Brout', '#6a4a20'],
       ['SCHLËSSELDÉNGSCHT', 'Schlësselen · Schong', '#3a3a3a'],
       ['BLUMMEN ANNE', 'Fleurs · Blummen', '#2a6a3a'],
     ];
@@ -324,7 +325,7 @@ export class Aldringen {
     g.addInteractable({
       pos: new THREE.Vector3(origin.x - 5.5, origin.y, origin.z - 5.2), radius: 2,
       label: () => (g.interior === this.interior ? 'Mat der Kiosk-Fra schwätzen' : null),
-      act: () => g.ui.toast(['Moien! D’Wort an d’Tageblatt sinn nach do. Déi éischt Bussen fuere ronderëm 5 Auer.',
+      act: () => g.ui.toast(['Moien! De Stater Owendblat ass nach do. Déi éischt Busse fueren ënnert der Woch ganz fréi.',
         'Hei ënnen ass et am Wanter wéinstens dréchen. Bis gläich!'][Math.floor(g.absHours()) % 2], 5000),
     });
 

@@ -1,21 +1,21 @@
 asset_id,location_district,historical_name,lat,lon,exists_from,exists_until,accuracy,source_ref,verification_status,license_status,reconstruction_status,open_questions
-LM_PONT_ADOLPHE,Ville Haute,Pont Adolphe,49.6085,6.1265,1903-07-24,,B,SRC_PENDING_PONT_ADOLPHE,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Zustand der Fahrbahn und Gelaender 1998; Umbau mit Radweg-Passerelle erst nach 1998 (Datum pruefen)
-LM_PASSERELLE,Ville Haute / Gare,Passerelle (Viaduc),49.6070,6.1300,1861-01-01,,B,SRC_PENDING_PASSERELLE,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Genaues Eroeffnungsdatum pruefen; Verkehrsfuehrung 1998
-LM_PONT_GDC,Kirchberg / Pfaffenthal,Pont Grande-Duchesse Charlotte (Rout Bréck),49.6175,6.1370,1966-01-01,,B,SRC_PENDING_PONT_GDC,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Gab es 1998 bereits die seitlichen Schutzscheiben? Farbe/Anstrich 1998
-LM_PALAIS_GRAND_DUCAL,Ville Haute,Palais grand-ducal,49.6106,6.1323,1572-01-01,,B,SRC_PENDING_PALAIS,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Fassadenzustand und Wachposten 1998
-LM_CATHEDRALE,Ville Haute,Cathédrale Notre-Dame,49.6097,6.1314,1621-01-01,,B,SRC_PENDING_CATHEDRALE,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Erweiterung 1935-1938 einbeziehen; Renovierungszustand 1998
-LM_GARE_CENTRALE,Gare,Gare de Luxembourg,49.6000,6.1340,1913-01-01,,B,SRC_PENDING_GARE,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Bahnhofsvorplatz und Busbahnhof 1998; spaeterer Glasbau der Bahnhofshalle ist NACH 1998 (Datum pruefen)
+LM_PONT_ADOLPHE,Ville Haute,Pont Adolphe,49.6085,6.1265,1903-07-24,,C,SRC_PENDING_PONT_ADOLPHE,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Zustand der Fahrbahn und Gelaender 1998; Umbau mit Radweg-Passerelle erst nach 1998 (Datum pruefen)
+LM_PASSERELLE,Ville Haute / Gare,Passerelle (Viaduc),49.6070,6.1300,1861-01-01,,C,SRC_PENDING_PASSERELLE,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Genaues Eroeffnungsdatum pruefen; Verkehrsfuehrung 1998
+LM_PONT_GDC,Kirchberg / Pfaffenthal,Pont Grande-Duchesse Charlotte (Rout Bréck),49.6175,6.1370,1966-01-01,,C,SRC_PENDING_PONT_GDC,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Gab es 1998 bereits die seitlichen Schutzscheiben? Farbe/Anstrich 1998
+LM_PALAIS_GRAND_DUCAL,Ville Haute,Palais grand-ducal,49.6106,6.1323,1572-01-01,,C,SRC_PENDING_PALAIS,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Fassadenzustand und Wachposten 1998
+LM_CATHEDRALE,Ville Haute,Cathédrale Notre-Dame,49.6097,6.1314,1621-01-01,,C,SRC_PENDING_CATHEDRALE,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Erweiterung 1935-1938 einbeziehen; Renovierungszustand 1998
+LM_GARE_CENTRALE,Gare,Gare de Luxembourg,49.6000,6.1340,1913-01-01,,C,SRC_PENDING_GARE,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Bahnhofsvorplatz und Busbahnhof 1998; spaeterer Glasbau der Bahnhofshalle ist NACH 1998 (Datum pruefen)
 LM_BOCK_CASEMATES,Clausen / Ville Haute,Bock-Kasematten,49.6117,6.1370,1745-01-01,,C,,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Baugeschichte mehrstufig (ab 1644); Besucherzugang 1998
 LM_ABBAYE_NEUMUENSTER,Grund,Abbaye de Neumünster,49.6095,6.1355,1688-01-01,,C,,unverified,keine Rechte noetig (Bauwerk),nicht begonnen,Nutzung 1998 klaeren: frueheres Gefaengnis; Kulturzentrum erst nach 1998 (Datum pruefen)
-LM_SCHUEBERFOUER,Limpertsberg,Schueberfouer am Glacis,49.6175,6.1250,1340-01-01,,B,SRC_PENDING_FOUER,unverified,Fahrgeschaefte: Rechte der Schausteller klaeren,nicht begonnen,Genaue Daten 1998 und Liste der Fahrgeschaefte 1998 fehlen
-TECH_WINDOWS98,ueberall,Microsoft Windows 98 (nur als generisches Betriebssystem darstellen),,,1998-06-25,,B,SRC_PENDING_WIN98,unverified,Marke Microsoft: nicht ohne Lizenz zeigen -> fiktives OS,nicht begonnen,Deutsch/Franzoesisch-Fassung Erscheinungsdatum pruefen
-FORBID_EURO_BOOK_MONEY,ueberall,Euro als Buchgeld,,,1999-01-01,,B,SRC_PENDING_EURO,unverified,keine,nicht begonnen,Nur Gespraeche/Plakate ueber den kommenden Euro in 1998 erlaubt
-FORBID_EURO_CASH,ueberall,Euro-Bargeld,,,2002-01-01,,B,SRC_PENDING_EURO,unverified,keine,nicht begonnen,
-FORBID_TRAM_LUX,Kirchberg,Moderne Strassenbahn Luxtram,,,2017-12-10,,B,SRC_PENDING_TRAM,unverified,keine,darf nicht erscheinen,
-FORBID_PHILHARMONIE,Kirchberg,Philharmonie Luxembourg,,,2005-06-26,,B,SRC_PENDING_PHILHARMONIE,unverified,keine,darf nicht erscheinen,1998 evtl. noch unbebaute Flaeche - Zustand pruefen
-FORBID_MUDAM,Kirchberg,Mudam,,,2006-07-01,,B,SRC_PENDING_MUDAM,unverified,keine,darf nicht erscheinen,Fort Thuengen 1998: Ruine oder Baustelle? pruefen
-FORBID_PFAFFENTHAL_LIFT,Pfaffenthal,Panoramalift Pfaffenthal,,,2016-07-01,,B,SRC_PENDING_LIFT,unverified,keine,darf nicht erscheinen,
-FORBID_FUNICULAR_PFAFFENTHAL,Pfaffenthal / Kirchberg,Standseilbahn Pfaffenthal-Kirchberg,,,2017-12-10,,B,SRC_PENDING_TRAM,unverified,keine,darf nicht erscheinen,
+LM_SCHUEBERFOUER,Limpertsberg,Schueberfouer am Glacis,49.6175,6.1250,1340-01-01,,C,SRC_PENDING_FOUER,unverified,Fahrgeschaefte: Rechte der Schausteller klaeren,nicht begonnen,Genaue Daten 1998 und Liste der Fahrgeschaefte 1998 fehlen
+TECH_WINDOWS98,ueberall,Microsoft Windows 98 (nur als generisches Betriebssystem darstellen),,,1998-06-25,,C,SRC_PENDING_WIN98,unverified,Marke Microsoft: nicht ohne Lizenz zeigen -> fiktives OS,nicht begonnen,Deutsch/Franzoesisch-Fassung Erscheinungsdatum pruefen
+FORBID_EURO_BOOK_MONEY,ueberall,Euro als Buchgeld,,,1999-01-01,,C,SRC_PENDING_EURO,unverified,keine,nicht begonnen,Nur Gespraeche/Plakate ueber den kommenden Euro in 1998 erlaubt
+FORBID_EURO_CASH,ueberall,Euro-Bargeld,,,2002-01-01,,C,SRC_PENDING_EURO,unverified,keine,nicht begonnen,
+FORBID_TRAM_LUX,Kirchberg,Moderne Strassenbahn Luxtram,,,2017-12-10,,C,SRC_PENDING_TRAM,unverified,keine,darf nicht erscheinen,
+FORBID_PHILHARMONIE,Kirchberg,Philharmonie Luxembourg,,,2005-06-26,,C,SRC_PENDING_PHILHARMONIE,unverified,keine,darf nicht erscheinen,1998 evtl. noch unbebaute Flaeche - Zustand pruefen
+FORBID_MUDAM,Kirchberg,Mudam,,,2006-07-01,,C,SRC_PENDING_MUDAM,unverified,keine,darf nicht erscheinen,Fort Thuengen 1998: Ruine oder Baustelle? pruefen
+FORBID_PFAFFENTHAL_LIFT,Pfaffenthal,Panoramalift Pfaffenthal,,,2016-07-01,,C,SRC_PENDING_LIFT,unverified,keine,darf nicht erscheinen,
+FORBID_FUNICULAR_PFAFFENTHAL,Pfaffenthal / Kirchberg,Standseilbahn Pfaffenthal-Kirchberg,,,2017-12-10,,C,SRC_PENDING_TRAM,unverified,keine,darf nicht erscheinen,
 FORBID_COQUE,Kirchberg,d'Coque,,,2002-01-01,,C,,unverified,keine,darf nicht erscheinen,Eroeffnungsjahr pruefen
 SHOP_INTERNETCAFE_01,Gare,Internetcafé (fiktiv),,,,,D,,fictional,eigene Gestaltung,nicht begonnen,Fiktives Geschaeft - keine Behauptung realer Existenz
 SHOP_CYBERCAFE_PIXEL,Gare,Cybercafé Pixel (fiktiv),,,,,D,,fictional,eigene Gestaltung,Browser-Fassung,Fiktives Internetcafe - keine Behauptung realer Existenz; Preise Platzhalter

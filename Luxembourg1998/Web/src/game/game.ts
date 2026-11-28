@@ -692,8 +692,8 @@ export class Game {
         <div class="small" style="margin-top:12px">Sommerzeit 1998: 29. März bis 25. Oktober · Nationalfeiertag: 23. Juni · Schueberfouer: Termin 1998 wird noch recherchiert.<br/>Bezahlt wird in Luxemburger Franken (LUF). Der Euro kommt erst 1999 als Buchgeld und 2002 als Bargeld.</div>`;
     } else {
       body.innerHTML = `<h3>IWWER D’SPILL</h3>
-        <div class="small">Browser-Fassung von „LUXEMBOURG 1998 – Echoes of a City“. Die Spiellogik (Kalender, Uhr, Sonnenstand, Geld, Missionen, Telefon, Spielstände) ist dieselbe wie im Unreal-Projekt und automatisch getestet; die Missionsdaten teilen sich beide Fassungen.<br/><br/>
-        Karte: OpenStreetMap-Mitwirkende (ODbL). Höhen: EU-DEM v1.1. Die Gebäude zeigen die Stadt von heute; Straßenbahn, heutige Baustellen und die Radweg-Passerelle unter dem Pont Adolphe sind entfernt. Fassaden, Farben, Autos und Kleidung sind zeittypische Annäherungen (Kategorie C/D), noch nicht historisch belegt. Alle Personen und Firmen sind erfunden.<br/><br/>
+        <div class="small">Browser-Fassung von „LUXEMBOURG 1998 – Echoes of a City“. Die Spiellogik (Kalender, Uhr, Sonnenstand, Geld, Missionen, Telefon, Spielstände) ist eine Übertragung des automatisch getesteten C++-Kerns aus dem Unreal-Projekt (die Unreal-Fassung selbst wurde noch nicht gebaut); die Missionsdaten teilen sich beide Fassungen.<br/><br/>
+        Karte: OpenStreetMap-Mitwirkende (ODbL). Höhen: EU-DEM v1.1. Die Gebäude zeigen weitgehend die Stadt von heute; Straßenbahn, heutige Baustellen, die Radweg-Passerelle unter dem Pont Adolphe und Wege des Neubaus Royal-Hamilius sind entfernt, 1998 noch stehende, später abgerissene Bauten fehlen noch. Fassaden, Farben, Autos und Kleidung sind zeittypische Annäherungen (Kategorie C/D), noch nicht historisch belegt. Alle Personen und Firmen sind erfunden.<br/><br/>
         Sonnenstand: berechnet für Luxemburg am jeweiligen Spieltag. 12 reale Minuten = 1 Spielstunde (T beschleunigt).</div>`;
     }
   }

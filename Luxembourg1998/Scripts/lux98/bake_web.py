@@ -33,6 +33,10 @@ GREEN = {("landuse", "grass"): 0, ("leisure", "park"): 1, ("natural", "wood"): 2
          ("natural", "heath"): 3, ("landuse", "allotments"): 1, ("landuse", "flowerbed"): 1}
 WALLS = {("barrier", "city_wall"), ("historic", "citywalls"), ("barrier", "retaining_wall"), ("barrier", "wall")}
 
+# Namen von Anlagen, die sicher erst nach 1998 entstanden sind (OSM traegt dort oft kein Baujahr)
+POST1998_NAMES = ("Royal-Hamilius", "Royal Hamilius", "Passerelle cyclable", "Cité judiciaire", "Luxtram", "Funiculaire")
+
+
 def _built_after_1998(t: dict[str, str]) -> bool:
     """OSM-Baujahr (start_date, z. B. "2012" oder "2012-05") nach 1998?"""
     for key in ("start_date", "building:start_date", "construction_date"):
@@ -47,10 +51,11 @@ EXCLUDE_RULES = [
     ("Bauwerke mit Baujahr nach 1998 (OSM start_date)", _built_after_1998),
     ("Strassenbahn (Luxtram, ab 2017)", lambda t: t.get("railway") in {"tram", "tram_stop", "platform"}
      and ("tram" in t.get("railway", "") or t.get("tram") == "yes")),
+    ("Bauten nach 1998 (Namensliste)", lambda t: any(n in t.get("name", "") for n in POST1998_NAMES)),
     ("Radweg-Passerelle unter dem Pont Adolphe (nach 1998)",
      lambda t: t.get("highway") == "cycleway" and t.get("bridge") in {"yes", "viaduct"}),
     ("Baustellen von heute", lambda t: t.get("landuse") == "construction" or t.get("highway") == "construction"),
-    ("Abgerissene Gleise", lambda t: t.get("railway") in {"razed", "abandoned", "disused"}),
+    ("Stillgelegte Gleise (Darstellung, kein Zeitfilter)", lambda t: t.get("railway") in {"razed", "abandoned", "disused"}),
 ]
 
 PLACE_NAMES = {

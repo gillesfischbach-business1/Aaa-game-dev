@@ -62,7 +62,7 @@ export class Mission05 implements MissionController {
 
     // Bushaltestelle Place de Paris mit Zeuge
     this.busStop = g.openSpot((P.place_de_paris ?? gare).clone().add(new THREE.Vector3(-20, 0, 18)), false, 8);
-    const stop = makeSign(['ARRÊT', 'Place de Paris · AVL'], '#c8b400', '#1d1d1b', 1.4);
+    const stop = makeSign(['ARRÊT', 'Place de Paris · Stadbus'], '#c8b400', '#1d1d1b', 1.4);
     stop.scale.setScalar(0.7);
     stop.position.copy(this.busStop).add(new THREE.Vector3(1.2, 0, 0));
     g.scene.add(stop);

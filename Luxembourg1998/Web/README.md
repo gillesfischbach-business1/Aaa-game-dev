@@ -1,12 +1,13 @@
 # LUX98 Web – spielbare Browser-Fassung
 
 Parallel zum Unreal-Projekt: dieselbe Spiellogik (Kalender, Uhr, Sonne, LUF, Missionen, Telefon, Spielstände),
-als TypeScript-Port des C++-Kerns mit denselben 109 Prüfungen, gerendert mit Three.js.
+als TypeScript-Port des C++-Kerns mit denselben Prüfungen (C++-Kern derzeit 148), gerendert mit Three.js.
 
 **Spielwelt:** Hollerich / Rond-Point Merl → Gare → Avenue de la Liberté → Pétrusse-Tal → Pont Adolphe / Viaduc → Ville Haute (2,6 × 1,8 km),
 erzeugt aus OpenStreetMap + EU-DEM 25 m durch `Scripts/lux98/bake_web.py`. Bekannte Nach-1998-Elemente
-(Luxtram, heutige Baustellen, Radweg-Passerelle unter dem Pont Adolphe, abgerissene Gleise) sind entfernt;
-alles andere zeigt die heutige Geometrie und ist historisch noch nicht geprüft.
+(Luxtram, heutige Baustellen, Radweg-Passerelle unter dem Pont Adolphe, Wege des Neubaus Royal-Hamilius und weitere
+Anlagen aus einer Namensliste in `bake_web.py`) sind entfernt; alles andere zeigt die heutige Geometrie und ist
+historisch noch nicht geprüft (z. B. Pétrusse-Bett, Cité judiciaire, später abgerissene Bauten von 1998).
 
 **Inhalt:** Mission 01 „Zeréck an d’Stad“ (Telefonzelle → Madame Weis → Onkels Wagen → Jang auf der Place d’Armes),
 Mission 02 „Eng lescht Chance“ (Anrufbeantworter → Garage Muller in Hollerich, rechtzeitig → ehrlich reparieren mit

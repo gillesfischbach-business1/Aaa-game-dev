@@ -188,8 +188,8 @@ export class Internet {
           <form id="chatform"><input placeholder="Schreiwen …" maxlength="120" /><button>Schécken</button></form></div>`;
       case 'tom':
         return `<div class="site tom"><h2>Tom’s Computerdokter</h2><p class="blink">*** UNDER CONSTRUCTION ***</p>
-          <p>PCs zesummebauen · Modems installéieren · Disketten retten · Windows nei opsetzen</p>
-          <p>Dir fannt mech am Cybercafé Pixel bei der Gare (fiktiv).</p><p class="small">Säit gemaach mat Notepad. Dir sidd Besucher Nr. 000042.</p></div>`;
+          <p>PCs zesummebauen · Modems installéieren · Disketten retten · Computeren nei opsetzen</p>
+          <p>Dir fannt mech am Cybercafé Pixel bei der Gare (fiktiv).</p><p class="small">Säit gemaach mam Texteditor. Dir sidd Besucher Nr. 000042.</p></div>`;
       default: {
         const t = FORUM.find((x) => `forum/${x.id}` === route);
         if (t) return `<div class="site"><h2>${t.title}</h2>${t.posts.map((p) => `<div class="post"><b>${p.who}</b> <span class="small">${p.when}</span><br/>${p.t}</div>`).join('')}<p>${link('forum', '« Zréck op d’Forum')}</p></div>`;
@@ -275,7 +275,7 @@ function host(h: InternetHost): string { return h.playerName.toLowerCase().repla
 const NEWS = [
   { h: 'StadNet huet elo 2 000 Memberen', t: 'Ëmmer méi Leit an der Stad hunn e Modem doheem oder ginn an en Internetcafé.' },
   { h: 'Tipps: Wéi een eng E-Mail schreift', t: 'Adress, Sujet, Text – a verschécken. Méi ass et net!' },
-  { h: 'Disketten richteg ophiewen', t: 'Ewech vu Magnéiten, Hëtzt an Waasser. Ëmmer eng Kopie maachen!' },
+  { h: 'Disketten richteg ophiewen', t: 'Ewech vu Magnéiten, Hëtzt a Waasser. Ëmmer eng Kopie maachen!' },
 ];
 
 const FORUM = [
@@ -289,7 +289,7 @@ const FORUM = [
     { who: 'nico', when: '11.04.1998', t: 'Kee Kommentar, ech iessen nëmme Bouneschlupp ;-)' },
   ] },
   { id: 'modem', title: 'Mäi Modem mécht komesch Geräischer', posts: [
-    { who: 'opa_net', when: '18.04.1998', t: 'Ass dat normal, dass et esou päift a kraacht?' },
+    { who: 'opa_net', when: '18.04.1998', t: 'Ass dat normal, datt et esou päift a kraacht?' },
     { who: 'tk_doc', when: '18.04.1998', t: 'Jo, dat ass normal. Dat ass d’Handshake. Bei Problemer kommt an de Pixel.' },
   ] },
   { id: 'amiga', title: 'Verkafen Heemcomputer mat 40 Spiller', posts: [
