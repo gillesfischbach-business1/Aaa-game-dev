@@ -1,0 +1,204 @@
+/* ===== Audio: loop-based engines, natural ambience, reverb, mixer =====
+   Engines work the way racing games do it: for every engine a set of seamless loops is prepared once, at fixed engine speeds,
+   each in an on-throttle and an off-throttle version. While driving the loops are only played back: their pitch follows the
+   rev counter and neighbouring loops are cross-faded by rpm and by load. Nothing is computed per sample at run time, so the
+   sound stays clean on phones.
+   The loops themselves are built from the physics of a four-stroke engine by inverse FFT (band-limited, no aliasing):
+   harmonics of the firing frequency shaped by exhaust resonances, weaker half-orders from uneven cylinders, and intake and
+   exhaust noise that pulses with the firing. All loops of one engine share the same phases and start together, so
+   cross-fades do not cancel. */
+const ENGINE_SPEC={
+ // cyl, loop rpm points, exhaust formants [Hz, gain, width], harmonic roll-off [on-load, off-load], cylinder unevenness, noise level [on, off], noise band, level
+ fidele:{cyl:4,pts:[850,1350,2000,2800,3700,4600],form:[[105,.6,55],[250,1,110],[600,.95,230],[1400,.5,520],[2600,.18,900]],roll:[.95,1.5],rough:.34,noise:[.16,.07],band:[1100,3600],clatter:.55,wobble:.014,gain:.62},
+ petrol:{cyl:4,pts:[800,1500,2400,3400,4500,5600,6400],form:[[165,.55,75],[400,1,170],[900,.9,340],[2100,.5,750],[3800,.16,1200]],roll:[.8,1.4],rough:.1,noise:[.09,.035],band:[700,4400],clatter:0,wobble:.005,gain:.52},
+ // 4.0 l twin-turbo flat-plane V8 behind the cabin, 7000 rpm limit. Tuned to measurements of a recording of the real car (only numbers were taken from it):
+ // ord = level in dB of each half engine order (the firing order is the 8th entry, the strong 4th entry is the flat-plane bank pulse),
+ // env = tone balance in dB over frequency: nearly all energy sits below 600 Hz, the exhaust is muted above, turbo noise fills the top
+ smaragd:{cyl:8,flat:true,pts:[1100,1900,2800,3800,4800,5800,6500,7000],
+  ord:[-28,-16.4,-28,-6,-28,-21,-28,0,-28,-13.7,-28,-11.9,-28,-16.5,-28,-6,-28,-25.5,-28,-23,-28,-23,-28,-14,-28,-24,-28,-24,-28,-24,-28,-18],ordTail:-20.5,scream:11,
+  env:[[40,-8],[90,-2],[160,0],[320,0],[450,-4],[640,-7],[1280,-9],[2560,-13],[5120,-18.5],[9000,-31]],
+  // scream = the orders above the firing line are this many dB quieter at idle and reach full level by 4500 rpm: deep at low revs, a high-pitched howl at the top,
+  // ordHi = how much the half orders and the bank pulse fade towards 4500 rpm under load (dB; at the top of a rev only the firing line stands out),
+  // ordOff = levels of the half orders with the throttle shut above 3800 rpm, fading in from 2800 rpm (right after lifting off the bank pulse is as strong as the firing line, the orders above it calm down),
+  // life (optional, currently off) = random drift of level and pitch [slow level drift, fast level flutter, extra slow drift on the overrun, pitch drift in cents, fast pitch jitter in cents, extra fast flutter under full load]. Switched off after listening tests with neural audio models: every recording with it was judged less like the real car and more synthetic than every recording without it,
+  // lp = low-pass over the whole engine [throttle shut, throttle open] in Hz, roar = level of the broadband intake and exhaust roar under load,
+  // rumble = level of the low irregular rumble for a good second after lifting off at high revs (the recording shows a broad 50-110 Hz cluster there),
+  // res = fixed resonances of the exhaust [Hz, dB, Q]: the level surges whenever a strong order sweeps through one, as in the recording
+  ordHi:-8,ordOff:[-28,-12,-28,-5,-28,-18,-28,0,-28,-20,-28,-18,-28,-22],lp:[2000,8500],roar:.34,rumble:.45,res:[[188,6,4],[290,5,4]],
+  form:[],roll:[1,1],rough:.2,noise:[.1,.05],band:[450,3800],clatter:0,wobble:.006,gain:.44} };
+const LOOP_SR=22050, LOOP_N=16384;
+function fftInverse(re,im){ const n=re.length; // in-place radix-2, returns the real signal in re
+  for(let i=1,j=0;i<n;i++){ let b=n>>1; for(;j&b;b>>=1) j^=b; j^=b; if(i<j){ let t=re[i]; re[i]=re[j]; re[j]=t; t=im[i]; im[i]=im[j]; im[j]=t; } }
+  for(let len=2;len<=n;len<<=1){ const ang=2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){ let cr=1, ci=0; for(let k=0;k<len/2;k++){ const a=i+k, b=a+len/2; const xr=re[b]*cr-im[b]*ci, xi=re[b]*ci+im[b]*cr; re[b]=re[a]-xr; im[b]=im[a]-xi; re[a]+=xr; im[a]+=xi; const t=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=t; } } } }
+function engineLoop(ctx,S,rpm,load,seed){ const N=LOOP_N, re=new Float32Array(N), im=new Float32Array(N); let sd=seed>>>0; const rnd=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
+  const K=Math.max(1,Math.round(rpm/120*N/LOOP_SR)), fc=K*LOOP_SR/N; // whole engine cycles per loop -> seamless
+  const form=f=>{ if(S.env){ const E=S.env, lf=Math.log(f); let i=0; while(i<E.length-2&&f>E[i+1][0]) i++; const w=Math.min(1,Math.max(0,(lf-Math.log(E[i][0]))/(Math.log(E[i+1][0])-Math.log(E[i][0])))); return Math.pow(10,(E[i][1]+(E[i+1][1]-E[i][1])*w)/20); } let g=.05; for(const [f0,a,w] of S.form){ const d=(f-f0)/w; g+=a*Math.exp(-d*d); } return g; };
+  const put=(bin,a,ph)=>{ if(bin<1||bin>=N/2) return; const r=a*Math.cos(ph), q=a*Math.sin(ph); re[bin]+=r; im[bin]+=q; re[N-bin]+=r; im[N-bin]-=q; };
+  const roll=S.roll[load?0:1], bright=load?1:.55;
+  for(let h=1;h*fc<9000;h++){ const f=h*fc, n=h/S.cyl, firing=h%S.cyl===0; const ph=rnd()*6.283*(firing&&n<=3?.3:1); // the phase depends only on h: equal in every loop of this engine
+    let a=1/Math.pow(Math.max(n,.5),roll); if(S.ord) { let o=h<=S.ord.length?S.ord[h-1]:S.ordTail; if(S.scream&&h>S.cyl) o-=S.scream*(1-Math.min(1,Math.max(0,(rpm-1500)/3000))); if(!firing&&load) o+=(S.ordHi||0)*Math.min(1,Math.max(0,(rpm-1900)/2600)); else if(!load&&S.ordOff&&h<=S.ordOff.length) o+=(S.ordOff[h-1]-o)*Math.min(1,Math.max(0,(rpm-2800)/1000)); a=Math.pow(10,o/20)*(firing||load?1:1.3)*(h>S.cyl&&!load?.7:1); } else if(!firing) a*=S.rough*((S.flat&&h%(S.cyl/2)===0)?(S.flatGain||2.4):1)*(load?1:1.3);
+    a*=form(f)*(f>1200?bright:1); put(h*K,a,ph); }
+  fftInverse(re,im); const tone=re.slice();
+  // noise: band-limited, pulsing with the firing (intake and exhaust), plus injector clatter for the diesel
+  re.fill(0); im.fill(0); const b0=Math.round(S.band[0]*N/LOOP_SR), b1=Math.round(S.band[1]*N/LOOP_SR);
+  for(let b=b0;b<b1;b++){ const f=b*LOOP_SR/N, sh=Math.sin(Math.PI*(b-b0)/(b1-b0)); put(b,sh*(.6+.8*rnd())/Math.sqrt(f/1000),rnd()*6.283); }
+  fftInverse(re,im); let tr=0, nr=0; for(let i=0;i<N;i++){ const ph=2*Math.PI*S.cyl*K*i/N; const m=S.clatter?Math.pow(.5+.5*Math.cos(ph),6)*S.clatter*3+.25:.55+.45*Math.cos(ph+1.1); re[i]*=m; tr+=tone[i]*tone[i]; nr+=re[i]*re[i]; }
+  tr=Math.sqrt(tr/N)||1; nr=Math.sqrt(nr/N)||1; const nl=S.noise[load?0:1]*(.6+.4*Math.min(1,rpm/4000));
+  const buf=ctx.createBuffer(1,N,LOOP_SR), d=buf.getChannelData(0); let pk=0; for(let i=0;i<N;i++){ const v=tone[i]/tr*.2*(load?1:.62)+re[i]/nr*.2*nl; d[i]=v; if(Math.abs(v)>pk) pk=Math.abs(v); }
+  if(pk>.9) for(let i=0;i<N;i++) d[i]*=.9/pk;
+  return {buf,rpm:fc*120}; }
+const PETROL={idle:800,red:6400,ratios:[3.6,2.1,1.4,1.05,.82,.66],final:3.9,wheel:.33,up:5400,down:1700};
+const GEARS={ kompakt:PETROL, limo:PETROL, suv:PETROL, petrol:PETROL, fidele:{idle:850,red:4600,ratios:[3.8,2.2,1.45,1.05,.8],final:4.1,wheel:.3,up:3800,down:1500},
+              smaragd:{idle:1100,red:7000,ratios:[3.4,2.6,2.0,1.6,1.3,1.05,.85,.68],final:3.6,wheel:.36,up:6600,down:2400} };
+const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,amb:.6}, eng:{}, gear:1, rpm:850, shiftT:0, mood:0, musicOn:false, nextNote:0, step:0,
+ init(){ if(this.ctx) return; try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const c=this.ctx=new AC({latencyHint:'interactive'});
+   this.comp=c.createDynamicsCompressor(); this.comp.threshold.value=-12; this.comp.ratio.value=3; { const mk=c.createGain(); mk.gain.value=1.6; const lim=c.createDynamicsCompressor(); lim.threshold.value=-2; lim.knee.value=2; lim.ratio.value=20; lim.attack.value=.002; lim.release.value=.08; this.comp.connect(mk); mk.connect(lim); lim.connect(c.destination); this.out=lim; }
+   this.master=c.createGain(); this.master.connect(this.comp);
+   // synthetic room impulse for natural reverb (decaying stereo noise)
+   const len=c.sampleRate*2.4, ir=c.createBuffer(2,len,c.sampleRate); for(let ch=0;ch<2;ch++){ const d=ir.getChannelData(ch); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2)*(i<c.sampleRate*.01?i/(c.sampleRate*.01):1); }
+   this.verb=c.createConvolver(); this.verb.buffer=ir; this.verbGain=c.createGain(); this.verbGain.gain.value=.28; this.verb.connect(this.verbGain); this.verbGain.connect(this.master);
+   const bus=n=>{ const g=c.createGain(); g.connect(this.master); return g; };
+   this.bus={music:bus(),engine:bus(),fx:bus(),amb:bus()}; this.bus.music.connect(this.verb); this.bus.fx.connect(this.verb);
+   const nb=c.createBuffer(1,c.sampleRate*3,c.sampleRate); const d=nb.getChannelData(0); let b0=0,b1=0,b2=0;
+   for(let i=0;i<d.length;i++){ const w=Math.random()*2-1; b0=.99765*b0+w*.099; b1=.963*b1+w*.2965; b2=.57*b2+w*1.0526; d[i]=(b0+b1+b2+w*.1848)*.18; } this.pink=nb; // pink noise
+   const wb=c.createBuffer(1,c.sampleRate*2,c.sampleRate); const wd=wb.getChannelData(0); for(let i=0;i<wd.length;i++) wd[i]=Math.random()*2-1; this.white=wb;
+   this.loopNoise=(buf,type,freq,q)=>{ const s=c.createBufferSource(); s.buffer=buf; s.loop=true; const f=c.createBiquadFilter(); f.type=type; f.frequency.value=freq; f.Q.value=q||.7; const g=c.createGain(); g.gain.value=0; s.connect(f); f.connect(g); s.start(); return {f,g}; };
+   // tyres, wind, rain, city hum, night crickets
+   this.tyre=this.loopNoise(this.pink,'bandpass',420,.9); this.tyre.g.connect(this.bus.fx);
+   this.wind=this.loopNoise(this.pink,'lowpass',700); this.wind.g.connect(this.bus.amb);
+   this.rain=this.loopNoise(this.white,'bandpass',2400,.5); this.rain.g.connect(this.bus.amb);
+   this.city=this.loopNoise(this.pink,'lowpass',260); this.city.g.connect(this.bus.amb);
+   this.turbo=this.loopNoise(this.white,'bandpass',3000,1.2); this.turbo.g.connect(this.bus.engine);
+   this.roar=this.loopNoise(this.pink,'bandpass',200,.4); this.roar.g.connect(this.bus.engine); this.rumble=this.loopNoise(this.pink,'bandpass',80,1.6); this.rumble.g.connect(this.bus.engine);
+   // random values that are played back extremely slowly: the browser interpolates them into smooth random curves, which drift the level and pitch of an engine at no cost
+   { const jb=c.createBuffer(1,8192,c.sampleRate), jd=jb.getChannelData(0); for(let i=0;i<jd.length;i++) jd[i]=Math.random()*2-1; this.jit=jb; }
+   this.drift=(perSec,depth,to)=>{ const s=c.createBufferSource(); s.buffer=this.jit; s.loop=true; s.playbackRate.value=perSec/c.sampleRate; const g=c.createGain(); g.gain.value=depth; s.connect(g); for(const p of to) g.connect(p); s.start(0,Math.random()*.18); return {s,g}; };
+   this.night=c.createGain(); this.night.gain.value=0; this.night.connect(this.bus.amb);
+   this.applyVolumes(); this.initEngines(); this.nextNote=c.currentTime+.2; setInterval(()=>this.tick(),90);
+ }catch(e){ console.warn('audio off',e); this.ctx=null; } },
+ /* Build the loops in small portions so the game never stutters: first the engine in use, the others afterwards. */
+ initEngines(){ const c=this.ctx; this.engOut=c.createGain(); this.engOut.gain.value=1; this.engOut.connect(this.bus.engine); this.engBuild=[]; this.live=null;
+   // electric whine of the hybrid hypercar: one quiet sine that climbs with speed
+   this.whine=c.createOscillator(); this.whine.type='sine'; this.whineG=c.createGain(); this.whineG.gain.value=0; this.whine.connect(this.whineG); this.whineG.connect(this.bus.engine); this.whine.start();
+   for(const key of ['fidele','petrol','smaragd']){ this.eng[key]={ready:false,loops:[]}; const S=ENGINE_SPEC[key]; S.pts.forEach((rpm,i)=>{ for(const load of [1,0]) this.engBuild.push({key,i,rpm,load}); }); }
+   const work=()=>{ if(!this.ctx) return; const want=this.wantKey||'fidele'; let j=this.engBuild.findIndex(b=>b.key===want); if(j<0) j=0; const b=this.engBuild.splice(j,1)[0]; if(!b) return;
+     const E=this.eng[b.key], L=engineLoop(c,ENGINE_SPEC[b.key],b.rpm,b.load,b.key.length*7919+1); (E.loops[b.i]||(E.loops[b.i]={rpm:L.rpm}))[b.load?'on':'off']=L.buf;
+     if(!this.engBuild.some(x=>x.key===b.key)) E.ready=true; if(this.engBuild.length) setTimeout(work,E.ready?40:4); };
+   setTimeout(work,30); },
+ /* start the loops of one engine, all at the same instant so their cycles stay in step */
+ startEngine(key){ const c=this.ctx, E=this.eng[key], S=ENGINE_SPEC[key]; this.stopEngine(); if(!E||!E.ready) return; const t0=c.currentTime+.03, out=c.createGain(); out.gain.value=0; const cyc=S.life?(Math.random()*6)|0:0; // start a few whole engine cycles into the loops (all loops alike, so they stay in step): no two starts sound the same
+   const v=[]; for(const L of E.loops){ const o={rpm:L.rpm}; for(const k of ['on','off']){ const src=c.createBufferSource(); src.buffer=L[k]; src.loop=true; src.playbackRate.value=this.rpm/L.rpm; const g=c.createGain(); g.gain.value=0; src.connect(g); g.connect(out); src.start(t0,cyc*120/L.rpm); o[k]={src,g,cur:0}; } v.push(o); }
+   const live=this.live={key,out,v,S,load:0,mod:[]};
+   if(S.life){ const am=c.createGain(), lp=c.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=.5; lp.frequency.value=S.lp[0]; out.connect(am); let last=am; for(const [f,g,q] of S.res||[]){ const pk=c.createBiquadFilter(); pk.type='peaking'; pk.frequency.value=f; pk.gain.value=g; pk.Q.value=q; last.connect(pk); last=pk; } last.connect(lp); lp.connect(this.engOut); live.am=am; live.lp=lp; const det=[]; for(const o of v){ det.push(o.on.src.detune,o.off.src.detune); }
+     live.mod=[this.drift(18,S.life[0],[am.gain]),this.drift(70,S.life[1],[am.gain]),this.drift(5,S.life[3],det),this.drift(45,S.life[4],det)]; }
+   else out.connect(this.engOut); },
+ stopEngine(){ const L=this.live; if(!L) return; const t=this.ctx.currentTime; L.out.gain.setTargetAtTime(0,t,.05); for(const o of L.v) for(const k of ['on','off']){ try{ o[k].src.stop(t+.4); }catch(e){} } setTimeout(()=>{ try{ L.out.disconnect(); if(L.am){ L.am.disconnect(); L.lp.disconnect(); } for(const m of L.mod){ m.s.stop(); m.g.disconnect(); } }catch(e){} },600); this.live=null; },
+ resume(){ if(this.ctx&&this.ctx.state!=='running') this.ctx.resume().catch(()=>{}); },
+ applyVolumes(){ if(this.song) this.song.volume=this.songVol(); if(!this.ctx) return; const t=this.ctx.currentTime; this.master.gain.setTargetAtTime(this.muted?0:this.vol.master,t,.05);
+   for(const k of ['music','engine','fx','amb']) this.bus[k].gain.setTargetAtTime(this.vol[k],t,.05); },
+ setMuted(m){ this.muted=m; this.applyVolumes(); },
+ setVolume(k,v){ this.vol[k]=v; this.applyVolumes(); },
+ /* per-frame vehicle sound: speed in m/s, throttle 0..1, active car */
+ updateCar(car,speed,thr,brk,on,dt){ if(!this.ctx) return; const t=this.ctx.currentTime, G=GEARS[car]; const v=Math.abs(speed);
+   if(this.car!==car){ this.car=car; this.gear=1; }
+   // automatic gearbox
+   const wheelRpm=v/(2*Math.PI*G.wheel)*60; let rpm=Math.max(G.idle,wheelRpm*G.ratios[this.gear-1]*G.final);
+   if(this.shiftT>0){ this.shiftT-=dt; }
+   else if(rpm>(thr>.5?G.up:G.up*.72)&&this.gear<G.ratios.length){ this.gear++; this.shiftT=car==='fidele'?.35:.12;
+     if(car==='smaragd'&&thr>.5&&rpm>3800&&Math.random()<.9) this.spit(1+((Math.random()*2)|0),1.05+.3*clamp((rpm-3800)/2800,0,1)); } // full-throttle upshift: the ignition cut spits unburnt fuel into the exhaust
+   else if(rpm<G.down&&this.gear>1){ this.gear--; this.shiftT=.2; if(car==='smaragd'&&v>8&&Math.random()<.85) this.spit(1+((Math.random()*2)|0),.7); }
+   rpm=Math.max(G.idle,wheelRpm*G.ratios[this.gear-1]*G.final);
+   if(v<1.2) rpm=G.idle+thr*(G.red-G.idle)*.35;
+   if(this.shiftT>0) rpm*=car==='fidele'?.82:.9;
+   const D=this.dbg; if(D) rpm=D.rpm; // test hook (tests/audio_capture.js): Audio_.dbg={rpm,load} drives the engine sound directly; never set in normal play
+   rpm=Math.min(rpm,G.red); this.rpm+=(rpm-this.rpm)*Math.min(1,dt*(car==='fidele'?6:12));
+   const load=D?D.load:this.shiftT>0?.1:clamp(thr*.9+(v>1?.1:0),0,1);
+   const ek=GEARS[car]===PETROL?'petrol':car; this.wantKey=ek; // the everyday cars share one four-cylinder petrol engine
+   if(on&&(!this.live||this.live.key!==ek)&&this.eng[ek]&&this.eng[ek].ready) this.startEngine(ek);
+   const L=this.live;
+   if(L){ const S=L.S, wob=1+S.wobble*(Math.sin(t*5.3)+.6*Math.sin(t*12.7))*Math.max(.15,1-this.rpm/3000); const rpm=this.rpm*wob; // an engine never holds its speed perfectly, least of all at idle
+     L.load+=(load-L.load)*Math.min(1,dt*9); const v2=L.v; let i=0; while(i<v2.length-2&&rpm>v2[i+1].rpm) i++; const w=clamp((rpm-v2[i].rpm)/(v2[i+1].rpm-v2[i].rpm),0,1);
+     for(let k=0;k<v2.length;k++){ const o=v2[k], gk=k===i?1-w:k===i+1?w:0; o.on.src.playbackRate.setTargetAtTime(rpm/o.rpm,t,.025); o.off.src.playbackRate.setTargetAtTime(rpm/o.rpm,t,.025);
+       const gOn=gk*L.load, gOff=gk*(1-L.load); if(Math.abs(gOn-o.on.cur)>.004){ o.on.cur=gOn; o.on.g.gain.setTargetAtTime(gOn,t,.03); } if(Math.abs(gOff-o.off.cur)>.004){ o.off.cur=gOff; o.off.g.gain.setTargetAtTime(gOff,t,.03); } }
+     L.out.gain.setTargetAtTime(on&&L.key===ek?S.gain*(.55+.45*L.load)*(.8+.2*Math.min(1,this.rpm/4000)):0,t,.08);
+     if(L.lp){ const over=clamp(1-L.load*5,0,1)*clamp((this.rpm-1800)/1500,0,1); // overrun: throttle shut at speed, the engine runs lumpy
+       L.lp.frequency.setTargetAtTime(S.lp[0]+(S.lp[1]-S.lp[0])*L.load*L.load,t,.06); L.mod[0].g.gain.setTargetAtTime(S.life[0]+S.life[2]*over,t,.1); L.mod[1].g.gain.setTargetAtTime(S.life[1]+S.life[5]*L.load*L.load,t,.1); }
+     // lift-off pops of the hypercar: a few soft cracks when the throttle closes at high revs
+     if(L.key==='smaragd'){ this.hot=Math.max(load,(this.hot||0)-dt*1.5); if(load>.5) this.burb=0; else if(load<.2&&this.hot>.55&&this.rpm>3600&&!(this.burb>0)){ this.burb=1.3; this.hot=0; }
+       if(this.burb>0){ this.burb-=dt; if(load<.2&&this.rpm>2300&&Math.random()<dt*11*this.burb) this.crackle(.5+this.burb*.4); } } }
+   this.prevLoad=load;
+   // turbos: a hiss that grows with load and revs, and a short sigh from the blow-off valves when the throttle shuts
+   if(this.rumble) this.rumble.g.gain.setTargetAtTime(on&&this.live&&this.live.S.rumble&&this.burb>0&&load<.2?this.live.S.rumble*Math.min(1,this.burb*1.6)*clamp((this.rpm-1500)/1500,0,1):0,t,.04);
+   if(this.roar){ const L=this.live, rr=on&&L&&L.S.roar?L.S.roar*(.3+.7*L.load*L.load)*clamp((this.rpm+600)/4500,0,1.2):0; this.roar.g.gain.setTargetAtTime(rr,t,.05); this.roar.f.frequency.setTargetAtTime(90+this.rpm*.06,t,.1); }
+   if(this.turbo){ const tb=on&&ek==='smaragd'?clamp((this.rpm-2200)/4000,0,1)*load:0; this.turbo.g.gain.setTargetAtTime(tb*(ENGINE_SPEC.smaragd.turbo||.07),t,.16); this.turbo.f.frequency.setTargetAtTime(1700+this.rpm*.45,t,.14);
+     if(ek==='smaragd'&&(this.tbPrev||0)>.45&&load<.15) this.noiseBurst(.3,'highpass',2400,.1); this.tbPrev=tb; }
+   this.whine.frequency.setTargetAtTime(420+v*46,t,.08); this.whineG.gain.setTargetAtTime(on&&ek==='smaragd'?(.008+clamp(v/45,0,1)*.022)*(.55+.45*load):0,t,.15);
+   // tyres and wind grow with speed; braking adds a scrub
+   const sl=on?clamp((this.slide||0)/6,0,1):0; // sliding tyres squeal: louder and higher
+   this.tyre.g.gain.setTargetAtTime(on?clamp(v/30,0,1)*.22+(brk&&v>4?.08:0)+sl*.3:0,t,.06); this.tyre.f.frequency.setTargetAtTime(250+v*14+sl*900,t,.06);
+   this.wind.g.gain.setTargetAtTime(on?Math.pow(clamp(v/60,0,1),2)*.35:0,t,.2); this.wind.f.frequency.setTargetAtTime(400+v*25,t,.2); },
+ setEngine(speed,on,C){ if(!on&&this.live&&this.ctx) this.live.out.gain.setTargetAtTime(0,this.ctx.currentTime,.2); },
+ /* ambience: hour of day, rain 0..1, region 'city'|'motorway' */
+ ambience(hour,rain,region){ if(!this.ctx) return; const t=this.ctx.currentTime; const night=hour<5.5||hour>21;
+   this.rain.g.gain.setTargetAtTime(rain*.12,t,.5); this.city.g.gain.setTargetAtTime(region==='city'?(night?.05:.1):.03,t,1);
+   if(night&&region!=='city'){ if(!this._cr||t>this._cr){ this._cr=t+.35+Math.random()*.4; this.cricket(); } } },
+ cricket(){ const c=this.ctx,t=c.currentTime; const f=4200+Math.random()*600; for(let k=0;k<3;k++){ const o=c.createOscillator(); o.frequency.value=f; const g=c.createGain(); const s=t+k*.045; g.gain.setValueAtTime(0,s); g.gain.linearRampToValueAtTime(.012,s+.008); g.gain.exponentialRampToValueAtTime(.0001,s+.035); o.connect(g); g.connect(this.bus.amb); o.start(s); o.stop(s+.05); } },
+ // ---- effects (natural envelopes, inharmonic partials, filtered noise) ----
+ bell(freq,vol=.1,when=0,dest){ const c=this.ctx; if(!c) return; const t=c.currentTime+when;
+   for(const [m,a,dc] of [[1,1,1.6],[2.76,.45,.9],[5.4,.25,.5],[8.9,.12,.3]]){ const o=c.createOscillator(); o.frequency.value=freq*m; const g=c.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol*a,t+.004); g.gain.exponentialRampToValueAtTime(.0001,t+dc); o.connect(g); g.connect(dest||this.bus.fx); o.start(t); o.stop(t+dc+.05); } },
+ noiseBurst(dur,type,freq,vol,dest,sweepTo){ const c=this.ctx; if(!c) return; const t=c.currentTime; const s=c.createBufferSource(); s.buffer=this.pink; s.playbackRate.value=.8+Math.random()*.4;
+   const f=c.createBiquadFilter(); f.type=type; f.frequency.setValueAtTime(freq,t); if(sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo,t+dur); const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+   s.connect(f); f.connect(g); g.connect(dest||this.bus.fx); s.start(t,Math.random()*2); s.stop(t+dur+.05); },
+ /* exhaust spit: n short cracks, each a band of noise with a low thump; the game adds the flame */
+ // exhaust pops, shaped after the pops measured in the recording of the real car: short (5-30 ms) cracks that sit inside the engine sound rather than bangs on top of it, one or two at a time
+ spit(n,vol){ if(!this.ctx) return; for(let k=0;k<n;k++) setTimeout(()=>{ if(!this.ctx) return; this.noiseBurst(.012+Math.random()*.02,'bandpass',400+Math.random()*500,.3*vol); this.noiseBurst(.012+Math.random()*.012,'bandpass',2400+Math.random()*1200,1.3*vol); this.thump(120+Math.random()*60,.03,.17*vol); this.spitFlag=(this.spitFlag||0)+vol; },k*(70+Math.random()*60)); },
+ /* overrun burble: one soft irregular crack from the exhaust */
+ crackle(vol){ this.crackFlag=(this.crackFlag||0)+vol; this.noiseBurst(.025+Math.random()*.03,'bandpass',350+Math.random()*900,.1*vol,this.bus.engine); if(Math.random()<.4) this.thump(90+Math.random()*50,.04,.08*vol); },
+ thump(freq,dur,vol){ const c=this.ctx; if(!c) return; const t=c.currentTime; const o=c.createOscillator(); o.frequency.setValueAtTime(freq,t); o.frequency.exponentialRampToValueAtTime(freq*.45,t+dur); const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur); o.connect(g); g.connect(this.bus.fx); o.start(t); o.stop(t+dur+.05); },
+ pickup(i){ const s=[0,2,4,7,9,12][((i%6)+6)%6]; this.bell(1046*Math.pow(2,s/12),.05); },
+ noiseHit(dur,freq,vol){ this.noiseBurst(dur*.8,'lowpass',freq*1.5,vol*.9,null,90); this.thump(70,dur*.7,vol*.8); this.noiseBurst(.06,'highpass',3000,vol*.25); },
+ hit(){ this.noiseHit(.5,1600,.5); },
+ boom(v){ this.noiseBurst(1.1,'lowpass',700,.45*v,null,60); this.thump(48,.9,.4*v); },
+ boost(){ this.noiseBurst(.9,'bandpass',300,.28,null,3800); [523,659,784].forEach((n,i)=>this.bell(n,.035,i*.06)); },
+ chime(){ [659,784,988,1319].forEach((n,i)=>this.bell(n,.06,i*.13)); },
+ click(){ this.bell(1800,.02); },
+ setRain(v){},
+ // ---- generative score: warm pads, plucked piano-like arpeggios, reverb ----
+ MOODS:[{ch:[[57,60,64],[53,57,60],[48,52,55],[55,59,62]],bpm:84},{ch:[[50,53,57],[46,50,53],[48,52,55],[45,48,52]],bpm:80},{ch:[[52,55,59],[48,52,55],[50,53,57],[47,50,54]],bpm:92},{ch:[[53,57,60],[57,60,64],[50,53,57],[55,59,62]],bpm:88},{ch:[[48,52,55,59],[53,57,60,64],[57,60,64,67],[55,59,62,65]],bpm:70}],
+ m2f:m=>440*Math.pow(2,(m-69)/12),
+ // ---- radio: real hip-hop instrumentals by Kontext ("Rest In Beats John Dope", CC BY 4.0, archive.org), streamed one at a time so start-up stays quick.
+ // If the files cannot be loaded the generated score below takes over again.
+ TRACKS:[['sky-blue','Sky Blue'],['june-2023','June 2023'],['stranger-things','Stranger Things'],['winter','Winter'],['july-2018','July 2018'],['october-2019','October 2019']],
+ song:null, songI:0, songOk:true, songFail:0,
+ songVol(){ return this.muted?0:Math.min(1,this.vol.master*this.vol.music*1.5); },
+ // The player's own music: files picked on this device, kept in the browser's local database (IndexedDB) and never uploaded. They play before the built-in tracks.
+ own:[],
+ list(){ return this.own.map(o=>({src:o.url,name:o.name,own:true})).concat(this.TRACKS.map(t=>({src:'assets/music/'+t[0]+'.mp3',name:t[1]}))); },
+ playSong(step,at){ if(!this.songOk) return; const T=this.list();
+   if(!this.song){ const a=new Audio(); a.preload='auto'; this.songI=this.own.length?0:(Math.random()*T.length)|0; step=0;
+     a.onended=()=>this.playSong(1); a.onerror=()=>{ if(++this.songFail>2){ this.songOk=false; this.song=null; } else this.playSong(1); };
+     a.onplaying=()=>{ this.songFail=0; const c=this.list()[this.songI]; if(c&&typeof toast==='function') toast('♪ '+c.name+(c.own?'':' · Kontext')); }; this.song=a; }
+   this.songI=at!=null?at:(this.songI+step+T.length)%T.length; const a=this.song; a.src=T[this.songI].src; a.volume=this.songVol(); const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); },
+ ownDb(){ return new Promise((ok,no)=>{ const r=indexedDB.open('ldr-music',1); r.onupgradeneeded=()=>r.result.createObjectStore('f',{autoIncrement:true}); r.onsuccess=()=>ok(r.result); r.onerror=()=>no(r.error); }); },
+ ownSet(files){ for(const o of this.own) URL.revokeObjectURL(o.url); this.own=files.map(f=>({name:(f.name||'Eigenes Lied').replace(/\.[a-z0-9]+$/i,''),url:URL.createObjectURL(f.blob)})); },
+ async ownLoad(){ try{ const db=await this.ownDb(); const all=await new Promise((ok,no)=>{ const q=db.transaction('f').objectStore('f').getAll(); q.onsuccess=()=>ok(q.result); q.onerror=()=>no(q.error); }); this.ownSet(all); }catch(e){} },
+ async ownSave(fileList){ const files=[...fileList].filter(f=>/^audio\//.test(f.type)||/\.(mp3|m4a|aac|ogg|opus|wav|flac)$/i.test(f.name)).map(f=>({name:f.name,blob:f})); if(!files.length) return 0;
+   try{ const db=await this.ownDb(); await new Promise((ok,no)=>{ const tx=db.transaction('f','readwrite'), st=tx.objectStore('f'); st.clear(); for(const f of files) st.add(f); tx.oncomplete=ok; tx.onerror=()=>no(tx.error); }); }catch(e){}
+   this.ownSet(files); this.songOk=true; this.songFail=0; if(this.musicOn) this.playSong(0,0); return files.length; },
+ async ownClear(){ try{ const db=await this.ownDb(); await new Promise(ok=>{ const tx=db.transaction('f','readwrite'); tx.objectStore('f').clear(); tx.oncomplete=ok; tx.onerror=ok; }); }catch(e){} this.ownSet([]); if(this.song&&this.musicOn) this.playSong(0,0); },
+ setMood(m){ this.mood=m; this.musicOn=true; if(!this.song) this.playSong(0); },
+ tick(){ if(!this.ctx||!this.musicOn) return; if(this.songOk&&this.song){ if(this.song.paused&&!document.hidden&&this.song.readyState>1){ const pr=this.song.play(); if(pr&&pr.catch) pr.catch(()=>{}); } this.nextNote=this.ctx.currentTime+.1; return; } const c=this.ctx; const M=this.MOODS[this.mood]; const sp=60/M.bpm/2;
+   while(this.nextNote<c.currentTime+.3){ const t=this.nextNote-c.currentTime; const chord=M.ch[(this.step>>4)%M.ch.length]; const s=this.step%16;
+     if(s===0){ chord.forEach(n=>this.pad(this.m2f(n-12),sp*16,t)); this.pluck(this.m2f(chord[0]-24),sp*12,t,.09); }
+     if(s%2===0&&Math.random()<.85){ const n=chord[[0,1,2,1,2,0,1,2][(s>>1)%8]%chord.length]+12+(s>=8?12:0); this.pluck(this.m2f(n),sp*3,t,.035); }
+     this.nextNote+=sp; this.step++; } },
+ pluck(freq,dur,when,vol){ const c=this.ctx,t=c.currentTime+when; for(const [m,a] of [[1,1],[2,.35],[3,.12]]){ const o=c.createOscillator(); o.type='sine'; o.frequency.value=freq*m*(1+(Math.random()-.5)*.002); const g=c.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol*a,t+.006); g.gain.exponentialRampToValueAtTime(.0001,t+dur*(1.2-m*.2)); o.connect(g); g.connect(this.bus.music); o.start(t); o.stop(t+dur+.1); } },
+ pad(freq,dur,when){ const c=this.ctx,t=c.currentTime+when; const g=c.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.022,t+dur*.35); g.gain.linearRampToValueAtTime(0,t+dur);
+   const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=700; f.Q.value=.5; f.connect(g); g.connect(this.bus.music);
+   for(const dt of [-9,0,9]){ const o=c.createOscillator(); o.type='sawtooth'; o.frequency.value=freq; o.detune.value=dt; o.connect(f); o.start(t); o.stop(t+dur+.05); } }
+};
+
+addEventListener('visibilitychange',()=>{ const a=Audio_.song; if(!a) return; if(document.hidden) a.pause(); else if(Audio_.musicOn){ const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); } });
+addEventListener('keydown',e=>{ if(e.code==='KeyN'&&Audio_.song&&Audio_.musicOn) Audio_.playSong(1); });
+Audio_.ownLoad();

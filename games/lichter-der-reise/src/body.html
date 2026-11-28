@@ -1,0 +1,113 @@
+<!-- loading screen: a collage of slanted panels with the story's own pictures, logo, progress and tips -->
+<div id="loadO" aria-live="polite">
+  <div class="ld-panels">
+    <div class="ld-p"><img class="a" src="assets/panel_belval.jpg" alt=""><img class="b" src="assets/glutplatz.jpg" alt=""></div>
+    <div class="ld-p"><img class="a" src="assets/panel_bar.jpg" alt=""><img class="b" src="assets/mira.jpg" alt=""></div>
+    <div class="ld-p"><img class="a" src="assets/car_smaragd.jpg" alt=""><img class="b" src="assets/panel_bruecke.jpg" alt=""></div>
+    <div class="ld-p"><img class="a" src="assets/panel_abend.jpg" alt=""><img class="b" src="assets/leo.jpg" alt=""></div>
+    <div class="ld-p"><img class="a" src="assets/car_fidele.jpg" alt=""><img class="b" src="assets/monaco.jpg" alt=""></div>
+  </div>
+  <div class="ld-shade"></div>
+  <div class="ld-foot">
+    <div class="ld-logo">Lichter der <em>Reise</em></div>
+    <div class="ld-sub">Luxemburg · Eindhoven</div>
+    <div class="ld-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="ldBarWrap"><i id="ldBar"></i></div>
+    <div class="ld-row"><span id="ldStep">Wird geladen …</span><span id="ldPct">0 %</span></div>
+    <div class="ld-tip" id="ldTip"></div>
+  </div>
+</div>
+<canvas id="gfx" aria-label="Spielgrafik"></canvas>
+
+<div id="hud" hidden>
+  <div id="obj" class="hud-box">
+    <div class="eyebrow" style="font-size:10px">Ziel</div>
+    <div id="objTitle">Ziel</div>
+    <div id="objText"></div>
+    <div class="row" style="gap:8px"><span id="objArrow">▲</span><span id="objDist"></span></div>
+  </div>
+  <div id="hudRight">
+    <canvas id="mini" width="170" height="170" aria-label="Minikarte"></canvas>
+    <div class="row" style="gap:8px;justify-content:flex-end">
+      <div class="hud-box" id="light"><i></i><span id="lightN">0</span></div>
+      <div id="topBtns"><button class="icon-btn" id="btnMap" aria-label="Karte">⌖</button><button class="icon-btn" id="btnSwap" aria-label="Auto wechseln">⇄</button><button class="icon-btn" id="btnView" aria-label="Kamera wechseln">◉</button><button class="icon-btn" id="btnMute" aria-label="Ton an oder aus">♪</button><button class="icon-btn" id="btnPause" aria-label="Pause">❚❚</button></div>
+    </div>
+  </div>
+  <div id="dash" class="hud-box"><b id="speedN">0</b><small id="speedU">km/h</small><span id="carName">Fidèle</span><span id="clock">18:30</span><span id="boostHint">Lichtstoß</span></div>
+</div>
+<div id="toast"></div>
+<div id="fpsBox" hidden></div>
+<div class="overlay" id="optO" hidden><div class="card" style="width:min(820px,100%)">
+  <div class="row" style="justify-content:space-between"><h2 style="font-size:44px">Optionen</h2><button class="btn ghost" id="optClose">Fertig</button></div>
+  <div id="optTabs" role="tablist"><button data-tab="gfx" class="on">Grafik</button><button data-tab="snd">Ton</button><button data-tab="ctl">Steuerung</button><button data-tab="save">Spielstand</button></div>
+  <div id="optBody"></div>
+</div></div>
+<div class="overlay" id="mapO" hidden><div class="card" style="width:min(1140px,100%)"><div class="row" style="justify-content:space-between"><h2 style="font-size:40px">Karte</h2><button class="btn ghost" id="mapClose">Schließen</button></div><canvas id="mapC" width="1000" height="360" style="width:100%;border-radius:14px"></canvas><div class="keys">Gelb: euer Ziel · Rosa: ihr · Grün: der Smaragd</div></div></div>
+<div id="bark"><div id="barkAv"></div><div id="barkText"></div></div>
+<div id="chapCard"><div class="eyebrow" id="chapEyebrow">Kapitel I</div><h2 id="chapTitle">Die Hochöfen</h2></div>
+<figure id="photo" aria-hidden="true"><div class="frame"><img id="photoImg" alt=""></div><figcaption id="photoCap"></figcaption></figure>
+
+<div id="touch">
+  <div class="tgroup"><button class="tbtn" id="tL" aria-label="Links">‹</button><button class="tbtn" id="tR" aria-label="Rechts">›</button></div>
+  <div class="tgroup"><div class="tgroup v"><button class="tbtn sm" id="tUp" aria-label="Gas">▲</button><button class="tbtn sm" id="tDn" aria-label="Bremse">▼</button></div><button class="tbtn" id="tBoost" aria-label="Lichtstoß">LICHT</button></div>
+</div>
+
+<div id="dialog" hidden>
+  <div id="dlgBox" role="dialog" aria-live="polite">
+    <div id="dlgAv"></div>
+    <div id="dlgMain">
+      <div id="dlgName"></div>
+      <div id="dlgText"></div>
+      <div id="choices" hidden></div>
+      <div id="dlgFoot"><span id="dlgHint">Tippen oder <kbd>Leertaste</kbd> zum Weiterlesen</span><button id="dlgSkip">Überspringen</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="title">
+  <div class="card">
+    <div class="eyebrow">Open World · Luxemburg und Eindhoven</div>
+    <h1>Lichter der <em>Reise</em></h1>
+    <p class="lede">Zwei Städte, eine Autobahn und eine Nacht voller Glut. Fahrt frei durch ein fiktives Luxemburg mit Hochöfen, Tal und Brücken und durch ein fiktives Eindhoven mit Kanal, Fabrikhallen und dem Glutplatz. Mit Fidèle, dem alten weißen Lieferwagen, oder dem smaragdgrünen Supersportwagen.</p>
+    <div class="row"><button class="btn" id="btnStart">Reise beginnen</button><button class="btn ghost" id="btnContinue" hidden>Weiterspielen</button><button class="btn ghost" id="btnOptTitle">Optionen</button><span class="best" id="bestLbl"></span></div>
+    <div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> oder Pfeiltasten fahren · <kbd>Leertaste</kbd> Lichtstoß · <kbd>Umschalt</kbd> Handbremse (Driften) · <kbd>C</kbd> Auto wechseln oder nehmen · <kbd>V</kbd> Kamera · <kbd>K</kbd> Karte · <kbd>P</kbd> Pause · <kbd>M</kbd> Ton<br>Am Handy: Tasten am Rand. Bremsen und Lenken zugleich lässt das Heck ausbrechen. Gamepad wird unterstützt.</div>
+  </div>
+</div>
+
+<div class="overlay" id="pauseO" hidden>
+  <div class="card" style="align-items:flex-start">
+    <div class="eyebrow">Pause</div>
+    <h2>Kurz durchatmen.</h2>
+    <div class="row"><button class="btn" id="btnResume">Weiterfahren</button><button class="btn ghost" id="btnOptPause">Optionen</button><button class="btn ghost" id="btnReset">Zurück auf die Straße</button><button class="btn ghost" id="btnRestart">Neues Spiel</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="endO" hidden>
+  <div class="card" style="width:min(820px,100%)">
+    <div class="eyebrow" id="endEyebrow">Epilog</div>
+    <h2 id="endTitle">Der Hafen leuchtet.</h2>
+    <p class="lede" id="endText"></p>
+    <div class="stats" id="endStats"></div>
+    <div id="albumWrap" hidden>
+      <div class="eyebrow" style="margin-bottom:10px;color:var(--gold)">Das Album der Reise</div>
+      <div class="album" id="album"></div>
+    </div>
+    <div id="lbWrap" hidden>
+      <div class="eyebrow" style="margin-bottom:8px;color:var(--gold)">Bestenliste</div>
+      <div class="lb-row"><input id="lbName" maxlength="16" placeholder="Spitzname" aria-label="Spitzname für die Bestenliste" autocomplete="off"><button class="btn sm" id="lbSend">Eintragen</button><a id="lbMore" class="lb-more" target="_blank" rel="noopener">Ganze Liste</a></div>
+      <div id="lbMsg" class="lb-msg" aria-live="polite"></div>
+      <ol id="lbList" class="lb-list"></ol>
+      <div class="lb-note">Gesendet werden nur Spitzname und Ergebnis, und nur wenn du auf „Eintragen“ tippst.</div>
+    </div>
+    <div class="row"><button class="btn" id="btnFree">Weiterfahren (freie Fahrt)</button><button class="btn ghost" id="btnAgain">Neues Spiel</button><button class="btn ghost" id="btnRethink" hidden>Entscheidung überdenken</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="errO" hidden>
+  <div class="card err">
+    <div class="eyebrow">WebGPU wird benötigt</div>
+    <h2>Dieser Browser kann die Grafik nicht starten.</h2>
+    <p class="lede" id="errText">Öffne das Spiel in einem aktuellen Chrome oder Edge (Computer und Android) oder in Safari ab Version 26 (Mac, iPhone, iPad).</p>
+  </div>
+</div>
+
+<div id="fade"></div>

@@ -1,0 +1,205 @@
+{
+  "url": "http://localhost:8777/lichter-der-reise/index.html",
+  "passed": 9,
+  "failed": 1,
+  "results": [
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 15333,
+      "info": {
+        "title": "Lichter der Reise",
+        "webgpu": true,
+        "canvas": [
+          960,
+          540
+        ],
+        "cells": 1059,
+        "sparks": 186,
+        "nodes": 202,
+        "models": [
+          "fidele",
+          "kompakt",
+          "leo_seat",
+          "leo_stand",
+          "limo",
+          "mira_seat",
+          "mira_stand",
+          "smaragd",
+          "suv"
+        ]
+      },
+      "errors": []
+    },
+    {
+      "name": "rendering",
+      "ok": true,
+      "ms": 6918,
+      "info": {
+        "mean": 73.9,
+        "std": 46.9
+      },
+      "errors": []
+    },
+    {
+      "name": "options_menu",
+      "ok": true,
+      "ms": 30773,
+      "info": {
+        "low": {
+          "ms": 1,
+          "scale": 0.6
+        },
+        "kb": "x",
+        "persisted": true
+      },
+      "errors": []
+    },
+    {
+      "name": "prologue_and_controls",
+      "ok": true,
+      "ms": 17972,
+      "info": {
+        "moved": 35,
+        "turned": 1.03,
+        "mapOpen": true,
+        "swap": "fidele→smaragd",
+        "paused": true
+      },
+      "errors": []
+    },
+    {
+      "name": "save_load",
+      "ok": true,
+      "ms": 2,
+      "info": {
+        "ok": true,
+        "back": true,
+        "light": 0
+      },
+      "errors": []
+    },
+    {
+      "name": "story_playthrough",
+      "ok": true,
+      "ms": 7107,
+      "info": {
+        "minutes": 11.2,
+        "title": "Beide Städte leuchten.",
+        "light": 0,
+        "total": 17,
+        "stuck": 29,
+        "st1": "Error\n    at window.showEnd (eval at evaluate (:311:30), <anonymous>:1:80)\n    at http://localhost:8777/lichter-der-reise/index.html:2385:137 | state=ending m5",
+        "st2": "Error\n    at HTMLDivElement.set (eval at evaluate (:311:30), <anonymous>:1:392)\n    at showEnd (http://localhost:8777/lichter-der-reise/index.html:2387:41)\n    at window.showEnd (eval at evaluate (:311:30), <anonymous>:1:149)\n    at http://localhost:8777/lichter-der-reise/index.html:2385:137",
+        "pos": [
+          1863,
+          -20,
+          1.57
+        ],
+        "spots": [
+          [
+            1928,
+            -169,
+            4
+          ],
+          [
+            1923,
+            -166,
+            4
+          ],
+          [
+            1922,
+            -166,
+            4
+          ],
+          [
+            1922,
+            -166,
+            4
+          ],
+          [
+            1922,
+            -166,
+            4
+          ],
+          [
+            1922,
+            -166,
+            4
+          ],
+          [
+            1922,
+            -166,
+            4
+          ],
+          [
+            1922,
+            -166,
+            4
+          ],
+          [
+            1922,
+            -166,
+            4
+          ],
+          [
+            1922,
+            -166,
+            4
+          ],
+          [
+            1922,
+            -166,
+            5
+          ],
+          [
+            1915,
+            -168,
+            5
+          ]
+        ],
+        "states": 9
+      },
+      "errors": []
+    },
+    {
+      "name": "free_roam_stuck_scan",
+      "ok": false,
+      "ms": 6822,
+      "error": "{\"reached\":1,\"tries\":6,\"stuck\":59,\"spots\":[[1564,55,6],[1564,55,6],[1564,55,6],[1564,55,6],[1564,55,6],[1564,55,6],[1564,55,6],[1564,55,6],[1564,55,6],[1565,55,6],[1565,55,6],[1565,55,6],[1565,55,6],[1565,55,6],[1565,55,6],[1565,55,6],[1565,55,6],[1565,55,6],[1565,55,6],[678,1,6],[677,1,6],[354,7,6],[353,8,6],[331,-2,6],[860,1,6],[872,1,6],[884,2,6],[897,2,6],[911,2,6],[925,2,6],[1430,9,6],[1506,-9,6],[1521,9,6],[1538,-9,6],[1550,9,6],[1547,-9,6],[1152,-9,6],[1155,-9,6],[1217,9,6],[1258,-9,6]]}",
+      "errors": []
+    },
+    {
+      "name": "performance",
+      "ok": true,
+      "ms": 35,
+      "info": {
+        "updateMs": 0.03,
+        "buildFrameMs": 0.41,
+        "instances": 4177,
+        "traffic": 1
+      },
+      "errors": []
+    },
+    {
+      "name": "locations",
+      "ok": true,
+      "ms": 39930,
+      "info": {
+        "count": 10
+      },
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "ok": true,
+      "ms": 8665,
+      "info": {
+        "touchVisible": true,
+        "speedAfterGas": 12,
+        "overflow": false
+      },
+      "errors": []
+    }
+  ]
+}
