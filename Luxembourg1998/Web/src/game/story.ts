@@ -40,6 +40,7 @@ export const PHONEBOOK = [
   { number: '48 32 10', name: 'Reding, J.-P.', address: 'Rue fictive 22, Gare', district: 'Gare' },
   { number: '44 90 57', name: 'Reding, A.', address: 'Rue fictive 5, Hollerich', district: 'Hollerich' },
   { number: NUMBERS.fund, name: 'Fundbüro / Objets trouvés (fiktiv)', address: 'Rue fictive 1, bei der Place de Metz', district: 'Ville Haute', isBusiness: true },
+  { number: '49 05 81', name: 'Feller, Mia – Fotolabo (fiktiv)', address: 'Rue fictive 9, Bonnevoie', district: 'Bonnevoie-Nord / Verlorenkost', isBusiness: true },
   { number: NUMBERS.home, name: 'Kremer (eigene Wohnung)', address: 'Avenue de la Liberté, 3. Stock', district: 'Gare' },
 ];
 
@@ -81,6 +82,11 @@ export const OBJECTIVE_TEXT: Record<string, { de: string; fr: string; en: string
   'group:find_disk': { de: 'Die blaue Diskette „TK – Diplom“ finden – Internet (Forum), Telefonbuch oder Leute an der Bushaltestelle fragen', fr: 'Retrouver la disquette bleue « TK – Diplom » – Internet (forum), annuaire ou témoins à l’arrêt de bus', en: 'Find the blue disk “TK – Diplom” – internet (forum), phone book or ask people at the bus stop' },
   return_disk: { de: 'Die Diskette Tom ins Cybercafé zurückbringen', fr: 'Rapporter la disquette à Tom au cybercafé', en: 'Bring the disk back to Tom at the cybercafé' },
   done05: { de: 'Freies Spiel – Stadt erkunden, im Cybercafé surfen, in der Garage arbeiten. Weitere Missionen folgen.', fr: 'Jeu libre – explorer, surfer au cybercafé, travailler au garage. D’autres missions suivront.', en: 'Free roam – explore, surf at the cybercafé, work at the garage. More missions to come.' },
+  // Mission 06
+  listen_invite: { de: 'Jang hat sicher wieder angerufen – Anrufbeantworter zu Hause abhören', fr: 'Jang a sûrement rappelé – écouter le répondeur à la maison', en: 'Jang probably called again – check the answering machine at home' },
+  arrive_grund: { de: 'Abends (21–3 Uhr) auf die Terrasse „Am Pëtz“ im Grund, unten an der Alzette', fr: 'Le soir (21 h–3 h) sur la terrasse « Am Pëtz » au Grund, au bord de l’Alzette', en: 'In the evening (9 pm–3 am) to the “Am Pëtz” terrace in the Grund, down by the Alzette' },
+  'group:outcome': { de: 'Der Abend im Grund – wie gehst du mit Steve um?', fr: 'La soirée au Grund – comment réagir face à Steve ?', en: 'The evening in the Grund – how do you handle Steve?' },
+  done06: { de: 'Freies Spiel – Stadt erkunden, arbeiten, Radio hören (im Auto: C). Weitere Missionen folgen.', fr: 'Jeu libre – explorer, travailler, écouter la radio (en voiture : C). D’autres missions suivront.', en: 'Free roam – explore, work, listen to the radio (in the car: C). More missions to come.' },
   done02: { de: 'Probearbeit erledigt. Freies Spiel – weitere Missionen folgen.', fr: 'Essai terminé. Jeu libre – d’autres missions suivront.', en: 'Trial job done. Free roam – more missions to come.' },
 };
 
@@ -230,6 +236,40 @@ export const DIALOGUE05 = {
   fundEmpty: [T('Fundbüro', 'Mir hu keng Diskett hei. Wann eppes ofginn gëtt, rufft eis un.', 'Wir haben keine Diskette hier. Wenn etwas abgegeben wird, rufen Sie uns an.', 'Nous n’avons pas de disquette. Si quelque chose est déposé, appelez-nous.', 'We don’t have a disk here. If something comes in, give us a call.')],
   sandraMail: { subject: 'Re: Diskett', body: 'Moien!\n\nSuper, datt de Besëtzer sech mellt! Ech sinn all Dag vu 14 bis 20 Auer am Cybercafé Pixel bei der Gare – roude Rucksak. Kommt einfach laanscht.\n\nSandra' },
 };
+
+export const DIALOGUE06 = {
+  invite: [
+    T('Äntwerter', 'Moien, ech sinn et, de Jang. Haut den Owend um néng Auer am Gronn – op der Terrass vum „Am Pëtz“, direkt un der Alzette.', 'Hallo, ich bin’s, Jang. Heute Abend um neun im Grund – auf der Terrasse vom „Am Pëtz“, direkt an der Alzette.', 'Salut, c’est Jang. Ce soir à neuf heures au Grund – sur la terrasse de « Am Pëtz », au bord de l’Alzette.', 'Hi, it’s Jang. Tonight at nine in the Grund – on the terrace of “Am Pëtz”, right by the Alzette.'),
+    T('Äntwerter', 'Ech stellen dir e puer Leit vir. Kënnt bis dräi Auer, du weess jo, wéi dat ass.', 'Ich stelle dir ein paar Leute vor. Kann bis drei Uhr gehen, du weißt ja, wie das ist.', 'Je te présenterai quelques personnes. Ça peut durer jusqu’à trois heures, tu sais comment c’est.', 'I’ll introduce you to some people. Might go on till three, you know how it is.'),
+  ],
+  early: [T('Jang', 'Du bass fréi! Déi aner kommen eréischt géint néng Auer.', 'Du bist früh! Die anderen kommen erst gegen neun.', 'Tu es en avance ! Les autres arrivent vers neuf heures.', 'You’re early! The others come around nine.')],
+  intro: [
+    T('Jang', 'Do bass de! Dat hei ass d’Mia – si fotograféiert alles, wat sech beweegt. An dat do ass de Steve, mir waren zesummen an der Schoul.', 'Da bist du! Das hier ist Mia – sie fotografiert alles, was sich bewegt. Und das ist Steve, wir waren zusammen in der Schule.', 'Te voilà ! Voici Mia – elle photographie tout ce qui bouge. Et voilà Steve, on était à l’école ensemble.', 'There you are! This is Mia – she photographs anything that moves. And that’s Steve, we were at school together.'),
+    T('Mia', 'Moien! De Jang huet vill vun dir erzielt. Du bass zeréck aus dem Ausland?', 'Hallo! Jang hat viel von dir erzählt. Du bist zurück aus dem Ausland?', 'Salut ! Jang m’a beaucoup parlé de toi. Tu es revenu de l’étranger ?', 'Hi! Jang told me a lot about you. You’re back from abroad?'),
+    T('Steve', 'Ha! Den neie Mechaniker vum Muller. Fréier am Ausland, elo schmiereg Hänn. Schéi Karriär!', 'Ha! Der neue Mechaniker von Muller. Früher im Ausland, jetzt schmierige Hände. Schöne Karriere!', 'Ha ! Le nouveau mécano de Muller. Avant à l’étranger, maintenant les mains pleines de graisse. Belle carrière !', 'Ha! Muller’s new mechanic. Abroad before, greasy hands now. Great career!'),
+    T('', 'De Steve wénkt mat sengem Glas – a stéisst dem Mia seng Kamera vum Dësch. Si fält mat engem Kraach op d’Pavé.', 'Steve fuchtelt mit seinem Glas – und stößt Mias Kamera vom Tisch. Sie fällt krachend aufs Pflaster.', 'Steve gesticule avec son verre – et fait tomber l’appareil de Mia de la table. Il tombe sur les pavés.', 'Steve waves his glass – and knocks Mia’s camera off the table. It crashes onto the cobblestones.'),
+  ],
+  choice: T('', 'Alleguer kucken dech un. Wat méchs du?', 'Alle schauen dich an. Was tust du?', 'Tout le monde te regarde. Que fais-tu ?', 'Everyone looks at you. What do you do?'),
+  friendship: [
+    T('Du', 'Komm, Steve, et ass näischt geschitt. Ech bezuelen eng Ronn fir jiddereen.', 'Komm, Steve, es ist nichts passiert. Ich gebe eine Runde für alle aus.', 'Allez, Steve, il ne s’est rien passé. Je paie une tournée pour tout le monde.', 'Come on, Steve, no harm done. I’ll buy a round for everyone.'),
+    T('Steve', '… Hm. Merci. Sorry, Mia.', '… Hm. Danke. Entschuldige, Mia.', '… Hm. Merci. Désolé, Mia.', '… Hm. Thanks. Sorry, Mia.'),
+    T('Jang', 'Siss de, dofir hunn ech dech vermësst. Du bréngs d’Leit zesummen.', 'Siehst du, deshalb habe ich dich vermisst. Du bringst die Leute zusammen.', 'Tu vois, c’est pour ça que tu m’as manqué. Tu rassembles les gens.', 'See, that’s why I missed you. You bring people together.'),
+  ],
+  conflict: [
+    T('Du', 'Steve, du hues genuch. Entschëlleg dech beim Mia – oder géi.', 'Steve, du hast genug. Entschuldige dich bei Mia – oder geh.', 'Steve, ça suffit. Excuse-toi auprès de Mia – ou va-t’en.', 'Steve, that’s enough. Apologise to Mia – or leave.'),
+    T('Steve', 'Wéi schwätz du mat mir? Dat vergiessen ech der net.', 'Wie redest du mit mir? Das vergesse ich dir nicht.', 'Tu me parles comment ? Je ne l’oublierai pas.', 'Who do you think you’re talking to? I won’t forget this.'),
+    T('Jang', '… Dat war elo net néideg. Mee hie war och ze wäit gaangen.', '… Das war jetzt nicht nötig. Aber er war auch zu weit gegangen.', '… Ce n’était pas nécessaire. Mais il était allé trop loin aussi.', '… That wasn’t necessary. But he went too far too.'),
+  ],
+  job: [
+    T('Du', 'Waart, Mia – weis mol. D’Objektiv ass ganz, nëmmen de Deckel ass ofgesprongen.', 'Warte, Mia – zeig mal. Das Objektiv ist heil, nur der Deckel ist abgesprungen.', 'Attends, Mia – montre. L’objectif est intact, seul le bouchon a sauté.', 'Wait, Mia – let me see. The lens is fine, only the cap popped off.'),
+    T('Mia', 'Du kenns dech mat Kameraen aus? Ech hunn e klenge Fotolabo zu Bouneweg. Ech brauch een, deen Fotoe fir d’Zeitung mécht – Stroossen, Haiser, Leit.', 'Du kennst dich mit Kameras aus? Ich habe ein kleines Fotolabor in Bonnevoie. Ich brauche jemanden, der Fotos für die Zeitung macht – Straßen, Häuser, Leute.', 'Tu t’y connais en appareils ? J’ai un petit labo photo à Bonnevoie. Il me faut quelqu’un pour faire des photos pour le journal – rues, maisons, gens.', 'You know cameras? I have a small photo lab in Bonnevoie. I need someone to shoot photos for the paper – streets, houses, people.'),
+    T('Mia', 'Ruff mech un, wann s de Loscht hues. Meng Nummer schreiwen ech der an de Carnet.', 'Ruf mich an, wenn du Lust hast. Meine Nummer schreibe ich dir ins Notizbuch.', 'Appelle-moi si ça te dit. J’écris mon numéro dans ton carnet.', 'Call me if you’re interested. I’ll write my number in your notebook.'),
+  ],
+  after: [T('Jang', 'Schéin Owend, oder? Komm gutt heem.', 'Schöner Abend, oder? Komm gut heim.', 'Belle soirée, non ? Rentre bien.', 'Nice evening, right? Get home safe.')],
+  steveRevenge: [T('Äntwerter', 'Jang hei. De Steve ass nach ëmmer sauer … ech mengen, hien huet eppes mat dengem Auto gemaach. Kuck emol no. Sorry.', 'Jang hier. Steve ist immer noch sauer … ich glaube, er hat etwas mit deinem Auto gemacht. Schau mal nach. Sorry.', 'Ici Jang. Steve est toujours fâché … je crois qu’il a fait quelque chose à ta voiture. Va voir. Désolé.', 'Jang here. Steve’s still angry … I think he did something to your car. Have a look. Sorry.')],
+};
+
+export const ROUND_PRICE = 600;  // eine Runde fuer vier (Platzhalter, Kategorie D)
 
 export const NET_PRICE = 75;  // halbe Stunde Internet (Platzhalter, Kategorie D)
 

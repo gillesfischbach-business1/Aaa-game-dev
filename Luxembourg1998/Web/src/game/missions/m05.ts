@@ -192,6 +192,7 @@ export class Mission05 implements MissionController {
         g.wallet.receiveCash(2500, g.clock.getDate(), 'Belohnung Tom Kieffer');
         g.reputation += 3;
         this.complete('return_disk');
+        g.flags['m05.done_at'] = String(g.absHours());
         g.ui.toast(`Mission erfüllt: „Déi verluer Diskett“ · +${formatLuf(2500)} · Internet im Pixel jetzt gratis`, 5000);
         g.onMissionSucceeded(this.id);
       });

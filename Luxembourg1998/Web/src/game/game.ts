@@ -14,6 +14,8 @@ import { Mission01, M01_ID } from './missions/m01';
 import { Mission02, M02_ID } from './missions/m02';
 import { Mission03, M03_ID } from './missions/m03';
 import { Mission05, M05_ID } from './missions/m05';
+import { Mission06, M06_ID } from './missions/m06';
+import { Radio } from './radio';
 import { Internet } from './internet';
 import type { MissionController } from './missions/types';
 import { missionDef } from './missiondata';
@@ -84,6 +86,8 @@ export class Game {
   readonly m05: Mission05;
   readonly internet: Internet;
   interior: Interior | null = null;
+  readonly m06: Mission06;
+  readonly radio: Radio;
   private computerOpen = false;
   readonly controllers: MissionController[];
   private messages = new Map<string, Line[]>();
@@ -135,7 +139,20 @@ export class Game {
       playerName: 'kremer',
     });
     this.m05 = new Mission05(this);
-    this.controllers = [this.m01, this.m02, this.m03, this.m05];
+    this.m06 = new Mission06(this);
+    this.controllers = [this.m01, this.m02, this.m03, this.m05, this.m06];
+    this.radio = new Radio({
+      hour: () => this.clock.getHour(),
+      minute: () => this.clock.getMinute(),
+      raining: () => this.env.raining,
+      rushHour: () => { const h = this.clock.getHourLocal(); return dayOfWeek(this.clock.getDate()) < 5 && ((h >= 7 && h < 9) || (h >= 16.5 && h < 18.5)); },
+      district: () => { const p = this.activePos(); return p.x < -600 ? 'Hollerich' : p.z > 950 ? 'Gare' : p.x > 250 ? 'Grund' : 'Stad'; },
+      extraNews: () => [
+        ...(this.missions.getState(M05_ID) === 'Succeeded' ? ['Gutt Noriicht fir d’Studenten: d’Diplomaarbechten ginn dës Woch ofginn (fiktiv).'] : []),
+        ...(this.flags['m06.outcome'] === 'conflict' ? ['Polizei: Kratzer un engem geparkten Auto bei der Place de Paris gemellt (fiktiv).'] : []),
+        'Schueberfouer 1998: Datumer gi spéider bekannt.',
+      ],
+    });
     document.addEventListener('lux98-logoff', () => this.closeComputer());
     this.registerMissions();
 
@@ -148,7 +165,7 @@ export class Game {
 
   private registerMissions(): void {
     this.missions = new MissionTracker();
-    for (const id of [M01_ID, M02_ID, M03_ID, M05_ID]) {
+    for (const id of [M01_ID, M02_ID, M03_ID, M05_ID, M06_ID]) {
       const r = this.missions.register(missionDef(id));
       if (!r.ok) console.error(r.error);
     }
@@ -411,6 +428,7 @@ export class Game {
       this.camYaw = v.heading;
       this.ui.show('speedo', true);
       this.ui.show('carinfo', true);
+      if (this.radio.station >= 0) this.radio.setStation(this.radio.station);  // Radio laeuft weiter
       if (v === this.car) this.m01.onCarEntered();
     };
     if (v === this.car && !d.introSeen) { d.introSeen = true; this.ui.dialogue(DIALOGUE.car, go); } else go();
@@ -432,6 +450,8 @@ export class Game {
     this.player.root.visible = true;
     this.ui.show('speedo', false);
     this.ui.show('carinfo', false);
+    this.radio.stop();
+    this.ui.show('radio', false);
   }
 
   // ---------- Telefonzelle ----------
@@ -555,7 +575,7 @@ export class Game {
     const L = this.ui.lang;
     if (this.nbPage === 'notes') {
       // Laufende Mission zuerst und ausfuehrlich, erledigte als eine Zeile
-      const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung', [M05_ID]: 'Déi verluer Diskett' };
+      const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung', [M05_ID]: 'Déi verluer Diskett', [M06_ID]: 'Eng Nuecht am Gronn' };
       const active = this.controllers.filter((c) => this.missions.getState(c.id) === 'Active').map((c) => c.notes(L).replace(' style="margin-top:14px"', '')).join('');
       const doneList = this.controllers.filter((c) => this.missions.getState(c.id) === 'Succeeded').map((c) => `<div class="done">✓ ${titles[c.id] ?? c.id}</div>`).join('');
       const missionsHtml = `${active}${this.career.notes(L)}${doneList ? `<h3 style="margin-top:14px">ERLEDIGT</h3>${doneList}` : ''}`;
@@ -778,6 +798,10 @@ export class Game {
       this.ui.toast(`Zeit ×${this.timeScales[this.timeIdx] / 5}`);
     }
     if (inp.consume('lights') && this.veh) this.veh.lights = !this.veh.lights;
+    if (inp.consume('radio') && this.veh) {
+      const st = this.radio.cycle();
+      this.ui.toast(st ? `Radio: ${st.name} ${st.freq}` : 'Radio aus');
+    }
     if (inp.consume('save')) this.save();
     if (inp.consume('load')) this.load();
     if (inp.consume('pause')) this.setPaused(true);
@@ -785,6 +809,7 @@ export class Game {
 
   setPaused(p: boolean): void {
     this.ui.show('pause', p);
+    if (p) this.radio.stop(); else if (this.veh && this.radio.station >= 0) this.radio.setStation(this.radio.station);
     if (p) document.exitPointerLock?.();
   }
 
@@ -940,6 +965,9 @@ export class Game {
     if (v) {
       const name = this.drivables.find((d) => d.v === v)?.name ?? '';
       this.ui.drawSpeedo(v.kmh, v.fuel / v.spec.tankLiters, v.damage, `${name} · ${v.spec.name}`, v.lights);
+      const st = this.radio.current;
+      this.ui.show('radio', !!st);
+      if (st) document.getElementById('radio')!.innerHTML = `<b>${st.freq} ${st.name}</b><span>${this.radio.ticker(performance.now())}</span>`;
     }
   }
 }

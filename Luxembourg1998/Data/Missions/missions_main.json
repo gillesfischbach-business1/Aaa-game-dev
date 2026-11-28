@@ -243,7 +243,7 @@
       "title_de": "Eine Nacht im Grund",
       "district": "Grund",
       "prerequisites": [
-        "M04_UM_GLACIS"
+        "M05_DEI_VERLUER_DISKETT"
       ],
       "time_window": {
         "from_hour": 21,
@@ -251,7 +251,12 @@
       },
       "objectives": [
         {
-          "id": "arrive_grund"
+          "id": "listen_invite",
+          "checkpoint": true
+        },
+        {
+          "id": "arrive_grund",
+          "checkpoint": true
         },
         {
           "id": "outcome_friendship",
@@ -271,8 +276,13 @@
         "money_luf": null
       },
       "teaches": [
+        "night",
+        "choices",
+        "relationships",
         "consequences"
-      ]
+      ],
+      "prerequisites_note": "Urspruenglich nach M04 (Schueberfouer). M04 bleibt gesperrt, bis die Termine 1998 belegt sind; daher vorlaeufig nach M05.",
+      "location_note": "Bistro-Terrasse \"Am Pëtz\" (fiktiv) im Grund an der Alzette"
     },
     {
       "mission_id": "M07_DSTAD_AM_WANDEL",
@@ -280,7 +290,7 @@
       "title_de": "Die Stadt im Wandel",
       "district": "Kirchberg",
       "prerequisites": [
-        "M05_DEI_VERLUER_DISKETT"
+        "M06_ENG_NUECHT_AM_GRONN"
       ],
       "objectives": [
         {

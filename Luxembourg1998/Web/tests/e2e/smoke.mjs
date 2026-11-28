@@ -45,6 +45,16 @@ check('Eingestiegen', await g(() => window.__lux98.mode === 'drive'));
 await page.keyboard.down('w'); await page.waitForTimeout(2500); await page.keyboard.up('w');
 check('Auto faehrt', await g(() => window.__lux98.car.kmh > 1), `${await g(() => Math.round(window.__lux98.car.kmh))} km/h`);
 await page.screenshot({ path: `${out}/04_drive.png` });
+// Autoradio
+await page.keyboard.press('c'); await page.waitForTimeout(400);
+check('Radio an: Radio Stad', await g(() => window.__lux98.radio.current?.id === 'stad') && await page.isVisible('#radio'), await page.textContent('#radio'));
+await page.keyboard.press('c'); await page.waitForTimeout(200);
+await page.keyboard.press('c'); await page.waitForTimeout(400);
+check('Info Lëtz mit Nachrichten-Laufschrift', (await page.textContent('#radio')).includes('Info Lëtz'), await page.textContent('#radio'));
+await page.screenshot({ path: `${out}/19_radio.png` });
+await page.keyboard.press('c'); await page.waitForTimeout(300);
+check('Radio aus', await g(() => !window.__lux98.radio.on) && !(await page.isVisible('#radio')));
+
 await g(() => window.__lux98.leaveVehicle(true));
 await goTo('x.m01.jang.root.position'); await press(); await advance();
 check('M01 erfuellt, M02 aktiv', await g(() => window.__lux98.missions.getState('M01_ZERECK_AN_DSTAD') === 'Succeeded') && (await st()).mission === 'M02_ENG_LESCHT_CHANCE', JSON.stringify(await st()));
@@ -191,13 +201,30 @@ await goTo('x.m05.tom.root.position'); await press(); await advance();
 check('M05 erfuellt: +2 500 F', await g(() => window.__lux98.missions.getState('M05_DEI_VERLUER_DISKETT') === 'Succeeded') && (await st()).cash === cash6 + 2500);
 await goTo('x.m05.interior.spawn'); await press();
 check('Cybercafe verlassen', await g(() => !window.__lux98.interior));
+
+// ---------- Mission 06, Ausgang Freundschaft ----------
+await g(() => window.__lux98.advanceMinutes(90));
+await page.waitForTimeout(500);
+check('M06 aktiv nach M05', (await st()).mission === 'M06_ENG_NUECHT_AM_GRONN', JSON.stringify(await st()));
+await goTo('x.homeDoor'); await press(); await press('1'); await advance();
+check('Einladung von Jang abgehoert', (await st()).obj === 'arrive_grund');
+await g(() => { const x = window.__lux98; const h = x.clock.getHourLocal(); x.advanceMinutes(((h < 21 ? 21 : 24 + 21) - h) * 60 + 30); });
+await page.waitForTimeout(600);
+check('Abends sind alle auf der Terrasse', await g(() => window.__lux98.m06.mia.root.visible));
+await goTo('x.m06.jang.root.position'); await press(); await advance();
+check('Entscheidung erscheint', await page.isVisible('#choice'));
+await page.screenshot({ path: `${out}/20_gronn.png` });
+const cash7 = (await st()).cash, rep7 = (await st()).rep;
+await page.keyboard.press('1'); await page.waitForTimeout(200); await advance();
+const s7 = await st();
+check('M06 Freundschaft: Runde -600 F, Ruf +2', await g(() => window.__lux98.missions.getState('M06_ENG_NUECHT_AM_GRONN') === 'Succeeded' && window.__lux98.flags['m06.outcome'] === 'friendship') && s7.cash === cash7 - 600 && s7.rep === rep7 + 2, JSON.stringify(s7));
 await page.keyboard.press('Tab'); await page.waitForTimeout(200);
 await page.click('#nb nav button[data-page="map"]'); await page.waitForTimeout(300);
 await g(() => { const x = window.__lux98; x['mapView'].scale = 0.28; x['mapView'].cx = -500; x['mapView'].cz = 800; x['drawNotebookMap'](); });
 await page.screenshot({ path: `${out}/07_map.png` });
 await page.keyboard.press('Tab'); await page.waitForTimeout(200);
 check('Notizbuch mit Tab geschlossen', !(await page.isVisible('#notebook')));
-check('Speichern/Laden', await g(() => window.__lux98.save() && window.__lux98.load()) && await g(() => window.__lux98.missions.getState('M02_ENG_LESCHT_CHANCE') === 'Succeeded' && window.__lux98.flags['m02.path'] === 'honest' && window.__lux98.missions.getState('M03_DNUMMER_AN_DER_ZEITUNG') === 'Succeeded' && window.__lux98.missions.getState('M05_DEI_VERLUER_DISKETT') === 'Succeeded' && window.__lux98.internet.mails.length >= 3));
+check('Speichern/Laden', await g(() => window.__lux98.save() && window.__lux98.load()) && await g(() => window.__lux98.missions.getState('M02_ENG_LESCHT_CHANCE') === 'Succeeded' && window.__lux98.flags['m02.path'] === 'honest' && window.__lux98.missions.getState('M03_DNUMMER_AN_DER_ZEITUNG') === 'Succeeded' && window.__lux98.missions.getState('M05_DEI_VERLUER_DISKETT') === 'Succeeded' && window.__lux98.internet.mails.length >= 3 && window.__lux98.flags['m06.outcome'] === 'friendship'));
 const fps = await g(() => { const f = window.__lux98.frameTimes; return Math.round(1000 / (f.reduce((a, b) => a + b, 0) / f.length)); });
 await page.close();
 
@@ -291,6 +318,39 @@ for (const way of ['witness', 'phonebook']) {
     const c0 = (await st()).cash;
     await goTo('x.m05.fundDoor'); await press(); await advance();
     check('Diskette im Fundbuero abgeholt (-50 F)', await g(() => window.__lux98.missions.isObjectiveDone('M05_DEI_VERLUER_DISKETT', 'find_via_phonebook')) && (await st()).cash === c0 - 50);
+  }
+  await page.close();
+}
+
+// ---------- Mission 06, Ausgaenge Streit und Jobangebot (Zustand vorbereitet) ----------
+for (const [key, outcome] of [['2', 'conflict'], ['3', 'job']]) {
+  const { page, g, advance, goTo, press, st } = await open();
+  await advance();
+  await g(() => {
+    const x = window.__lux98;
+    const all = [['M01_ZERECK_AN_DSTAD', ['call_friend', 'get_key', 'find_car', 'visit_friend']], ['M02_ENG_LESCHT_CHANCE', ['listen_message', 'meet_contact', 'trial_repair_honest', 'test_drive', 'report_to_owner']], ['M03_DNUMMER_AN_DER_ZEITUNG', ['buy_newspaper', 'call_from_home', 'meet_stranger', 'combine_clues']], ['M05_DEI_VERLUER_DISKETT', ['listen_tom', 'talk_technician', 'find_via_witness', 'return_disk']]];
+    for (const [m, objs] of all) { x.missions.refresh(x.clock.getDate()); x.missions.start(m); for (const o of objs) x.missions.completeObjective(m, o); }
+    x.onMissionSucceeded('M05_DEI_VERLUER_DISKETT');
+    x.clock.setDateTime(x.clock.getDate(), 16);
+  });
+  await page.waitForTimeout(400);
+  await goTo('x.m06.terrace'); await page.waitForTimeout(300);
+  if (outcome === 'conflict') {
+    // tagsueber ist noch niemand da (Jang unsichtbar) -> kein Gespraech moeglich
+    check('Nachmittags ist die Terrasse leer', await g(() => !window.__lux98.m06.jang.root.visible));
+  }
+  await g(() => { const x = window.__lux98; x.advanceMinutes(5.5 * 60); });
+  await page.waitForTimeout(500);
+  await goTo('x.m06.jang.root.position'); await press(); await advance();
+  await page.keyboard.press(key); await page.waitForTimeout(200); await advance();
+  check(`M06 Ausgang ${outcome}`, await g((o) => window.__lux98.flags['m06.outcome'] === o && window.__lux98.missions.getState('M06_ENG_NUECHT_AM_GRONN') === 'Succeeded', outcome));
+  if (outcome === 'conflict') {
+    const dmg0 = await g(() => window.__lux98.car.damage);
+    await g(() => window.__lux98.advanceMinutes(7 * 60));
+    await page.waitForTimeout(500);
+    check('Steves Rache: Kratzer am Auto + Nachricht', await g(() => window.__lux98.car.damage) > dmg0 && await g(() => window.__lux98.phoneNet.unheardMessages('447198').some((m) => m.dialogueId === 'DLG_STEVE_REVENGE')));
+  } else {
+    check('Jobangebot als Fotograf vermerkt', await g(() => window.__lux98.flags['career.photographer'] === 'offer'));
   }
   await page.close();
 }

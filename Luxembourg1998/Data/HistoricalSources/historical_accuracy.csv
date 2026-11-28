@@ -20,3 +20,5 @@ FORBID_COQUE,Kirchberg,d'Coque,,,2002-01-01,,C,,unverified,keine,darf nicht ersc
 SHOP_INTERNETCAFE_01,Gare,Internetcafé (fiktiv),,,,,D,,fictional,eigene Gestaltung,nicht begonnen,Fiktives Geschaeft - keine Behauptung realer Existenz
 SHOP_CYBERCAFE_PIXEL,Gare,Cybercafé Pixel (fiktiv),,,,,D,,fictional,eigene Gestaltung,Browser-Fassung,Fiktives Internetcafe - keine Behauptung realer Existenz; Preise Platzhalter
 OFFICE_FUNDBUERO_FICTIVE,Ville Haute,Fundbüro (fiktiv),,,,,D,,fictional,eigene Gestaltung,Browser-Fassung,Lage und Oeffnungszeiten erfunden; reales Fundbuero 1998 recherchieren
+BAR_AM_PETZ,Grund,Bistro „Am Pëtz“ (fiktiv),,,,,D,,fictional,eigene Gestaltung,Browser-Fassung,Fiktive Kneipe - keine Behauptung realer Existenz
+RADIO_FICTIVE_STATIONS,ueberall,"Fiktive Radiosender (Radio Stad, Pëtrus, Info Lëtz)",,,,,D,,fictional,eigene generierte Musik,Browser-Fassung,Keine echten Sender oder Aufnahmen

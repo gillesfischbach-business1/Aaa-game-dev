@@ -26,6 +26,12 @@
   #toast { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); background: var(--hud); padding: 7px 16px; border-radius: 4px; font-size: 14px; transition: opacity .4s; }
   #speedo { position: absolute; bottom: 16px; right: 16px; width: 150px; height: 150px; }
   #carinfo { position: absolute; bottom: 172px; right: 16px; background: var(--hud); padding: 4px 10px; border-radius: 4px; font-size: 12px; text-align: right; }
+  #radio { position: absolute; bottom: 222px; right: 16px; width: min(320px, 60vw); background: rgba(14,16,20,.72); border: 1px solid #3a3f48; border-radius: 4px; padding: 5px 10px; font-family: 'Special Elite', monospace; font-size: 12px; color: #9fe0a0; overflow: hidden; white-space: nowrap; }
+  #radio b { color: #e0b74a; margin-right: 8px; font-weight: normal; }
+  #radio span { display: inline-block; animation: radioscroll 12s linear infinite; }
+  @keyframes radioscroll { from { transform: translateX(40%); } to { transform: translateX(-100%); } }
+  @media (prefers-reduced-motion: reduce) { #radio span { animation: none; white-space: normal; } }
+  body.touch #radio { bottom: 312px; }
   #dialogue { position: fixed; left: 50%; bottom: 7%; transform: translateX(-50%); width: min(760px, calc(100vw - 32px)); background: rgba(10, 12, 16, 0.78); padding: 14px 18px; border-radius: 6px; pointer-events: auto; }
   #dialogue .who { color: var(--accent); font-weight: 600; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
   #dialogue .lb { font-size: 18px; line-height: 1.35; }
@@ -196,6 +202,7 @@
   <div id="toast" class="hidden"></div>
   <canvas id="speedo" class="hidden" width="300" height="300"></canvas>
   <div id="carinfo" class="hidden"></div>
+  <div id="radio" class="hidden"></div>
 </div>
 
 <div id="touch" class="hidden">
@@ -206,6 +213,9 @@
     <button data-tap="notebook" class="sm">Notizbuch</button>
     <button data-tap="view" class="sm">Ansicht</button>
     <button data-tap="pause" class="sm">Pause</button>
+    <button data-tap="radio" class="sm">Radio</button>
+    <button data-tap="lights" class="sm">Licht</button>
+    <button data-tap="time" class="sm">Zeit</button>
     <button data-hold="sprint">Rennen</button>
     <button data-hold="jump">Springen<br/><small>Handbremse</small></button>
     <button data-tap="interact" class="main">E</button>
@@ -278,6 +288,7 @@
       <kbd>Tab</kbd><span>Notizbuch &amp; Stadtplan</span>
       <kbd>V</kbd><span>Erste / dritte Person</span>
       <kbd>L · R · T</kbd><span>Licht · Regen · Zeit schneller</span>
+      <kbd>C</kbd><span>Autoradio: Sender wechseln / aus</span>
       <kbd>N</kbd><span>Navigationshilfe (Barrierefreiheit)</span>
       <kbd>F5 · F9</kbd><span>Speichern · Laden</span>
     </div>

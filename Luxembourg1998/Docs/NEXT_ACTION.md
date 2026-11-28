@@ -10,8 +10,9 @@
 
 ## B – hier sofort weitermachbar
 0. Browser-Fassung: Rueckmeldung des Nutzers einholen (M01–M03, M05, Arbeit, Touch, Internetcafe sind fertig).
-   Danach: M06 „Eng Nuecht am Gronn“ (nachts, drei Ausgaenge); Autoradio mit fiktiven Sendern; weitere
-   Innenraeume (Wohnung, Kneipe); bessere Figuren (CC0-Modelle). M04 bleibt gesperrt, bis Fouer-Termine 1998 belegt.
+   Fertig ausserdem: M06 (drei Ausgaenge), Autoradio. Danach: M07 „D'Stad am Wandel“ (Fotografie, Kirchberg;
+   Fotoauftraege von Mia als Karriere); Wohnung als Innenraum; bessere Figuren (CC0-Modelle).
+   M04 bleibt gesperrt, bis Fouer-Termine 1998 belegt.
 1. (erledigt) Dialogsystem und Notizbuch im Kern + Unreal-Huellen – Unreal-Huellen beim ersten Windows-Build pruefen.
 2. Weitere Dialoge aus der Browser-Fassung nach Data/Dialogue uebertragen, damit beide Fassungen sie teilen.
 3. GIS-Pipeline fuer Unreal: `bake_web.py`-Ausgabe (bereits EPSG:2169-basiert) als Import fuer Unreal nutzen.

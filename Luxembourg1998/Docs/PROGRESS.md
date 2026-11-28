@@ -96,3 +96,17 @@ der engine-unabhaengige Kern und die Werkzeuge.
 - Geschrieben: `ULuxDialogueSubsystem` (Dialoge aus Data/Dialogue laden, abspielen, Untertitel, Auswahl, Flags)
   und `ULuxNotebookSubsystem`; beide im Spielstand (`ULuxSaveSubsystem`).
 - **Nicht kompiliert** (keine Unreal Engine in dieser Umgebung). Der darunterliegende Kern ist getestet.
+
+## 2026-11-28 – Sitzung 2, Teil 3: Mission 06 „Eng Nuecht am Gronn“ und Autoradio
+
+### Tatsaechlich geprueft
+- M06: Einladung per Anrufbeantworter, Terrasse im Grund nur abends (21–3 Uhr) belebt, Entscheidung mit drei
+  Ausgaengen (Freundschaft: Runde ausgeben; Streit: Steve raecht sich ueber Nacht am Auto; Job: Mia bietet
+  Fotoauftraege an). Beziehungs-Flags (rel.jang, rel.mia, rel.steve) fuer spaetere Missionen.
+- M06 haengt vorlaeufig an M05 (statt M04, die bis zur Belegung der Fouer-Termine 1998 gesperrt bleibt).
+- Autoradio: drei fiktive Sender, Musik live erzeugt (WebAudio, eigene Regeln, keine Aufnahmen), Laufschrift mit
+  Uhrzeit, Verkehr (Berufsverkehr), Wetter, Spielereignissen. Taste C bzw. Touch-Knopf.
+- Browser-Test: 70 Pruefungen gruen (alle drei M06-Ausgaenge, Radio), Handy-Test gruen, Vitest 20.
+
+### Nicht geprueft
+- Klang des Radios (im Test nur Zustand und Laufschrift; Audio ohne Lautsprecher nicht beurteilbar).
