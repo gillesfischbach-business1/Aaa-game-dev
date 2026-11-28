@@ -162,5 +162,6 @@ Bericht und Status aller Befunde: `Docs/COUNCIL_REVIEW_2026-11-28.md`.
   Unity-Build-Namen, `Instigator` (alles ungebaut, kein UBT verfuegbar).
 - Geschichte/Daten: 15 Eintraege von B auf C (keine Quelle eingesehen), Validator verlangt fuer A/B eingesehene
   Quellen; Nach-1998-Wege per Namensliste entfernt; Sprachfehler und echte Marken korrigiert.
+- Tests nach allen Council-Fixes: vitest 27/27 (inkl. Erreichbarkeit), Touch 8/8, M08 22/22, Smoke 80/80, Kern 151; Artifact Version 8.
 - Welt: hohe Mauern sperren Strassen nicht mehr (Durchgaenge, Kollision nur bis Mauerhoehe); Innenraum-Lampen nur an,
   wenn man drin ist; Touch: kein Herunterziehen-Neuladen/Zoomen.
