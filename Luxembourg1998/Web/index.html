@@ -12,8 +12,10 @@
     --hud-text: #ece6d6; --accent: #e0b74a; --line: rgba(31, 42, 68, 0.18);
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: #0d0f12; overflow: hidden; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: var(--hud-text); }
-  canvas#game { display: block; width: 100%; height: 100%; }
+  html, body { margin: 0; height: 100%; background: #0d0f12; overflow: hidden; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: var(--hud-text);
+    overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  canvas#game { display: block; width: 100%; height: 100%; touch-action: none; }  /* kein Zoomen/Herunterziehen-zum-Neuladen */
+  input, textarea { -webkit-user-select: text; user-select: text; }
   .hidden { display: none !important; }
   #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
   #clock { position: absolute; top: 14px; left: 16px; background: var(--hud); padding: 6px 12px; border-radius: 4px; font-family: 'Special Elite', monospace; font-size: 15px; letter-spacing: .5px; }
@@ -363,6 +365,7 @@
     <button class="btn" id="btnResume">Weiter</button>
     <button class="btn sec" id="btnSave">Speichern</button>
     <button class="btn sec" id="btnLoad">Laden</button>
+    <button class="btn sec" id="btnUnstuck" title="Bringt die Figur an den nächsten freien Platz">Festgesteckt?</button>
   </div>
 </div>
 

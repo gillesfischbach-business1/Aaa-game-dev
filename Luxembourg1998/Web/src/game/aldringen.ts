@@ -240,10 +240,13 @@ export class Aldringen {
       group.add(oct, frame);
     }
     // Wenige Lichtquellen (Handy-Leistung), der Rest kommt aus den leuchtenden Feldern
+    const lights: THREE.Light[] = [];
     for (const x of [-11, 11]) {
       const l = new THREE.PointLight(0xfff0d8, 30, 26, 1.4);
       l.position.set(x, H - 0.8, 0);
+      l.visible = false;  // nur an, solange man drin ist
       group.add(l);
+      lights.push(l);
     }
 
     // Gruen geflieste Rundpfeiler mit Plakaten
@@ -336,7 +339,7 @@ export class Aldringen {
     const spawn = new THREE.Vector3(origin.x, origin.y, origin.z + D / 2 - 1.6);
     const x0 = origin.x - W / 2, x1 = origin.x + W / 2, z0 = origin.z - D / 2, z1 = origin.z + D / 2;
     c.addWallLine([[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]], origin.y - 1, origin.y + H);
-    return { floor: origin.y, origin: origin.clone(), spawn, exit: this.door.clone().add(new THREE.Vector3(0, 0, 1.2)), bounds: [x0 + 0.4, z0 + 0.4, x1 - 0.4, z1 - 0.4], name: 'Galerie Aldringen' };
+    return { floor: origin.y, origin: origin.clone(), spawn, exit: this.door.clone().add(new THREE.Vector3(0, 0, 1.2)), bounds: [x0 + 0.4, z0 + 0.4, x1 - 0.4, z1 - 0.4], name: 'Galerie Aldringen', lights };
   }
 
   private circle(x: number, z: number, r: number): [number, number][] {

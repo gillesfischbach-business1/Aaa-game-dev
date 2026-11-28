@@ -98,6 +98,7 @@ export class Vehicle {
     this.fuel = Math.max(0, this.fuel - (dist / 100000) * s.fuelLitersPer100 * (throttle > 0 ? 1.3 : 0.8));
 
     const f = this.forward();
+    const prevX = this.pos.x, prevZ = this.pos.z;
     this.pos.addScaledVector(f, this.speed * dt);
 
     // Kollision: zwei Kreise (vorne/hinten)
@@ -106,7 +107,8 @@ export class Vehicle {
     for (const off of [this.model.length / 2 - r, -(this.model.length / 2 - r)]) {
       const c = { x: this.pos.x + f.x * off, z: this.pos.z + f.z * off };
       const before = { ...c };
-      if (city.collision.resolve(c, r, this.pos.y)) {
+      const from = { x: prevX + f.x * off, z: prevZ + f.z * off };
+      if (city.collision.resolve(c, r, this.pos.y, from)) {
         this.pos.x += c.x - before.x;
         this.pos.z += c.z - before.z;
         impact = Math.max(impact, Math.abs(this.speed));

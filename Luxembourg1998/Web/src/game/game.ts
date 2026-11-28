@@ -33,7 +33,11 @@ export type Quality = 'high' | 'low';
 const SAVE_KEY = 'lux98.slot1';
 
 /** Begehbarer Innenraum (liegt unsichtbar unter dem Gelaende) */
-export interface Interior { floor: number; origin: THREE.Vector3; spawn: THREE.Vector3; exit: THREE.Vector3; bounds: [number, number, number, number]; name: string }
+export interface Interior {
+  floor: number; origin: THREE.Vector3; spawn: THREE.Vector3; exit: THREE.Vector3; bounds: [number, number, number, number]; name: string;
+  /** Lampen nur im Raum einschalten (jede Lichtquelle kostet sonst in der ganzen Stadt Rechenzeit) */
+  lights?: THREE.Light[];
+}
 
 export interface Interactable { pos: THREE.Vector3; radius: number; label: () => string | null; act: () => void }
 interface Drivable { v: Vehicle; canEnter: () => boolean; name: string; introSeen: boolean }
@@ -258,6 +262,7 @@ export class Game {
   enterInterior(i: Interior): void {
     if (this.veh) return;
     this.interior = i;
+    for (const l of i.lights ?? []) l.visible = true;
     this.pos.copy(i.spawn);
     this.vy = 0;
     this.heading = 0;  // vom Eingang (Suedwand) in den Raum blicken (-z)
@@ -271,6 +276,7 @@ export class Game {
     const i = this.interior;
     if (!i) return;
     this.interior = null;
+    for (const l of i.lights ?? []) l.visible = false;
     this.env.indoor = false;
     this.pos.copy(i.exit);
     this.pos.y = this.city.surfaceAt(this.pos.x, this.pos.z, this.pos.y + 1);
@@ -391,7 +397,7 @@ export class Game {
     const roomy = (p: THREE.Vector3) => {
       if (wallClear <= 0) return true;
       const probe = { x: p.x, z: p.z };
-      return !this.city.collision.resolve(probe, wallClear, this.city.terrain.heightAt(p.x, p.z));
+      return this.city.collision.nearestWallDist(probe.x, probe.z, this.city.terrain.heightAt(p.x, p.z), wallClear) >= wallClear;
     };
     const best = cands.find((c) => clear(c.p) && roomy(c.p) && !this.insideBuilding(c.p.x, c.p.z))?.p
       ?? cands.find((c) => clear(c.p) && !this.insideBuilding(c.p.x, c.p.z))?.p ?? target;
@@ -407,9 +413,22 @@ export class Game {
       if (x < minX - 0.8 || x > maxX + 0.8 || z < minZ - 0.8 || z > maxZ + 0.8) continue;
       if (pointInPolygon(x, z, fp)) return true;
     }
-    const probe = { x, z };
-    this.city.collision.resolve(probe, 0.8, this.city.terrain.heightAt(x, z));
-    return probe.x !== x || probe.z !== z;
+    // auch Punkte genau auf einer Wand gelten als belegt (Abstand 0)
+    return this.city.collision.nearestWallDist(x, z, this.city.terrain.heightAt(x, z), 0.8) < 0.8;
+  }
+
+  /** Steckt die Figur in einem Gebaeude/Innenhof fest? Dann an den naechsten freien Platz mit Raum ringsum. */
+  unstuck(always = false): boolean {
+    if (this.veh || this.interior) return false;
+    let inside = false;
+    for (const fp of this.city.buildingFootprints) {
+      if (pointInPolygon(this.pos.x, this.pos.z, fp)) { inside = true; break; }
+    }
+    if (!inside && !always) return false;
+    const spot = this.openSpot(this.pos.clone(), false, 0, 4);
+    this.pos.copy(spot);
+    this.vy = 0;
+    return true;
   }
 
   private placeWorldObjects(): void {
@@ -544,10 +563,11 @@ export class Game {
     const f = v.forward();
     const left = new THREE.Vector3(f.z, 0, -f.x);
     this.pos.copy(v.pos).addScaledVector(left, v.model.width / 2 + 0.6);
-    this.city.collision.resolve(this.pos, 0.35, this.pos.y);
+    this.city.collision.resolve(this.pos, 0.35, this.pos.y, { x: v.pos.x, z: v.pos.z });  // nicht durch eine Wand aussteigen
     this.pos.y = this.city.surfaceAt(this.pos.x, this.pos.z, v.pos.y + 1);
     this.heading = v.heading;
     this.veh = null;
+    this.unstuck();  // nicht in einem Gebaeude aussteigen
     this.player.root.visible = true;
     this.ui.show('speedo', false);
     this.ui.show('carinfo', false);
@@ -843,6 +863,7 @@ export class Game {
     if (pp) this.pos.copy(pp);
     this.heading = Number(d['player.yaw']) || 0;
     if (d['player.in_car'] === '1' || d['player.mode'] === 'drive') { this.drivables[0].introSeen = true; this.enterVehicle(this.car); }
+    else this.unstuck();  // Spielstand aus einer festgefahrenen Lage: an einen freien Platz
     this.ui.show('hud', true);
     this.running = true;
     this.ui.toast(res.usedBackup ? 'Spielstand war beschädigt – Sicherungskopie geladen.' : 'Spielstand geladen.');
@@ -977,12 +998,13 @@ export class Game {
       this.heading += dh * Math.min(1, dt * 10);
       if (this.firstPerson) this.heading = this.camYaw;
     }
+    const from = { x: this.pos.x, z: this.pos.z };
     this.pos.addScaledVector(move, speed * dt);
     const t = this.city.terrain;
     const b = this.interior?.bounds;
     this.pos.x = b ? THREE.MathUtils.clamp(this.pos.x, b[0], b[2]) : THREE.MathUtils.clamp(this.pos.x, t.x0 + 3, t.maxX - 3);
     this.pos.z = b ? THREE.MathUtils.clamp(this.pos.z, b[1], b[3]) : THREE.MathUtils.clamp(this.pos.z, t.z0 + 3, t.maxZ - 3);
-    this.city.collision.resolve(this.pos, 0.35, this.pos.y);
+    this.city.collision.resolve(this.pos, 0.35, this.pos.y, from);
     const ground = this.interior ? this.interior.floor : this.city.surfaceAt(this.pos.x, this.pos.z, this.pos.y + 0.6);
     const onGround = this.pos.y <= ground + 0.05;
     if (onGround && inp.held('jump') && this.vy <= 0) this.vy = 4.3;

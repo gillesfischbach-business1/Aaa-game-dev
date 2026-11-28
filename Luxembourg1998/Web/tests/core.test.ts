@@ -339,3 +339,43 @@ describe('Historische Regeln', () => {
     expect(checkAsset(unknown, D(1998, 1, 1)).length).toBe(2);
   });
 });
+
+describe('Missionen: Spielstand sicher einlesen (Council-Befund)', () => {
+  const make = () => {
+    const t = new MissionTracker();
+    t.register({ id: 'A', objectives: [{ id: 'x' }, { id: 'y' }] });
+    t.register({ id: 'B', objectives: [{ id: 'z' }] });
+    t.refresh(D(1998, 4, 20));
+    t.start('A');
+    t.completeObjective('A', 'x');
+    return t;
+  };
+  it('kaputter Eintrag laesst alles unveraendert', () => {
+    const t = make();
+    const before = t.serialize();
+    expect(t.deserialize({ 'mission.A': 'Available;;;', 'mission.B': 'Quatsch;;;' })).toBe(false);
+    expect(t.serialize()).toEqual(before);
+  });
+  it('fehlende Missionen starten frisch, Grund mit Semikolon bleibt ganz', () => {
+    const t = make();
+    expect(t.deserialize({ 'mission.B': 'Failed;;;zu spaet; nochmal' })).toBe(true);
+    expect(t.getState('A')).toBe('Locked');
+    expect(t.serialize()['mission.B']).toBe('Failed;;;zu spaet; nochmal');
+  });
+});
+
+describe('Anrufbeantworter: speichern und laden (Council-Befund)', () => {
+  it('ungehoerte Nachrichten ueberleben das Laden, ohne doppelt zu erscheinen', () => {
+    const book = new PhoneBook();
+    const a = new PhoneNetwork(book);
+    const msg = { date: D(1998, 5, 2), hour: 10, minute: 5, fromNumber: '40 55 31', text: 'Muller', dialogueId: 'OFFER' };
+    a.leaveMessage('44 71 98', msg);
+    a.leaveMessage('44 71 98', msg);  // doppelt -> nur einmal
+    const b = new PhoneNetwork(book);
+    b.loadMachines(a.serializeMachines());
+    b.leaveMessage('44 71 98', msg);   // Mission legt nach dem Laden erneut ab -> keine Doppelte
+    expect(b.unheardMessages('44 71 98').map((m) => m.dialogueId)).toEqual(['OFFER']);
+    b.loadMachines('{kaputt');
+    expect(b.unheardMessages('44 71 98')).toEqual([]);
+  });
+});

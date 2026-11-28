@@ -59,6 +59,7 @@ function boot(): void {
   $('btnResume').onclick = () => { game.setPaused(false); if (!isTouchDevice()) game.input.requestLock(); };
   $('btnSave').onclick = () => game.save();
   $('btnLoad').onclick = () => { game.load(); game.setPaused(false); };
+  $('btnUnstuck').onclick = () => { game.unstuck(true); game.setPaused(false); game.ui.toast('Freien Platz gesucht.'); };
   $('game').addEventListener('click', () => { if (game.running && !game.ui.inDialogue && !isTouchDevice()) game.input.requestLock(); });
   if (params.has('autostart')) { begin(); game.newGame(); }
 }

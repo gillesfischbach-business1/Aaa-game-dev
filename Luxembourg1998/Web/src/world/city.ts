@@ -436,7 +436,13 @@ export function buildCity(data: WorldData, scene: THREE.Scene, opts: { trees: nu
       stone.quad(a, b, b.clone().setY(b.y + w.h), a.clone().setY(a.y + w.h), [0, 0, a.distanceTo(b) / 3, 0, a.distanceTo(b) / 3, w.h / 3, 0, w.h / 3], c);
       stone.quad(b, a, a.clone().setY(a.y + w.h), b.clone().setY(b.y + w.h), [0, 0, a.distanceTo(b) / 3, 0, a.distanceTo(b) / 3, w.h / 3, 0, w.h / 3], c);
     }
-    if (w.k) collision.addWallLine(pairs(w.p), -1e4, 1e4);
+    // Festungsmauer: Kollision nur so hoch wie die Mauer selbst (sonst sperrt sie Bruecken und Strassen darueber)
+    if (w.k) {
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const a = pts[i], b = pts[i + 1];
+        collision.addWallLine([[a.x, a.z], [b.x, b.z]], Math.min(a.y, b.y) - 0.5, Math.max(a.y, b.y) + w.h);
+      }
+    }
   }
 
   // Wasser (Petrusse/Alzette)

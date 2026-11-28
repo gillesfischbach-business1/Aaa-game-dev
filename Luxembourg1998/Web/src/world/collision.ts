@@ -21,6 +21,16 @@ class Grid<T> {
   query(x: number, z: number): T[] {
     return this.cells.get(this.key(Math.floor(x / CELL), Math.floor(z / CELL))) ?? [];
   }
+  /** alle Eintraege der Zellen, die ein Kreis (x, z, r) beruehrt – ohne Doppelte */
+  queryArea(x: number, z: number, r: number): T[] {
+    const out = new Set<T>();
+    for (let cx = Math.floor((x - r) / CELL); cx <= Math.floor((x + r) / CELL); cx++) {
+      for (let cz = Math.floor((z - r) / CELL); cz <= Math.floor((z + r) / CELL); cz++) {
+        for (const it of this.cells.get(this.key(cx, cz)) ?? []) out.add(it);
+      }
+    }
+    return [...out];
+  }
 }
 
 export class CollisionWorld {
@@ -77,12 +87,48 @@ export class CollisionWorld {
       Math.max(b.ax, b.bx) + b.half, Math.max(b.az, b.bz) + b.half, b);
   }
 
-  // Schiebt einen Kreis (Radius r, Fuesse auf Hoehe y) aus allen Waenden heraus. Gibt true zurueck bei Kontakt.
-  resolve(pos: { x: number; z: number }, r: number, y: number): boolean {
+  /** Kleinster Abstand von (x, z) zu einer Wand auf Hoehe y (bis maxR; sonst maxR) */
+  nearestWallDist(x: number, z: number, y: number, maxR: number): number {
+    let best = maxR;
+    for (const s of this.walls.queryArea(x, z, maxR)) {
+      if (y > s.top - 0.3 || y + 1.8 < s.base) continue;
+      const dx = s.bx - s.ax, dz = s.bz - s.az;
+      const len2 = dx * dx + dz * dz || 1;
+      const t = Math.min(Math.max(((x - s.ax) * dx + (z - s.az) * dz) / len2, 0), 1);
+      best = Math.min(best, Math.hypot(x - (s.ax + dx * t), z - (s.az + dz * t)));
+    }
+    return best;
+  }
+
+  /**
+   * Schiebt einen Kreis (Radius r, Fuesse auf Hoehe y) aus allen Waenden heraus. Gibt true zurueck bei Kontakt.
+   * from = Position vor der Bewegung: Wird dabei eine Wand ueberquert (schnelles Auto, Ruckeln am Handy),
+   * bleibt der Kreis vor der Wand stehen. Liegt der Mittelpunkt genau auf einer Wand, wird zur Herkunftsseite geschoben.
+   */
+  resolve(pos: { x: number; z: number }, r: number, y: number, from?: { x: number; z: number }): boolean {
     let hit = false;
+    if (from && (from.x !== pos.x || from.z !== pos.z)) {
+      const mx = pos.x - from.x, mz = pos.z - from.z;
+      let tMin = 1;
+      for (const s of this.walls.queryArea((pos.x + from.x) / 2, (pos.z + from.z) / 2, Math.hypot(mx, mz) / 2 + 1)) {
+        if (y > s.top - 0.3 || y + 1.8 < s.base) continue;
+        const sx = s.bx - s.ax, sz = s.bz - s.az;
+        const den = mx * sz - mz * sx;
+        if (Math.abs(den) < 1e-12) continue;
+        const qx = s.ax - from.x, qz = s.az - from.z;
+        const t = (qx * sz - qz * sx) / den, u = (qx * mz - qz * mx) / den;
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && t < tMin) tMin = t;
+      }
+      if (tMin < 1) {
+        const back = Math.max(0, tMin - 0.05 / Math.max(1e-6, Math.hypot(mx, mz)));
+        pos.x = from.x + mx * back;
+        pos.z = from.z + mz * back;
+        hit = true;
+      }
+    }
     for (let iter = 0; iter < 3; iter++) {
       let moved = false;
-      for (const s of this.walls.query(pos.x, pos.z)) {
+      for (const s of this.walls.queryArea(pos.x, pos.z, r)) {
         if (y > s.top - 0.3 || y + 1.8 < s.base) continue;  // ueber/unter der Wand
         const dx = s.bx - s.ax, dz = s.bz - s.az;
         const len2 = dx * dx + dz * dz || 1;
@@ -93,6 +139,14 @@ export class CollisionWorld {
         if (d < r && d > 1e-6) {
           pos.x = px + (ex / d) * r;
           pos.z = pz + (ez / d) * r;
+          moved = hit = true;
+        } else if (d <= 1e-6) {
+          // genau auf der Wand: senkrecht zur Wand schieben, zur Seite, von der man kam
+          const len = Math.sqrt(len2);
+          let nx = -dz / len, nz = dx / len;
+          if (from && (from.x - px) * nx + (from.z - pz) * nz < 0) { nx = -nx; nz = -nz; }
+          pos.x = px + nx * r;
+          pos.z = pz + nz * r;
           moved = hit = true;
         }
       }

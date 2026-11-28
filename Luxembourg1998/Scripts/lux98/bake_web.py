@@ -185,6 +185,68 @@ def building_kind(t: dict[str, str]) -> int:
     return 0
 
 
+def _cut_wall_gaps(walls: list[dict], roads: list[dict]) -> tuple[list[dict], int]:
+    """Hohe Mauern (k=1) dort oeffnen, wo ein ebenerdiger Weg sie kreuzt (Tore/Durchgaenge).
+    Ohne Luecke wuerde die Mauer Strassen und Fusswege sperren. Bruecken (mit "y") laufen darueber und bleiben."""
+    cell = 25.0
+    grid: dict[tuple[int, int], list[tuple[float, float, float, float, float]]] = {}
+    for r in roads:
+        if "y" in r:
+            continue
+        pts = r["p"]
+        for i in range(0, len(pts) - 2, 2):
+            ax, az, bx, bz = pts[i], pts[i + 1], pts[i + 2], pts[i + 3]
+            for cx in range(int(math.floor(min(ax, bx) / cell)), int(math.floor(max(ax, bx) / cell)) + 1):
+                for cz in range(int(math.floor(min(az, bz) / cell)), int(math.floor(max(az, bz) / cell)) + 1):
+                    grid.setdefault((cx, cz), []).append((ax, az, bx, bz, r["w"]))
+    out, gaps = [], 0
+    for w in walls:
+        if not w["k"]:
+            out.append(w)
+            continue
+        pts = [(w["p"][i], w["p"][i + 1]) for i in range(0, len(w["p"]) - 1, 2)]
+        cuts: list[tuple[float, float, float]] = []  # Kreuzungspunkt + halbe Lueckenbreite
+        for (ax, az), (bx, bz) in zip(pts, pts[1:]):
+            seen = set()
+            for cx in range(int(math.floor(min(ax, bx) / cell)), int(math.floor(max(ax, bx) / cell)) + 1):
+                for cz in range(int(math.floor(min(az, bz) / cell)), int(math.floor(max(az, bz) / cell)) + 1):
+                    for seg in grid.get((cx, cz), []):
+                        if seg in seen:
+                            continue
+                        seen.add(seg)
+                        px, pz, qx, qz, rw = seg
+                        rx, rz, sx, sz = bx - ax, bz - az, qx - px, qz - pz
+                        den = rx * sz - rz * sx
+                        if abs(den) < 1e-9:
+                            continue
+                        t = ((px - ax) * sz - (pz - az) * sx) / den
+                        u = ((px - ax) * rz - (pz - az) * rx) / den
+                        if 0 <= t <= 1 and 0 <= u <= 1:
+                            cuts.append((ax + rx * t, az + rz * t, rw / 2 + 1.0))
+        if not cuts:
+            out.append(w)
+            continue
+        gaps += len(cuts)
+        # Mauer in 1-m-Schritte zerlegen und Punkte in den Luecken weglassen
+        run: list[tuple[float, float]] = []
+        runs: list[list[tuple[float, float]]] = []
+        for (ax, az), (bx, bz) in zip(pts, pts[1:]):
+            n = max(1, int(math.dist((ax, az), (bx, bz))))
+            for k in range(n + (1 if (bx, bz) == pts[-1] else 0)):
+                x, z = ax + (bx - ax) * k / n, az + (bz - az) * k / n
+                if any(math.dist((x, z), (c[0], c[1])) < c[2] for c in cuts):
+                    if len(run) >= 2:
+                        runs.append(run)
+                    run = []
+                else:
+                    run.append((round(x, 1), round(z, 1)))
+        if len(run) >= 2:
+            runs.append(run)
+        for r in runs:
+            out.append({"p": [v for p in r for v in p], "h": w["h"], "k": 1})
+    return out, gaps
+
+
 def _span_bridges(bridge_ways, local, ground_max) -> list[tuple[float, float, float]]:
     """Fasst aneinanderhaengende Brueckenstuecke zusammen und spannt die Fahrbahn gerade zwischen den Widerlagern.
 
@@ -404,6 +466,9 @@ def main(argv: list[str]) -> int:
                     x, z, y = local(nid)
                     places[key] = [round(x, 1), round(y, 1), round(z, 1)]
                     break
+
+    walls, gaps = _cut_wall_gaps(walls, roads)
+    print(f"Mauerdurchgaenge fuer Wege: {gaps}")
 
     world = {
         "meta": {

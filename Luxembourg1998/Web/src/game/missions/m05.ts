@@ -100,13 +100,16 @@ export class Mission05 implements MissionController {
     const walls = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), [mat(0xd8cfb4), mat(0xd8cfb4), mat(0xe8e6de), mat(0x6a7480), mat(0x7a5a8a), mat(0xd8cfb4)].map((m) => { m.side = THREE.BackSide; return m; }));
     walls.position.y = H / 2;
     group.add(floor, ceil, walls);
-    // Neonroehren
+    // Neonroehren (Lampen nur an, solange man drin ist)
+    const lights: THREE.Light[] = [];
     for (const x of [-3.5, 3.5]) {
       const tube = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.06, 0.25), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xeef4ff, emissiveIntensity: 2 }));
       tube.position.set(x, H - 0.05, 0);
       group.add(tube);
       const light = new THREE.PointLight(0xeef2ff, 18, 14, 1.6);
       light.position.set(x, H - 0.4, 0);
+      light.visible = false;
+      lights.push(light);
       group.add(light);
     }
     // Schreibtische mit Roehrenmonitoren (beige, leicht vergilbt), Tastatur, Stuhl
@@ -154,7 +157,7 @@ export class Mission05 implements MissionController {
     c.addWallLine([[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]], origin.y - 1, origin.y + H);
     for (const [x, z] of deskSpots) c.addFootprint([[origin.x + x - 1, origin.z + z - 0.45], [origin.x + x + 1, origin.z + z - 0.45], [origin.x + x + 1, origin.z + z + 0.45], [origin.x + x - 1, origin.z + z + 0.45]], origin.y, origin.y + 0.8);
     c.addFootprint([[origin.x + 2.9, origin.z - 2.55], [origin.x + 6.1, origin.z - 2.55], [origin.x + 6.1, origin.z - 1.85], [origin.x + 2.9, origin.z - 1.85]], origin.y, origin.y + 1.1);
-    return { floor: origin.y, origin: origin.clone(), spawn, exit: this.door, bounds: [x0 + 0.4, z0 + 0.4, x1 - 0.4, z1 - 0.4], name: 'Cybercafé Pixel' };
+    return { floor: origin.y, origin: origin.clone(), spawn, exit: this.door, bounds: [x0 + 0.4, z0 + 0.4, x1 - 0.4, z1 - 0.4], name: 'Cybercafé Pixel', lights };
   }
 
   // ---------- Ablauf ----------

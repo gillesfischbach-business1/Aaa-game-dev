@@ -148,4 +148,19 @@ der engine-unabhaengige Kern und die Werkzeuge.
   Vordach von 2012 am Bahnhof); Ueberdachungen ohne Waende.
 - Hochformat: weiterer Bildwinkel, mehr Kameraabstand, kuerzere Geldanzeige, kleinere Touch-Knoepfe, Startpunkt mit
   4 m Platz ringsum.
-- Tests laufen (Ergebnis folgt).
+- Tests danach: vitest 21/21, Touch 8/8, M08 gruen, Smoke 80/80 (Lauf auf dem Stand vor dem Council).
+
+## 2026-11-28 – Council-Pruefung (4 unabhaengige Pruef-Agenten) und Busbahnhof Aldringen
+Bericht und Status aller Befunde: `Docs/COUNCIL_REVIEW_2026-11-28.md`.
+- Ursache "eingesperrt im Hof": Startpunkt lag genau auf einer Ecke des Bahnhofsgrundrisses; die Kollision ignorierte
+  Abstand 0, der erste Schritt fuehrte ins Gebaeude. Behoben (Abstandspruefung, Wand-Ueberquerung, Rettung
+  "Festgesteckt?" im Pausenmenue, Pruefung beim Laden/Aussteigen) + Regressionstest `tests/reach.test.ts`.
+- Busbahnhof Aldringen mit unterirdischer Galerie (nach Nutzerfotos, Kategorie C/D, unbelegt).
+- Spielablauf: Film-Sackgasse M07, Anrufbeantworter im Spielstand, Uhr beim Laden (Sommerzeit), Schlafen nach
+  Mitternacht, Missionen beim Tageswechsel, Laden bei offenem Dialog, M02-Frist, Kleinigkeiten.
+- Kern (C++ + TS): `SetStandardDateTime`, Missionen transaktional einlesen; Unreal-Huellen: Freischaltung,
+  Unity-Build-Namen, `Instigator` (alles ungebaut, kein UBT verfuegbar).
+- Geschichte/Daten: 15 Eintraege von B auf C (keine Quelle eingesehen), Validator verlangt fuer A/B eingesehene
+  Quellen; Nach-1998-Wege per Namensliste entfernt; Sprachfehler und echte Marken korrigiert.
+- Welt: hohe Mauern sperren Strassen nicht mehr (Durchgaenge, Kollision nur bis Mauerhoehe); Innenraum-Lampen nur an,
+  wenn man drin ist; Touch: kein Herunterziehen-Neuladen/Zoomen.
