@@ -2086,8 +2086,8 @@ const ENGINE_SPEC={
  // ord = level in dB of each half engine order (the firing order is the 8th entry, the strong 4th entry is the flat-plane bank pulse),
  // env = tone balance in dB over frequency: nearly all energy sits below 600 Hz, the exhaust is muted above, turbo noise fills the top
  smaragd:{cyl:8,flat:true,pts:[1100,1900,2800,3800,4800,5800,6500,7000],
-  ord:[-28,-16.4,-28,-6,-28,-21,-28,0,-28,-13.7,-28,-11.9,-28,-16.5,-28,-4,-28,-25.5,-28,-22,-28,-22,-28,-8,-28,-24,-28,-24,-28,-24,-28,-12],ordTail:-17,scream:11,
-  env:[[40,-8],[90,-2],[160,0],[320,0],[450,-3],[640,-4],[1280,-4],[2560,-7],[5120,-13],[9000,-26]],
+  ord:[-28,-16.4,-28,-6,-28,-21,-28,0,-28,-13.7,-28,-11.9,-28,-16.5,-28,-6,-28,-25.5,-28,-23,-28,-23,-28,-14,-28,-24,-28,-24,-28,-24,-28,-18],ordTail:-20.5,scream:11,
+  env:[[40,-8],[90,-2],[160,0],[320,0],[450,-4],[640,-7],[1280,-9],[2560,-13],[5120,-18.5],[9000,-31]],
   // scream = the orders above the firing line are this many dB quieter at idle and reach full level by 4500 rpm: deep at low revs, a high-pitched howl at the top,
   // ordHi = how much the half orders and the bank pulse fade towards 4500 rpm under load (dB; at the top of a rev only the firing line stands out),
   // ordOff = levels of the half orders with the throttle shut above 3800 rpm, fading in from 2800 rpm (right after lifting off the bank pulse is as strong as the firing line, the orders above it calm down),
@@ -2177,8 +2177,8 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    const wheelRpm=v/(2*Math.PI*G.wheel)*60; let rpm=Math.max(G.idle,wheelRpm*G.ratios[this.gear-1]*G.final);
    if(this.shiftT>0){ this.shiftT-=dt; }
    else if(rpm>(thr>.5?G.up:G.up*.72)&&this.gear<G.ratios.length){ this.gear++; this.shiftT=car==='fidele'?.35:.12;
-     if(car==='smaragd'&&thr>.5&&rpm>3800&&Math.random()<.9) this.spit(2+((Math.random()*2)|0),.75+.25*clamp((rpm-3800)/2800,0,1)); } // full-throttle upshift: the ignition cut spits unburnt fuel into the exhaust
-   else if(rpm<G.down&&this.gear>1){ this.gear--; this.shiftT=.2; if(car==='smaragd'&&v>8&&Math.random()<.85) this.spit(3+((Math.random()*3)|0),.7); }
+     if(car==='smaragd'&&thr>.5&&rpm>3800&&Math.random()<.9) this.spit(1+((Math.random()*2)|0),1.05+.3*clamp((rpm-3800)/2800,0,1)); } // full-throttle upshift: the ignition cut spits unburnt fuel into the exhaust
+   else if(rpm<G.down&&this.gear>1){ this.gear--; this.shiftT=.2; if(car==='smaragd'&&v>8&&Math.random()<.85) this.spit(1+((Math.random()*2)|0),.7); }
    rpm=Math.max(G.idle,wheelRpm*G.ratios[this.gear-1]*G.final);
    if(v<1.2) rpm=G.idle+thr*(G.red-G.idle)*.35;
    if(this.shiftT>0) rpm*=car==='fidele'?.82:.9;
@@ -2222,7 +2222,8 @@ const Audio_={ ctx:null, muted:false, vol:{master:.85,music:.45,engine:.8,fx:.8,
    const f=c.createBiquadFilter(); f.type=type; f.frequency.setValueAtTime(freq,t); if(sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo,t+dur); const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
    s.connect(f); f.connect(g); g.connect(dest||this.bus.fx); s.start(t,Math.random()*2); s.stop(t+dur+.05); },
  /* exhaust spit: n short cracks, each a band of noise with a low thump; the game adds the flame */
- spit(n,vol){ if(!this.ctx) return; for(let k=0;k<n;k++) setTimeout(()=>{ if(!this.ctx) return; this.noiseBurst(.04+Math.random()*.03,'bandpass',500+Math.random()*700,.75*vol); this.noiseBurst(.012,'highpass',1800,.4*vol); this.thump(110+Math.random()*40,.06,.55*vol); this.spitFlag=(this.spitFlag||0)+vol; },k*(70+Math.random()*60)); },
+ // exhaust pops, shaped after the pops measured in the recording of the real car: short (5-30 ms) cracks that sit inside the engine sound rather than bangs on top of it, one or two at a time
+ spit(n,vol){ if(!this.ctx) return; for(let k=0;k<n;k++) setTimeout(()=>{ if(!this.ctx) return; this.noiseBurst(.012+Math.random()*.02,'bandpass',400+Math.random()*500,.3*vol); this.noiseBurst(.012+Math.random()*.012,'bandpass',2400+Math.random()*1200,1.3*vol); this.thump(120+Math.random()*60,.03,.17*vol); this.spitFlag=(this.spitFlag||0)+vol; },k*(70+Math.random()*60)); },
  /* overrun burble: one soft irregular crack from the exhaust */
  crackle(vol){ this.crackFlag=(this.crackFlag||0)+vol; this.noiseBurst(.025+Math.random()*.03,'bandpass',350+Math.random()*900,.1*vol,this.bus.engine); if(Math.random()<.4) this.thump(90+Math.random()*50,.04,.08*vol); },
  thump(freq,dur,vol){ const c=this.ctx; if(!c) return; const t=c.currentTime; const o=c.createOscillator(); o.frequency.setValueAtTime(freq,t); o.frequency.exponentialRampToValueAtTime(freq*.45,t+dur); const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur); o.connect(g); g.connect(this.bus.fx); o.start(t); o.stop(t+dur+.05); },
