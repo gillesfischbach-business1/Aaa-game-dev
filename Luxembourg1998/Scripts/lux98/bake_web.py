@@ -53,6 +53,10 @@ PLACE_NAMES = {
     "avenue_liberte": ["Avenue de la Liberté"],
     "place_de_paris": ["Place de Paris"],
     "place_de_metz": ["Place de Metz"],
+    "rue_abattoir": ["Rue de l'Abattoir"],
+    "route_esch": ["Route d'Esch"],
+    "rond_point_merl": ["Rond-Point Merl"],
+    "rue_bouillon": ["Rue de Bouillon"],
 }
 
 

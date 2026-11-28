@@ -32,6 +32,8 @@ export class Vehicle {
   fuel: number;
   lights = false;
   braking = false;
+  brakeEfficiency = 1;  // 1 = intakt; sinkt z. B. bei schlecht reparierten Bremsen (Mission 02)
+  locked = false;
   readonly spec: CarSpec;
   private pitch = 0;
   private roll = 0;
@@ -63,10 +65,10 @@ export class Vehicle {
     let a = 0;
     this.braking = false;
     if (throttle > 0) {
-      if (fwdSpeed < -0.3) { a = s.brake * throttle; this.braking = true; }
+      if (fwdSpeed < -0.3) { a = s.brake * this.brakeEfficiency * throttle; this.braking = true; }
       else a = s.accel * throttle * enginePower * Math.max(0.15, 1 - fwdSpeed / s.maxSpeed);
     } else if (throttle < 0) {
-      if (fwdSpeed > 0.3) { a = s.brake * throttle; this.braking = true; }
+      if (fwdSpeed > 0.3) { a = s.brake * this.brakeEfficiency * throttle; this.braking = true; }
       else a = 2.0 * throttle * enginePower * (fwdSpeed > -7 ? 1 : 0);
     }
     // Widerstaende

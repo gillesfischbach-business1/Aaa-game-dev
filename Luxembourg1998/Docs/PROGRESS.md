@@ -40,3 +40,17 @@ der engine-unabhaengige Kern und die Werkzeuge.
 
 ### Nicht geprueft
 - Bildrate auf echter Hardware; Gamepad; Handy-Bedienung (keine Touch-Steuerung).
+
+## 2026-11-28 – Sitzung 1, Teil 3: Mission 02 „Eng lescht Chance“ (Browser-Fassung)
+
+### Tatsaechlich geprueft
+- Karte nach Westen erweitert (Hollerich bis Rond-Point Merl): 2,6 x 1,8 km, 5 606 Gebaeude, 3 685 Wege.
+- Missionsdaten kommen jetzt fuer beide Fassungen aus `Data/Missions/missions_main.json` (Validator: 0 Fehler).
+- Neue Systeme: Anrufbeantworter (Wohnung), Bancomat, Fristen in Spielzeit, Oeffnungszeiten, Ruf-Wert,
+  Auswahl-Dialoge, Werkstatt-Minispiel, mehrere fahrbare Autos, nachlassende Bremsen, Pylonen-Probefahrt.
+- Vitest: 19 Tests (inkl. M01/M02 aus den gemeinsamen Daten). Browser-Test: 24 Pruefungen gruen
+  (M01, M02 ehrlicher Weg, M02 Abkuerzung, zu spaet kommen, Bremsfading, Speichern/Laden), 0 Konsolenfehler.
+- Artifact aktualisiert (Version 2).
+
+### Nicht geprueft
+- Echte Fahrt der Pylonen-Route mit Tastatur (im Test teleportiert, wegen ~5 FPS im Software-Rendering).

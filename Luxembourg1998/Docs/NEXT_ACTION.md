@@ -9,8 +9,8 @@
 4. Vorlagen-Fahrzeug aus dem UE-Vehicle-Template als Blueprint von `ALuxVehiclePawn` einrichten (Platzhalter `PH_`).
 
 ## B – hier sofort weitermachbar
-0. Browser-Fassung: Rueckmeldung des Nutzers zum Spielgefuehl einholen; Touch-Steuerung; Mission 02 (Hollerich,
-   dafuer Spielfeld nach Westen erweitern); Ladengeschaefte/Innenraeume; bessere Figuren (CC0-Modelle).
+0. Browser-Fassung: Rueckmeldung des Nutzers einholen; Mission 03 „D'Nummer an der Zeitung“ (Zeitungskiosk,
+   Kleinanzeige); Arbeitsschichten in der Garage (Karriere Mechaniker); Touch-Steuerung; Innenraeume; CC0-Figuren.
 1. Dialogsystem im Kern (Knoten, Bedingungen, Sprachen lb/de/fr/en) + Tests.
 2. Notizbuch-Modell (Adressen, Nummern, Termine, Fotos) + Tests.
 3. GIS-Pipeline fuer Unreal: `bake_web.py`-Ausgabe (bereits EPSG:2169-basiert) als Import fuer Unreal nutzen.

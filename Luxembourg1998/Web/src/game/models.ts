@@ -176,3 +176,47 @@ export function makeMarker(): THREE.Mesh {
   m.geometry.translate(0, 20, 0);
   return m;
 }
+
+// Firmenschild (Schrift auf Blech, fiktive Firmen)
+export function makeSign(lines: string[], bg = '#1f3a5f', fg = '#f2e6c8', width = 5): THREE.Group {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const g = c.getContext('2d')!;
+  g.fillStyle = bg; g.fillRect(0, 0, 512, 128);
+  g.strokeStyle = fg; g.lineWidth = 6; g.strokeRect(8, 8, 496, 112);
+  g.fillStyle = fg; g.textAlign = 'center';
+  g.font = 'bold 52px "IBM Plex Sans", Arial, sans-serif';
+  g.fillText(lines[0], 256, lines.length > 1 ? 62 : 82);
+  if (lines[1]) { g.font = '26px "IBM Plex Sans", Arial, sans-serif'; g.fillText(lines[1], 256, 104); }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const board = new THREE.Mesh(new THREE.BoxGeometry(width, width / 4, 0.12),
+    [0, 0, 0, 0, 1, 1].map((i) => (i ? new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 }) : new THREE.MeshStandardMaterial({ color: bg }))));
+  board.position.y = 3.4;
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x555a5e, metalness: 0.5, roughness: 0.5 });
+  const g2 = new THREE.Group();
+  for (const x of [-width / 2 + 0.3, width / 2 - 0.3]) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.4, 6), postMat);
+    post.position.set(x, 1.7, 0);
+    g2.add(post);
+  }
+  g2.add(board);
+  g2.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
+  return g2;
+}
+
+// Verkehrspylone (orange-weiss)
+export function makeCone(): THREE.Group {
+  const g = new THREE.Group();
+  const orange = new THREE.MeshStandardMaterial({ color: 0xe8611a, roughness: 0.6 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.5 });
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.75, 12), orange);
+  cone.position.y = 0.4;
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 0.12, 12), white);
+  band.position.y = 0.45;
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.5), orange);
+  base.position.y = 0.025;
+  g.add(cone, band, base);
+  g.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
+  return g;
+}

@@ -1,5 +1,5 @@
-// Rauchtest: Spiel starten, Konsole auf Fehler pruefen, Mission 01 per Spielzustand durchlaufen, Fotos.
-// Aufruf: node tests/e2e/smoke.mjs <URL> <AUSGABEORDNER>
+// Browser-Test: Spiel starten, Mission 01 und Mission 02 (beide Loesungswege) ueber die echte Oberflaeche,
+// Konsole auf Fehler pruefen, Bildschirmfotos. Aufruf: node tests/e2e/smoke.mjs <URL> <AUSGABEORDNER>
 import { createRequire } from 'node:module';
 // Playwright ist in der Cloud-Umgebung global vorinstalliert (NODE_PATH); lokal: npm i -D playwright
 const { chromium } = createRequire(import.meta.url)('playwright');
@@ -7,81 +7,131 @@ const { chromium } = createRequire(import.meta.url)('playwright');
 const url = process.argv[2] ?? 'http://localhost:4173/';
 const out = process.argv[3] ?? '.';
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-page.on('pageerror', (e) => errors.push(String(e)));
-const t0 = Date.now();
-await page.goto(url + '?autostart&quality=low');
-await page.waitForFunction(() => window.__lux98?.running, null, { timeout: 120000 });
-console.log('Start nach', Date.now() - t0, 'ms');
-const g = (fn, arg) => page.evaluate(fn, arg);
-// Dialog weiterklicken, bis er geschlossen ist
-const advance = async () => {
-  for (let i = 0; i < 12 && await page.isVisible('#dialogue'); i++) { await page.keyboard.press('e'); await page.waitForTimeout(120); }
-};
-await page.waitForTimeout(1500);
-await page.screenshot({ path: `${out}/01_intro.png` });
-// Intro wegklicken
+let failures = 0;
+const check = (name, cond, info = '') => { console.log(`${cond ? ' OK ' : 'FAIL'}  ${name}${info ? '  ' + info : ''}`); if (!cond) failures++; };
+
+async function open() {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto(url + '?autostart&quality=low');
+  await page.waitForFunction(() => window.__lux98?.running, null, { timeout: 120000 });
+  const g = (fn, arg) => page.evaluate(fn, arg);
+  const advance = async () => {
+    for (let i = 0; i < 15 && await page.isVisible('#dialogue'); i++) { await page.keyboard.press('e'); await page.waitForTimeout(100); }
+  };
+  const goTo = async (expr) => { await g(`(() => { const x = window.__lux98; x.pos.copy(${expr}).add({ x: 1.2, y: 0, z: 0.4 }); })()`); await page.waitForTimeout(250); };
+  const press = async (k = 'e') => { await page.keyboard.press(k); await page.waitForTimeout(250); };
+  const st = () => g(() => { const x = window.__lux98; const c = x.activeController(); return { mission: c?.id ?? '-', obj: c ? c.current() : '-', cash: x.wallet.getCash(), rep: x.reputation, clock: x.clock.toString() }; });
+  return { page, g, advance, goTo, press, st };
+}
+
+// ---------- Mission 01 ----------
+const { page, g, advance, goTo, press, st } = await open();
 await advance();
-const state = () => g(() => { const x = window.__lux98; return { obj: x.currentObjective(), mode: x.mode, pos: x.pos.toArray().map(Math.round), cash: x.wallet.getCash(), clock: x.clock.toString() }; });
-console.log('nach Intro', await state());
-// Laufen (W halten)
-await page.keyboard.down('w'); await page.waitForTimeout(2500); await page.keyboard.up('w');
-console.log('nach Laufen', await state());
-await page.screenshot({ path: `${out}/02_gare.png` });
-// Zur Telefonzelle teleportieren und anrufen ueber die echte Oberflaeche
-await g(() => { const x = window.__lux98; x.pos.copy(x['booths'][0]).add({ x: 0, y: 0, z: 1.5 }); });
-await page.waitForTimeout(300);
-await page.keyboard.press('e');
-await page.waitForTimeout(300);
-const phoneOpen = await page.isVisible('#phone');
-console.log('Telefon offen:', phoneOpen);
-await page.click('#pcoins button:nth-child(2)'); // 20 F
+check('M01 Intro', (await st()).obj === 'call_friend');
+await goTo('x.booths[0]'); await press();
+check('Telefonzelle oeffnet', await page.isVisible('#phone'));
+await page.click('#pcoins button:nth-child(2)');
 for (const d of '486127') await page.keyboard.press('Digit' + d);
-await page.screenshot({ path: `${out}/03_phone.png` });
-await page.click('#pactions .call');
-await page.waitForTimeout(200); await advance();
-console.log('nach Anruf', await state());
-// Madame Weis (Uhrzeit ggf. auf 9 Uhr stellen, Buero oeffnet um 8)
-await g(() => { const x = window.__lux98; x.clock.setDateTime(x.clock.getDate(), 9); x.pos.copy(x['weis'].root.position).add({ x: 1, y: 0, z: 0 }); });
-await page.waitForTimeout(300); await page.keyboard.press('e');
-await page.waitForTimeout(200); await advance();
-console.log('nach Weis', await state());
-// Auto
-await g(() => { const x = window.__lux98; x.pos.copy(x.car.pos).add({ x: 2.2, y: 0, z: 0 }); });
-await page.waitForTimeout(300); await page.keyboard.press('e');
-await page.waitForTimeout(200); await advance();
-console.log('nach Auto', await state());
-await page.keyboard.down('w'); await page.waitForTimeout(3000); await page.keyboard.up('w');
-const drive = await g(() => { const x = window.__lux98; return { kmh: Math.round(x.car.kmh), fuel: x.car.fuel.toFixed(2), dmg: Math.round(x.car.damage), pos: x.car.pos.toArray().map(Math.round) }; });
-console.log('Fahrt', drive);
+await page.click('#pactions .call'); await page.waitForTimeout(200); await advance();
+check('Anruf bei Jang', (await st()).obj === 'get_key', JSON.stringify(await st()));
+await g(() => { const x = window.__lux98; x.clock.setDateTime(x.clock.getDate(), 9); });
+await goTo('x.m01.weis.root.position'); await press(); await advance();
+check('Schluessel', (await st()).obj === 'find_car');
+await goTo('x.car.pos'); await page.keyboard.press('e'); await page.waitForTimeout(300); await advance();
+check('Eingestiegen', await g(() => window.__lux98.mode === 'drive'));
+await page.keyboard.down('w'); await page.waitForTimeout(2500); await page.keyboard.up('w');
+check('Auto faehrt', await g(() => window.__lux98.car.kmh > 1), `${await g(() => Math.round(window.__lux98.car.kmh))} km/h`);
 await page.screenshot({ path: `${out}/04_drive.png` });
-// Aussteigen, zu Jang
-await g(() => { const x = window.__lux98; x.car.speed = 0; });
-await page.waitForTimeout(200); await page.keyboard.press('e');
-await g(() => { const x = window.__lux98; x.pos.copy(x['jang'].root.position).add({ x: 1, y: 0, z: 0 }); });
-await page.waitForTimeout(300); await page.keyboard.press('e');
+await g(() => window.__lux98.leaveVehicle(true));
+await goTo('x.m01.jang.root.position'); await press(); await advance();
+check('M01 erfuellt, M02 aktiv', await g(() => window.__lux98.missions.getState('M01_ZERECK_AN_DSTAD') === 'Succeeded') && (await st()).mission === 'M02_ENG_LESCHT_CHANCE', JSON.stringify(await st()));
+
+// ---------- Mission 02, ehrlicher Weg ----------
+await goTo('x.homeDoor'); await press(); await advance();
+check('Anrufbeantworter vor der Nachricht leer', (await st()).obj === 'listen_message');
+await g(() => { const x = window.__lux98; x.advanceMinutes(70); });
+await page.waitForTimeout(400);
+await goTo('x.homeDoor'); await press(); await advance();
+check('Nachricht gehoert, Frist gesetzt', (await st()).obj === 'meet_contact' && await g(() => window.__lux98.m02.deadline > 0), await g(() => window.__lux98.formatAbsHours(window.__lux98.m02.deadline)));
+await goTo('x.m02.muller.root.position'); await press(); await advance();
+check('Auswahl erscheint', await page.isVisible('#choice'));
+await page.screenshot({ path: `${out}/08_choice.png` });
+await page.keyboard.press('1'); await page.waitForTimeout(200); await advance();
+check('Weg: ehrlich', await g(() => window.__lux98.m02.path === 'honest'));
+const cashBefore = (await st()).cash;
+await goTo('x.m02.partsSpot'); await press(); await advance();
+check('Teile gekauft (-1 800 F)', await g(() => window.__lux98.m02.partsBought) && (await st()).cash === cashBefore - 1800);
+await goTo('x.m02.customerCar.pos'); await press();
+check('Werkbank offen', await page.isVisible('#workshop'));
+await page.click('#workshop .tools button:has-text("Ölwechsel")');  // absichtlich falsch
+for (const label of ['Wagen auf die Hebebühne', 'Vorderräder abschrauben', 'Bremssattel lösen', 'Bremsscheiben tauschen', 'Neue Bremsbeläge einsetzen', 'Bremssattel montieren', 'Räder anschrauben', 'Wagen herunterlassen', 'Bremspedal pumpen']) {
+  if (label === 'Bremsscheiben tauschen') await page.screenshot({ path: `${out}/09_workshop.png` });
+  await page.click(`#workshop .tools button:has-text("${label}")`);
+}
 await page.waitForTimeout(200); await advance();
-const final = await state();
-console.log('Ende', final, 'Mission:', await g(() => window.__lux98.missions.getState('M01_ZERECK_AN_DSTAD')));
-await page.screenshot({ path: `${out}/05_place_darmes.png` });
-// Nacht + Regen
-await g(() => { const x = window.__lux98; x.clock.setDateTime(x.clock.getDate(), 22.5); x.env.setRain(true); x.env.wetness = 1; x.camYaw += 2.2; });
-await page.waitForTimeout(1500);
-await page.screenshot({ path: `${out}/06_night_rain.png` });
-// Notizbuch-Stadtplan
-await g(() => { const x = window.__lux98; x.env.setRain(false); x.clock.setDateTime(x.clock.getDate(), 10); });
+check('Reparatur erledigt', (await st()).obj === 'test_drive', `Fehler: ${await g(() => window.__lux98.m02.mistakes)}`);
+await goTo('x.m02.customerCar.pos'); await press(); await page.waitForTimeout(200);
+check('Im Kundenwagen', await g(() => window.__lux98.veh === window.__lux98.m02.customerCar));
+for (let i = 0; i < 3; i++) {
+  await g((i) => { const x = window.__lux98, c = x.m02.customerCar; c.placeAt(x.m02.cones[i].pos, c.heading, x.city); }, i);
+  await page.waitForTimeout(300);
+  if (i === 1) await page.screenshot({ path: `${out}/10_testdrive.png` });
+}
+check('Alle Pylonen', await g(() => window.__lux98.m02.conesPassed === 3));
+await g(() => { const x = window.__lux98, c = x.m02.customerCar; c.placeAt(x.m02.garageSpot, c.heading, x.city); c.speed = 0; });
+await page.waitForTimeout(500);
+check('Probefahrt beendet', (await st()).obj === 'report_to_owner');
+const cash2 = (await st()).cash;
+await goTo('x.m02.muller.root.position'); await press(); await advance();
+const s2 = await st();
+check('M02 erfuellt (ehrlich): +6 300 F, Ruf +8', await g(() => window.__lux98.missions.getState('M02_ENG_LESCHT_CHANCE') === 'Succeeded') && s2.cash === cash2 + 6300 && s2.rep === 8, JSON.stringify(s2));
+await page.screenshot({ path: `${out}/11_garage.png` });
 await page.keyboard.press('Tab'); await page.waitForTimeout(200);
 await page.click('#nb nav button[data-page="map"]'); await page.waitForTimeout(300);
+await g(() => { const x = window.__lux98; x['mapView'].scale = 0.28; x['mapView'].cx = -500; x['mapView'].cz = 800; x['drawNotebookMap'](); });
 await page.screenshot({ path: `${out}/07_map.png` });
-await page.keyboard.press('Tab');
-// Speichern/Laden
-const saved = await g(() => window.__lux98.save());
-const loaded = await g(() => window.__lux98.load());
-console.log('Speichern/Laden:', saved, loaded, await state());
+await page.keyboard.press('Tab'); await page.waitForTimeout(200);
+check('Notizbuch mit Tab geschlossen', !(await page.isVisible('#notebook')));
+check('Speichern/Laden', await g(() => window.__lux98.save() && window.__lux98.load()) && await g(() => window.__lux98.missions.getState('M02_ENG_LESCHT_CHANCE') === 'Succeeded' && window.__lux98.flags['m02.path'] === 'honest'));
 const fps = await g(() => { const f = window.__lux98.frameTimes; return Math.round(1000 / (f.reduce((a, b) => a + b, 0) / f.length)); });
+await page.close();
+
+// ---------- Mission 02, Abkuerzung + Bremsfading + zu spaet ----------
+{
+  const { page, g, advance, goTo, press, st } = await open();
+  await advance();
+  await g(() => { const x = window.__lux98; for (const o of ['call_friend', 'get_key', 'find_car', 'visit_friend']) x.missions.completeObjective('M01_ZERECK_AN_DSTAD', o); x.m01.completedAtHours = x.absHours(); x.car.locked = false; x.onMissionSucceeded('M01_ZERECK_AN_DSTAD'); x.advanceMinutes(70); });
+  await page.waitForTimeout(400);
+  await goTo('x.homeDoor'); await press(); await advance();
+  // zu spaet kommen
+  await g(() => { const x = window.__lux98; x.advanceMinutes(60 * 4); });
+  await goTo('x.m02.muller.root.position'); await press(); await advance();
+  check('Zu spaet: neuer Termin am naechsten Morgen', (await st()).obj === 'meet_contact' && await g(() => window.__lux98.m02.deadline > window.__lux98.absHours()), await g(() => window.__lux98.formatAbsHours(window.__lux98.m02.deadline)));
+  await g(() => { const x = window.__lux98; const d = x.m02.deadline - 1 - x.absHours(); x.advanceMinutes(d * 60); });
+  await press(); await advance();
+  await page.keyboard.press('2'); await page.waitForTimeout(200); await advance();
+  check('Weg: Abkuerzung', await g(() => window.__lux98.m02.path === 'shortcut'));
+  await goTo('x.m02.customerCar.pos'); await press();
+  for (const label of ['Wagen auf die Hebebühne', 'Vorderräder abschrauben', 'Beläge mit Druckluft', 'Bremse nachstellen', 'Räder anschrauben', 'Wagen herunterlassen']) await page.click(`#workshop .tools button:has-text("${label}")`);
+  await page.waitForTimeout(200); await advance();
+  await goTo('x.m02.customerCar.pos'); await press(); await page.waitForTimeout(200);
+  // hart bremsen bei Tempo -> Bremse wird weich
+  const eff = await g(() => { const x = window.__lux98, c = x.m02.customerCar; if (x.veh !== c) return -1; for (let i = 0; i < 300; i++) { c.speed = 16; c.braking = true; x.m02.update(0.05); } return c.brakeEfficiency; });
+  check('Bremsfading bei Abkuerzung', eff < 0.6, `Bremswirkung ${(eff * 100).toFixed(0)} %`);
+  await advance();
+  await g(() => { const x = window.__lux98, c = x.m02.customerCar; c.speed = 0; for (const cone of x.m02.cones) { c.placeAt(cone.pos, c.heading, x.city); x.m02.update(0.05); } c.placeAt(x.m02.garageSpot, c.heading, x.city); x.m02.update(0.05); });
+  await page.waitForTimeout(300);
+  const cash = (await st()).cash;
+  await goTo('x.m02.muller.root.position'); await press(); await advance();
+  const s3 = await st();
+  check('M02 erfuellt (Abkuerzung): +2 000 F, Ruf -5', s3.cash === cash + 2000 && s3.rep === -5, JSON.stringify(s3));
+  await page.close();
+}
+
 console.log('Bildrate (Software-Rendering, nicht aussagekraeftig):', fps);
 console.log('Konsolenfehler:', errors.length ? errors : 'keine');
 await browser.close();
-process.exit(errors.length || final.obj !== 'done' ? 1 : 0);
+process.exit(errors.length || failures ? 1 : 0);

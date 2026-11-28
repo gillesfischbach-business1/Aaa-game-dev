@@ -31,6 +31,24 @@
   #dialogue .lb { font-size: 18px; line-height: 1.35; }
   #dialogue .sub { font-size: 14px; color: #b9b3a5; margin-top: 6px; font-style: italic; }
   #dialogue .next { font-size: 12px; color: #8f897c; text-align: right; margin-top: 6px; }
+  #choice { position: fixed; left: 50%; bottom: 7%; transform: translateX(-50%); width: min(760px, calc(100vw - 32px)); background: rgba(10, 12, 16, 0.84); padding: 14px 18px; border-radius: 6px; pointer-events: auto; }
+  #choice .who { color: var(--accent); font-weight: 600; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
+  #choice .lb { font-size: 18px; line-height: 1.35; }
+  #choice .sub { font-size: 14px; color: #b9b3a5; margin-top: 6px; font-style: italic; }
+  #choice .opts { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  #choice .opts button { text-align: left; background: #262a31; color: var(--hud-text); border: 1px solid #3a3f48; border-radius: 4px; padding: 9px 12px; font-size: 15px; cursor: pointer; font-family: inherit; }
+  #choice .opts button:hover, #choice .opts button:focus-visible { border-color: var(--accent); outline: none; }
+  #choice kbd { font-family: inherit; border: 1px solid #77705f; border-radius: 3px; padding: 0 6px; margin-right: 8px; color: var(--accent); }
+  #workshop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); pointer-events: auto; padding: 16px; }
+  #workshop .wbox { width: min(720px, 100%); background: #2b2f34; border: 3px solid #5a5f66; border-radius: 6px; padding: 16px 18px; box-shadow: 0 10px 40px rgba(0,0,0,.6);
+        background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.02) 0 8px, transparent 8px 16px); }
+  #workshop h3 { margin: 0 0 4px; font-family: 'Special Elite', monospace; font-weight: normal; font-size: 20px; color: var(--accent); }
+  #workshop .hint { font-size: 13px; color: #c9c3b4; line-height: 1.45; margin: 0 0 12px; }
+  #workshop .tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+  #workshop .tools button { background: #3c4148; color: #eee; border: 1px solid #1f2226; border-radius: 4px; padding: 10px; font-size: 14px; cursor: pointer; font-family: inherit; text-align: left; }
+  #workshop .tools button:disabled { opacity: .35; cursor: default; }
+  #workshop .log { margin-top: 12px; max-height: 120px; overflow: auto; font-family: 'Caveat', cursive; font-size: 20px; color: #9fb08a; }
+  #workshop .log .bad { color: #e08a6a; }
   /* Notizbuch */
   #notebook { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); pointer-events: auto; }
   #nb { width: min(980px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px)); background: var(--paper); color: var(--ink); border-radius: 6px 10px 10px 6px; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 14px 0 0 #2a2f3a; display: flex; flex-direction: column; padding: 14px 18px 14px 34px;
@@ -92,6 +110,17 @@
 </div>
 
 <div id="dialogue" class="hidden"><div class="who"></div><div class="lb"></div><div class="sub"></div><div class="next">[E] / Klick – weiter</div></div>
+
+<div id="choice" class="hidden"><div class="who"></div><div class="lb"></div><div class="sub"></div><div class="opts"></div></div>
+
+<div id="workshop" class="hidden">
+  <div class="wbox">
+    <h3></h3>
+    <p class="hint"></p>
+    <div class="tools"></div>
+    <div class="log"></div>
+  </div>
+</div>
 
 <div id="notebook" class="hidden">
   <div id="nb">

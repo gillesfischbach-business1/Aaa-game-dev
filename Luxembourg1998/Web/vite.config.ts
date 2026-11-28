@@ -5,6 +5,8 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 export default defineConfig(({ mode }) => ({
   base: './',
   plugins: mode === 'single' ? [viteSingleFile()] : [],
+  // Missionsdaten liegen im Gesamtprojekt (../Data) und werden mit eingebunden
+  server: { fs: { allow: ['..'] } },
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',
     chunkSizeWarningLimit: 8000,

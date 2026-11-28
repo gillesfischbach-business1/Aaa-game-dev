@@ -1,5 +1,6 @@
 import type { City } from '../world/city';
 import type { Lang, Line } from './story';
+export type { Lang };
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -61,6 +62,64 @@ export class UI {
     (box.querySelector('.who') as HTMLElement).textContent = l.who;
     (box.querySelector('.lb') as HTMLElement).textContent = l.lb;
     (box.querySelector('.sub') as HTMLElement).textContent = l[this.lang];
+  }
+
+  // ---- Auswahl (Entscheidung im Dialog): Tasten 1-9 oder Klick ----
+  get inChoice(): boolean { return this.isOpen('choice'); }
+  choice(prompt: Line, options: { label: Record<Lang, string>; value: string }[], done: (value: string) => void): void {
+    const box = $('choice');
+    (box.querySelector('.who') as HTMLElement).textContent = prompt.who;
+    (box.querySelector('.lb') as HTMLElement).textContent = prompt.lb;
+    (box.querySelector('.sub') as HTMLElement).textContent = prompt[this.lang];
+    const list = box.querySelector('.opts') as HTMLElement;
+    list.innerHTML = '';
+    const pick = (v: string) => { this.show('choice', false); window.removeEventListener('keydown', onKey); done(v); };
+    const onKey = (e: KeyboardEvent) => {
+      const n = Number(e.key);
+      if (n >= 1 && n <= options.length) { e.preventDefault(); pick(options[n - 1].value); }
+    };
+    options.forEach((o, i) => {
+      const b = document.createElement('button');
+      b.innerHTML = `<kbd>${i + 1}</kbd> ${o.label[this.lang]}`;
+      b.onclick = () => pick(o.value);
+      list.appendChild(b);
+    });
+    window.addEventListener('keydown', onKey);
+    this.show('choice', true);
+  }
+
+  // ---- Werkstatt: Arbeitsschritte in der richtigen Reihenfolge waehlen ----
+  get inWorkshop(): boolean { return this.isOpen('workshop'); }
+  workshop(title: string, hint: string, steps: { id: string; label: string }[], order: string[],
+    onStep: (ok: boolean, step: string) => void, done: (mistakes: number) => void): void {
+    const box = $('workshop');
+    (box.querySelector('h3') as HTMLElement).textContent = title;
+    (box.querySelector('.hint') as HTMLElement).textContent = hint;
+    const log = box.querySelector('.log') as HTMLElement;
+    const grid = box.querySelector('.tools') as HTMLElement;
+    log.innerHTML = '';
+    grid.innerHTML = '';
+    let idx = 0, mistakes = 0;
+    for (const st of steps) {
+      const b = document.createElement('button');
+      b.textContent = st.label;
+      b.onclick = () => {
+        if (st.id === order[idx]) {
+          idx++;
+          b.disabled = true;
+          log.innerHTML += `<div>✓ ${st.label}</div>`;
+          onStep(true, st.id);
+          if (idx === order.length) { this.show('workshop', false); done(mistakes); }
+        } else {
+          mistakes++;
+          log.innerHTML += `<div class="bad">✗ ${st.label} – nicht jetzt</div>`;
+          onStep(false, st.id);
+        }
+        log.scrollTop = log.scrollHeight;
+      };
+      grid.appendChild(b);
+    }
+    this.show('workshop', true);
   }
 
   // ---- Tacho ----

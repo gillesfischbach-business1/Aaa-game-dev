@@ -31,3 +31,6 @@ vollstaendige Doku · D bewusst fiktiv.
 4. Rives de Clausen 1998 (Brauereigelaende).
 5. Luxemburger Kennzeichen 1998.
 6. Telefonzellen 1998: Muenzen und/oder Telefonkarte? Tarife.
+7. Hollerich 1998: Gab es „Nouvelle route d'Esch“ und den heutigen Verlauf des Boulevard Pierre Dupong schon?
+   Welche Gewerbebauten standen an der Rue de l'Abattoir (Schlachthof-Gelaende)?
+8. Begriff „Bancomat“ fuer Geldautomaten 1998 in Luxemburg belegen; Gebuehren.
