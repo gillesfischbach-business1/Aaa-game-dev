@@ -70,7 +70,9 @@ export class Mission02 implements MissionController {
     this.muller.root.position.copy(mPos);
     g.scene.add(this.muller.root);
     g.npcs.push(this.muller);
-    g.addInteractable({ pos: mPos, radius: 2.4, label: () => (g.mode === 'walk' ? 'Mam Här Muller schwätzen' : null), act: () => this.talkMuller() });
+    g.addInteractable({ pos: mPos, radius: 2.4, label: () => (g.mode === 'walk' && g.missions.getState(this.id) !== 'Succeeded' ? 'Mam Här Muller schwätzen' : null), act: () => this.talkMuller() });
+    // Nach der Mission: Arbeit als Mechaniker (Schichten)
+    g.addInteractable({ pos: mPos, radius: 2.4, label: () => (g.missions.getState(this.id) === 'Succeeded' ? g.career.label() : null), act: () => g.career.talk() });
 
     // Kundenwagen: roter Kombi, am Fahrbahnrand vor der Werkstatt
     this.customerCar = new Vehicle(9, 2, 0x8a1c1c);
@@ -310,6 +312,7 @@ export class Mission02 implements MissionController {
       g.reputation += (honest ? 10 - this.mistakes * 2 : -5) + (damaged ? -3 : 0);
       g.flags['m02.path'] = this.path;
       g.flags['career.mechanic'] = honest ? 'job_offer' : 'maybe';
+      g.flags['m02.done_at'] = String(g.absHours());
       this.complete('report_to_owner');
       g.ui.toast(`Mission erfüllt: „Eng lescht Chance“ · +${formatLuf(pay)} · Ruf ${g.reputation >= 0 ? '+' : ''}${g.reputation}`, 5000);
       g.onMissionSucceeded(this.id);

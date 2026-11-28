@@ -124,6 +124,28 @@ await goTo('x.m03.doors[0].pos'); await press(); await advance();
 const s4 = await st();
 check('M03 erfuellt: +2 500 F, Ruf +3', await g(() => window.__lux98.missions.getState('M03_DNUMMER_AN_DER_ZEITUNG') === 'Succeeded') && s4.cash === cash4 + 2500 && s4.rep === rep4 + 3, JSON.stringify(s4));
 
+
+// ---------- Arbeit in der Garage (Karriere) ----------
+const doShift = async (orders) => {
+  await goTo('x.m02.muller.root.position'); await press(); await advance();
+  for (const order of orders) {
+    for (const label of order) await page.click(`#workshop .tools button:has-text("${label}")`);
+    await page.waitForTimeout(150);
+  }
+  await advance();
+};
+const OIL = ['Wagen auf die Hebebühne', 'Altes Öl ablassen', 'Ölfilter wechseln', 'Ablassschraube eindrehen', 'Wagen herunterlassen', 'Neues Öl einfüllen', 'Ölstand prüfen'];
+const TYRES = ['Wagen auf die Hebebühne', 'Winterräder abschrauben', 'Sommerreifen auf Felgen ziehen', 'Räder auswuchten', 'Sommerräder anschrauben', 'Wagen herunterlassen', 'Radmuttern nachziehen'];
+const PLUGS = ['Motorhaube öffnen', 'Zündkabel abziehen', 'Alte Zündkerzen herausdrehen', 'Elektrodenabstand prüfen', 'Neue Zündkerzen eindrehen', 'Zündkabel aufstecken', 'Probelauf'];
+const bank0 = await g(() => window.__lux98.wallet.getBank()), rep0 = (await st()).rep;
+check('Schicht moeglich (Di 10:30, verspaetet)', await g(() => window.__lux98.career.canStartShift()));
+await doShift([OIL, TYRES]);
+const bank1 = await g(() => window.__lux98.wallet.getBank());
+check('Verspaetete Schicht: 1 700 F aufs Konto, Ruf -1, Feierabend 17 Uhr', bank1 === bank0 + 1700 && (await st()).rep === rep0 - 1 && (await st()).clock.endsWith('17:00'), `${bank1 - bank0} F, ${(await st()).clock}`);
+await g(() => { const x = window.__lux98; x.clock.setDateTime(x.clock.getDate(), 8.0); x.advanceMinutes(60 * 24); });
+await doShift([PLUGS, OIL]);
+const bank2 = await g(() => window.__lux98.wallet.getBank());
+check('Puenktliche Schicht: 2 200 F, Ruf +1, 2 Arbeitstage', bank2 === bank1 + 2200 && (await st()).rep === rep0 && await g(() => window.__lux98.career.daysWorked === 2), `${bank2 - bank1} F`);
 await page.keyboard.press('Tab'); await page.waitForTimeout(200);
 await page.click('#nb nav button[data-page="map"]'); await page.waitForTimeout(300);
 await g(() => { const x = window.__lux98; x['mapView'].scale = 0.28; x['mapView'].cx = -500; x['mapView'].cz = 800; x['drawNotebookMap'](); });
@@ -177,6 +199,7 @@ await page.close();
   await goTo('x.homeDoor'); await press(); await press('1');
   check('Nachricht von Herrn Reding auf dem Band', (await page.textContent('#dialogue .lb')).includes('Reding'));
   await advance();
+  check('Nach Abkuerzung: Jobangebot einen Tag spaeter per Band', await g(() => window.__lux98.career.hired));
 
   await page.close();
 }

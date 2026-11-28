@@ -7,6 +7,7 @@ import { readSaveFromStorage, writeSaveToStorage, type SaveData } from '../core/
 import { buildCity, type City } from '../world/city';
 import { pointInPolygon } from '../world/terrain';
 import type { WorldData } from '../world/types';
+import { Career } from './career';
 import { Environment } from './environment';
 import { Input } from './input';
 import { Mission01, M01_ID } from './missions/m01';
@@ -74,6 +75,7 @@ export class Game {
   readonly m01: Mission01;
   readonly m02: Mission02;
   readonly m03: Mission03;
+  readonly career: Career;
   readonly controllers: MissionController[];
   private messages = new Map<string, Line[]>();
   private phoneFromHome = false;
@@ -112,6 +114,7 @@ export class Game {
     this.phoneNet.setAnswerRule(NUMBERS.reding, (_d, h) => h >= 18 && h < 20);  // laut Kleinanzeige
 
     this.placeWorldObjects();
+    this.career = new Career(this);
     this.m01 = new Mission01(this);
     this.m02 = new Mission02(this, this.m01);
     this.m03 = new Mission03(this);
@@ -320,7 +323,7 @@ export class Game {
     const ids = msgs.map((m) => m.dialogueId);
     const lines = ids.flatMap((id) => this.messages.get(id) ?? []);
     this.ui.dialogue(lines.length ? lines : DIALOGUE02.machineEmpty, () => {
-      for (const id of ids) for (const c of this.controllers) c.onMessageHeard?.(id);
+      for (const id of ids) { for (const c of this.controllers) c.onMessageHeard?.(id); this.career.onMessageHeard(id); }
     });
   }
 
@@ -495,7 +498,7 @@ export class Game {
       const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung' };
       const active = this.controllers.filter((c) => this.missions.getState(c.id) === 'Active').map((c) => c.notes(L).replace(' style="margin-top:14px"', '')).join('');
       const doneList = this.controllers.filter((c) => this.missions.getState(c.id) === 'Succeeded').map((c) => `<div class="done">✓ ${titles[c.id] ?? c.id}</div>`).join('');
-      const missionsHtml = `${active}${doneList ? `<h3 style="margin-top:14px">ERLEDIGT</h3>${doneList}` : ''}`;
+      const missionsHtml = `${active}${this.career.notes(L)}${doneList ? `<h3 style="margin-top:14px">ERLEDIGT</h3>${doneList}` : ''}`;
       const last = [...this.controllers].reverse().find((c) => this.missions.getState(c.id) === 'Succeeded');
       const freeRoam = !this.activeController() ? `<p>${last?.objectiveText(L) ?? ''}</p>` : '';
       const hist = this.wallet.getHistory().slice(-6).reverse().map((t) => `<div class="small">${toIso(t.date)} · ${t.memo} · ${formatLuf(t.amount)}</div>`).join('');
@@ -585,6 +588,7 @@ export class Game {
       ...this.missions.serialize(),
     };
     for (const c of this.controllers) Object.assign(data, c.save());
+    Object.assign(data, this.career.save());
     try {
       const r = writeSaveToStorage(window.localStorage, SAVE_KEY, data);
       this.ui.toast(r.ok ? 'Gespeichert.' : `Speichern fehlgeschlagen: ${r.error}`);
@@ -627,6 +631,7 @@ export class Game {
     this.car.damage = Number(d['car.damage']) || 0;
     this.car.fuel = Number(d['car.fuel']) || this.car.fuel;
     for (const c of this.controllers) c.load(d);
+    this.career.load(d);
     // Aeltere Staende: Mission 01 fertig, Mission 02 noch nicht gestartet
     this.startAvailableMissions();
     const pp = vec(d['player.location']);
@@ -676,6 +681,7 @@ export class Game {
         if (this.mode === 'walk') this.updateWalk(dt); else this.updateDrive(dt);
         this.updateInteract();
         for (const c of this.controllers) c.update(dt);
+        this.career.update();
       }
     }
     this.traffic.update(dt, this.camera.position, this.veh ? this.veh.pos : null, this.pos, this.env.night > 0.5);
