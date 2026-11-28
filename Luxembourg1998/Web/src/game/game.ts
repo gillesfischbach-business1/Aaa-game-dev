@@ -11,10 +11,11 @@ import { Environment } from './environment';
 import { Input } from './input';
 import { Mission01, M01_ID } from './missions/m01';
 import { Mission02, M02_ID } from './missions/m02';
+import { Mission03, M03_ID } from './missions/m03';
 import type { MissionController } from './missions/types';
 import { missionDef } from './missiondata';
 import { animateWalk, makeMarker, makePerson, makePhoneBooth, makeSign, type PersonModel } from './models';
-import { COINS, DIALOGUE, DIALOGUE02, NUMBERS, PAYPHONE_TARIFF, PHONEBOOK, START, START_MONEY, timeAnnouncement, type Lang } from './story';
+import { COINS, DIALOGUE, DIALOGUE02, NUMBERS, PAYPHONE_TARIFF, PHONEBOOK, SLEEP_LINE, START, START_MONEY, timeAnnouncement, type Lang, type Line } from './story';
 import { Traffic } from './traffic';
 import { UI, drawMap } from './ui';
 import { Vehicle } from './vehicle';
@@ -72,7 +73,11 @@ export class Game {
   frameTimes: number[] = [];
   readonly m01: Mission01;
   readonly m02: Mission02;
+  readonly m03: Mission03;
   readonly controllers: MissionController[];
+  private messages = new Map<string, Line[]>();
+  private phoneFromHome = false;
+  private overlayClose: (() => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement, world: WorldData, readonly quality: Quality, lang: Lang) {
     this.ui.lang = lang;
@@ -96,17 +101,21 @@ export class Game {
     this.registerVehicle(this.car, () => !this.car.locked, 'Onkels Wagen');
 
     for (const e of PHONEBOOK) this.phoneBook.add(e);
+    // Anschluss aus der Kleinanzeige (steht nicht im gedruckten Telefonbuch)
+    this.phoneBook.add({ number: NUMBERS.reding, name: 'Chiffre 4711', address: '—', district: '—' });
     this.phoneNet = new PhoneNetwork(this.phoneBook);
     // Erreichbarkeiten (fiktive Tagesablaeufe): Buero Weis Mo-Sa 8-18, Garage Mo-Fr 8-18 + Sa 8-12, Wagner Mo-Sa 8-18
     this.phoneNet.setAnswerRule(NUMBERS.weis, (d, h) => dayOfWeek(d) < 6 && h >= 8 && h < 18);
     this.phoneNet.setAnswerRule(NUMBERS.garage, (d, h) => (dayOfWeek(d) < 5 && h >= 8 && h < 18) || (dayOfWeek(d) === 5 && h >= 8 && h < 12));
     this.phoneNet.setAnswerRule(NUMBERS.parts, (d, h) => dayOfWeek(d) < 6 && h >= 8 && h < 18);
     this.phoneNet.setAnswerRule(NUMBERS.home, () => false);  // man selbst ist nicht zu Hause
+    this.phoneNet.setAnswerRule(NUMBERS.reding, (_d, h) => h >= 18 && h < 20);  // laut Kleinanzeige
 
     this.placeWorldObjects();
     this.m01 = new Mission01(this);
     this.m02 = new Mission02(this, this.m01);
-    this.controllers = [this.m01, this.m02];
+    this.m03 = new Mission03(this);
+    this.controllers = [this.m01, this.m02, this.m03];
     this.registerMissions();
 
     this.setupPhoneUI();
@@ -118,7 +127,7 @@ export class Game {
 
   private registerMissions(): void {
     this.missions = new MissionTracker();
-    for (const id of [M01_ID, M02_ID]) {
+    for (const id of [M01_ID, M02_ID, M03_ID]) {
       const r = this.missions.register(missionDef(id));
       if (!r.ok) console.error(r.error);
     }
@@ -172,11 +181,30 @@ export class Game {
     this.clock.setTimeScale(before);
   }
 
-  onMissionSucceeded(id: string): void {
-    this.missions.refresh(this.clock.getDate());
-    // Naechste Mission startet von selbst (der Spieler erfaehrt davon diegetisch: Anruf, Brief ...)
-    if (id === M01_ID && this.missions.getState(M02_ID) === 'Available') this.missions.start(M02_ID);
+  onMissionSucceeded(_id: string): void {
+    this.startAvailableMissions();
     this.save();
+  }
+
+  /** Freigeschaltete Missionen starten von selbst (der Spieler erfaehrt davon im Spiel: Anruf, Zeitung ...) */
+  private startAvailableMissions(): void {
+    this.missions.refresh(this.clock.getDate());
+    for (const c of this.controllers) if (this.missions.getState(c.id) === 'Available') this.missions.start(c.id);
+  }
+
+  registerMessage(id: string, lines: Line[]): void { this.messages.set(id, lines); }
+
+  isSummerAbs(abs: number): boolean {
+    const day = Math.floor(abs / 24);
+    return isSummerTime(addDays({ year: 1998, month: 1, day: 1 }, day), Math.floor(abs - day * 24));
+  }
+
+  /** Vollbild-Ueberlagerung (z. B. Zeitung) oeffnen; E/Esc/Knopf schliesst */
+  openOverlay(id: string, onClose?: () => void): void {
+    this.ui.show(id, true);
+    this.input.enabled = false;
+    document.exitPointerLock?.();
+    this.overlayClose = () => { this.ui.show(id, false); this.input.enabled = true; this.overlayClose = null; onClose?.(); };
   }
 
   // ---------- Aufbau ----------
@@ -237,7 +265,7 @@ export class Game {
     doorSign.scale.setScalar(0.55);
     doorSign.position.copy(this.homeDoor).add(new THREE.Vector3(0.8, 0, 0));
     this.scene.add(doorSign);
-    this.addInteractable({ pos: this.homeDoor, radius: 2.2, label: () => (this.mode === 'walk' ? 'Heem: Äntwerter nolauschteren' : null), act: () => this.checkAnsweringMachine() });
+    this.addInteractable({ pos: this.homeDoor, radius: 2.2, label: () => (this.mode === 'walk' ? 'Heem (Äntwerter · Telefon · Schlofen)' : null), act: () => this.homeMenu() });
     this.resetOwnCar();
   }
 
@@ -263,13 +291,37 @@ export class Game {
     this.ui.toast(`Bancomat: ${formatLuf(2000)} abgehoben`);
   }
 
+  private homeMenu(): void {
+    const opts = [
+      { value: 'machine', label: { de: 'Anrufbeantworter abhören', fr: 'Écouter le répondeur', en: 'Check the answering machine' } },
+      { value: 'call', label: { de: 'Von zu Hause telefonieren (Telefonrechnung)', fr: 'Téléphoner de chez soi (facture)', en: 'Make a call from home (phone bill)' } },
+      { value: 'sleep', label: { de: 'Schlafen bis morgen 8 Uhr', fr: 'Dormir jusqu’à demain 8 h', en: 'Sleep until 8 am tomorrow' } },
+      { value: 'leave', label: { de: 'Weitergehen', fr: 'Repartir', en: 'Leave' } },
+    ];
+    this.ui.choice({ who: '', lb: 'Doheem – drëtte Stack.', de: 'Zu Hause – dritter Stock.', fr: 'Chez soi – troisième étage.', en: 'Home – third floor.' }, opts, (v) => {
+      if (v === 'machine') this.checkAnsweringMachine();
+      else if (v === 'call') this.openPhone(true);
+      else if (v === 'sleep') this.ui.dialogue([SLEEP_LINE], () => this.sleep());
+    });
+  }
+
+  private sleep(): void {
+    const next = addDays(this.clock.getDate(), 1);
+    this.clock.setDateTime(next, 8);
+    if (this.veh) this.leaveVehicle(true);
+    this.ui.toast(`Gut geschlafen. ${this.clock.toString()}`, 3500);
+    this.save();
+  }
+
   private checkAnsweringMachine(): void {
     const msgs = this.phoneNet.unheardMessages(NUMBERS.home);
     if (!msgs.length) { this.ui.dialogue(DIALOGUE02.machineEmpty); return; }
-    const ids = msgs.map((m) => m.dialogueId);
     this.phoneNet.markAllHeard(NUMBERS.home);
-    const lines = ids.includes('DLG_JANG_GARAGE') ? DIALOGUE02.jangMessage : DIALOGUE02.machineEmpty;
-    this.ui.dialogue(lines, () => { for (const id of ids) this.m02.onMessageHeard(id); });
+    const ids = msgs.map((m) => m.dialogueId);
+    const lines = ids.flatMap((id) => this.messages.get(id) ?? []);
+    this.ui.dialogue(lines.length ? lines : DIALOGUE02.machineEmpty, () => {
+      for (const id of ids) for (const c of this.controllers) c.onMessageHeard?.(id);
+    });
   }
 
   // ---------- Spielstart ----------
@@ -347,13 +399,17 @@ export class Game {
     });
   }
 
-  private openPhone(): void {
-    this.session = new PayphoneSession(PAYPHONE_TARIFF);
+  private openPhone(fromHome = false): void {
+    this.phoneFromHome = fromHome;
+    // Zu Hause: keine Muenzen, Kosten kommen auf die Telefonrechnung (Konto)
+    this.session = new PayphoneSession(fromHome ? { pricePerUnit: 0, secondsPerUnitLocal: 0, minimumInsert: 0 } : PAYPHONE_TARIFF);
     this.dialed = '';
+    document.getElementById('pcoins')!.classList.toggle('hidden', fromHome);
+    (document.querySelector('#phonebox .title') as HTMLElement).textContent = fromHome ? 'Telefon zu Hause · Anschluss Kremer' : 'Telefonzelle · Ortsgespräch';
     this.ui.show('phone', true);
     this.input.enabled = false;
     document.exitPointerLock?.();
-    this.renderPhone('Hörer abgenommen.\nMünzen einwerfen und wählen.');
+    this.renderPhone(fromHome ? 'Freizeichen.\nNummer wählen.' : 'Hörer abgenommen.\nMünzen einwerfen und wählen.');
   }
 
   private closePhone(): void {
@@ -386,7 +442,8 @@ export class Game {
   private placeCall(): void {
     if (!this.session) return;
     if (!this.dialed) { this.renderPhone('Bitte Nummer wählen.'); return; }
-    if (!this.session.tick(0.01)) { this.renderPhone(`Bitte mindestens ${PAYPHONE_TARIFF.pricePerUnit} F einwerfen.`); return; }
+    if (!this.phoneFromHome && !this.session.tick(0.01)) { this.renderPhone(`Bitte mindestens ${PAYPHONE_TARIFF.pricePerUnit} F einwerfen.`); return; }
+    if (this.phoneFromHome) this.wallet.payFromBank(PAYPHONE_TARIFF.pricePerUnit, this.clock.getDate(), 'Telefonrechnung', 'Bill');
     const num = normalizeNumber(this.dialed);
     const d = this.clock.getDate(), h = this.clock.getHour();
     const result = this.phoneNet.dial(num, d, h);
@@ -397,6 +454,7 @@ export class Game {
     const is = (n: string) => num === normalizeNumber(n);
     if (result === 'InvalidNumber') { this.ui.dialogue(DIALOGUE.invalid, finish); return; }
     if (result === 'Busy') { this.ui.dialogue(DIALOGUE.busy, finish); return; }
+    for (const c of this.controllers) if (c.onCall?.(num, result, this.phoneFromHome, finish)) return;
     if (result === 'NoAnswer') {
       if (is(NUMBERS.home)) { this.ui.dialogue([{ who: 'Äntwerter', lb: 'Hei ass den Uschloss Kremer. Schwätzt w.e.g. nom Piip.', de: 'Hier ist der Anschluss Kremer. Bitte sprechen Sie nach dem Piepton.', fr: 'Vous êtes chez Kremer. Parlez après le bip.', en: 'You’ve reached Kremer. Please speak after the beep.' }], finish); return; }
       this.ui.dialogue(DIALOGUE.noAnswer, finish);
@@ -433,13 +491,19 @@ export class Game {
     const body = this.ui.notebookBody();
     const L = this.ui.lang;
     if (this.nbPage === 'notes') {
-      const missionsHtml = this.controllers.map((c) => c.notes(L)).join('');
-      const freeRoam = !this.activeController() ? `<p>${this.m02.objectiveText(L) ?? ''}</p>` : '';
+      // Laufende Mission zuerst und ausfuehrlich, erledigte als eine Zeile
+      const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung' };
+      const active = this.controllers.filter((c) => this.missions.getState(c.id) === 'Active').map((c) => c.notes(L).replace(' style="margin-top:14px"', '')).join('');
+      const doneList = this.controllers.filter((c) => this.missions.getState(c.id) === 'Succeeded').map((c) => `<div class="done">✓ ${titles[c.id] ?? c.id}</div>`).join('');
+      const missionsHtml = `${active}${doneList ? `<h3 style="margin-top:14px">ERLEDIGT</h3>${doneList}` : ''}`;
+      const last = [...this.controllers].reverse().find((c) => this.missions.getState(c.id) === 'Succeeded');
+      const freeRoam = !this.activeController() ? `<p>${last?.objectiveText(L) ?? ''}</p>` : '';
       const hist = this.wallet.getHistory().slice(-6).reverse().map((t) => `<div class="small">${toIso(t.date)} · ${t.memo} · ${formatLuf(t.amount)}</div>`).join('');
       const rep = `<div class="small" style="margin-top:10px">Ruf: ${this.reputation >= 0 ? '+' : ''}${this.reputation}${this.flags['career.mechanic'] === 'job_offer' ? ' · Stellenangebot: Garage Muller, Montag 8 Uhr' : ''}</div>`;
       body.innerHTML = `${missionsHtml}${freeRoam}${rep}<h3 style="margin-top:18px">AUSGABEN &amp; EINNAHMEN</h3>${hist || '<div class="small">—</div>'}`;
     } else if (this.nbPage === 'contacts') {
-      const rows = PHONEBOOK.map((e) => `<tr><td>${e.name}</td><td>${e.number}</td><td class="small">${e.address}</td></tr>`).join('');
+      const entries = [...PHONEBOOK, ...(this.m03.adNoted ? [{ name: 'Chiffre 4711 (Kleinanzeige, nur 18–20 Uhr)', number: NUMBERS.reding, address: 'aus dem Owendblat' }] : [])];
+      const rows = entries.map((e) => `<tr><td>${e.name}</td><td>${e.number}</td><td class="small">${e.address}</td></tr>`).join('');
       body.innerHTML = `<h3>TELEFONBUCH (Auszug)</h3><table>${rows}</table><p class="small">Alle Einträge sind erfunden. Ortsgespräche aus der Telefonzelle: Münzen einwerfen, Nummer wählen. Zeitansage: ${NUMBERS.time}.</p>`;
     } else if (this.nbPage === 'map') {
       body.innerHTML = '<canvas id="mapcanvas"></canvas>';
@@ -467,6 +531,11 @@ export class Game {
   }
 
   private setupMapControls(): void {
+    // Ueberlagerungen (Zeitung) mit E/Esc schliessen
+    document.getElementById('paperClose')?.addEventListener('click', () => this.overlayClose?.());
+    window.addEventListener('keydown', (e) => {
+      if (this.overlayClose && ['KeyE', 'Escape', 'Space'].includes(e.code)) { e.preventDefault(); this.overlayClose(); }
+    });
     // Notizbuch mit Tab/J/Esc schliessen (die Spielsteuerung ist waehrenddessen gesperrt)
     window.addEventListener('keydown', (e) => {
       if (!this.ui.isOpen('notebook') || !['Tab', 'KeyJ', 'Escape'].includes(e.code)) return;
@@ -559,8 +628,7 @@ export class Game {
     this.car.fuel = Number(d['car.fuel']) || this.car.fuel;
     for (const c of this.controllers) c.load(d);
     // Aeltere Staende: Mission 01 fertig, Mission 02 noch nicht gestartet
-    this.missions.refresh(this.clock.getDate());
-    if (this.missions.getState(M01_ID) === 'Succeeded' && this.missions.getState(M02_ID) === 'Available') this.missions.start(M02_ID);
+    this.startAvailableMissions();
     const pp = vec(d['player.location']);
     if (pp) this.pos.copy(pp);
     this.heading = Number(d['player.yaw']) || 0;
@@ -593,7 +661,7 @@ export class Game {
   }
 
   private get blocked(): boolean {
-    return this.ui.isOpen('phone') || this.ui.inChoice || this.ui.inWorkshop || this.ui.isOpen('notebook');
+    return this.ui.isOpen('phone') || this.ui.inChoice || this.ui.inWorkshop || this.ui.isOpen('notebook') || !!this.overlayClose;
   }
 
   tick(dt: number): void {
@@ -790,7 +858,8 @@ export class Game {
     this.ui.setClock(this.clock.toString(), scale !== 1 ? `Zeit ×${scale}` : '');
     this.ui.setMoney(formatLuf(this.wallet.getCash()), formatLuf(this.wallet.getBank()));
     const ctl = this.activeController();
-    this.ui.setObjective(ctl?.objectiveText(this.ui.lang) ?? this.m02.objectiveText(this.ui.lang) ?? '');
+    const last = [...this.controllers].reverse().find((c) => this.missions.getState(c.id) === 'Succeeded');
+    this.ui.setObjective(ctl?.objectiveText(this.ui.lang) ?? last?.objectiveText(this.ui.lang) ?? '');
     const v = this.veh;
     if (v) {
       const name = this.drivables.find((d) => d.v === v)?.name ?? '';

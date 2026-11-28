@@ -117,21 +117,24 @@
       "mission_id": "M03_DNUMMER_AN_DER_ZEITUNG",
       "title_lb": "D'Nummer an der Zeitung",
       "title_de": "Die Nummer in der Zeitung",
-      "district": "Ville Haute",
+      "district": "Gare",
       "prerequisites": [
-        "M01_ZERECK_AN_DSTAD"
+        "M02_ENG_LESCHT_CHANCE"
       ],
       "objectives": [
         {
-          "id": "buy_newspaper"
+          "id": "buy_newspaper",
+          "checkpoint": true
         },
         {
           "id": "call_from_payphone",
-          "group": "contact"
+          "group": "contact",
+          "checkpoint": true
         },
         {
           "id": "call_from_home",
-          "group": "contact"
+          "group": "contact",
+          "checkpoint": true
         },
         {
           "id": "meet_stranger",
@@ -145,13 +148,17 @@
         "missed_meeting"
       ],
       "rewards": {
-        "money_luf": null
+        "money_luf": 3000,
+        "note": "weniger Ruf bei falschem Klingeln (Spielbalance, Kategorie D)"
       },
       "teaches": [
-        "payphone",
-        "phonebook",
-        "notebook"
-      ]
+        "newspaper",
+        "classified_ads",
+        "phone_hours",
+        "deduction",
+        "sleep"
+      ],
+      "location_note": "Kiosk an der Place de Paris (fiktiv); Treffen im Petrusse-Tal unter dem Pont Adolphe; drei moegliche Adressen (Ville Haute, Gare, Hollerich)"
     },
     {
       "mission_id": "M04_UM_GLACIS",

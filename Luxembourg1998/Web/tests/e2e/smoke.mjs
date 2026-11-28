@@ -50,11 +50,11 @@ await goTo('x.m01.jang.root.position'); await press(); await advance();
 check('M01 erfuellt, M02 aktiv', await g(() => window.__lux98.missions.getState('M01_ZERECK_AN_DSTAD') === 'Succeeded') && (await st()).mission === 'M02_ENG_LESCHT_CHANCE', JSON.stringify(await st()));
 
 // ---------- Mission 02, ehrlicher Weg ----------
-await goTo('x.homeDoor'); await press(); await advance();
+await goTo('x.homeDoor'); await press(); await press('1'); await advance();
 check('Anrufbeantworter vor der Nachricht leer', (await st()).obj === 'listen_message');
 await g(() => { const x = window.__lux98; x.advanceMinutes(70); });
 await page.waitForTimeout(400);
-await goTo('x.homeDoor'); await press(); await advance();
+await goTo('x.homeDoor'); await press(); await press('1'); await advance();
 check('Nachricht gehoert, Frist gesetzt', (await st()).obj === 'meet_contact' && await g(() => window.__lux98.m02.deadline > 0), await g(() => window.__lux98.formatAbsHours(window.__lux98.m02.deadline)));
 await goTo('x.m02.muller.root.position'); await press(); await advance();
 check('Auswahl erscheint', await page.isVisible('#choice'));
@@ -89,13 +89,48 @@ await goTo('x.m02.muller.root.position'); await press(); await advance();
 const s2 = await st();
 check('M02 erfuellt (ehrlich): +6 300 F, Ruf +8', await g(() => window.__lux98.missions.getState('M02_ENG_LESCHT_CHANCE') === 'Succeeded') && s2.cash === cash2 + 6300 && s2.rep === 8, JSON.stringify(s2));
 await page.screenshot({ path: `${out}/11_garage.png` });
+// ---------- Mission 03 ----------
+check('M03 aktiv nach M02', (await st()).mission === 'M03_DNUMMER_AN_DER_ZEITUNG', JSON.stringify(await st()));
+const cash3 = (await st()).cash;
+await goTo('x.m03.kiosk'); await press(); await advance();
+check('Zeitung offen', await page.isVisible('#paper'));
+await page.click('#paper .ad[data-id="reding"] button');
+await page.screenshot({ path: `${out}/12_newspaper.png` });
+await press('e');
+check('Zeitung gekauft (-30 F), Anzeige notiert', !(await page.isVisible('#paper')) && (await st()).obj === 'group:contact' && (await st()).cash === cash3 - 30 && await g(() => window.__lux98.m03.adNoted));
+await goTo('x.homeDoor'); await press(); await press('2');
+for (const d of '451998') await page.keyboard.press('Digit' + d);
+await page.keyboard.press('Enter'); await page.waitForTimeout(200); await advance();
+check('Anruf vor 18 Uhr: niemand meldet sich', (await st()).obj === 'group:contact' && (await page.evaluate(() => window.__lastLine ?? '')) !== 'invalid');
+await g(() => { const x = window.__lux98; x.clock.setDateTime(x.clock.getDate(), 18.5); });
+await goTo('x.homeDoor'); await press(); await press('2');
+for (const d of '451998') await page.keyboard.press('Digit' + d);
+await page.keyboard.press('Enter'); await page.waitForTimeout(200); await advance();
+check('Anruf 18:30 von zu Hause: Treffen vereinbart', (await st()).obj === 'meet_stranger', await g(() => window.__lux98.m03.objectiveText('de')));
+await goTo('x.homeDoor'); await press(); await press('3'); await advance();
+check('Geschlafen bis 8 Uhr', (await st()).clock.endsWith('08:00'), (await st()).clock);
+await g(() => { const x = window.__lux98; x.clock.setDateTime(x.clock.getDate(), 10.5); });
+await page.waitForTimeout(400);
+check('Herr Reding sitzt auf der Bank', await g(() => window.__lux98.m03.reding.root.visible));
+await goTo('x.m03.reding.root.position'); await press(); await advance();
+check('Kiste erhalten', (await st()).obj === 'combine_clues');
+await page.keyboard.press('Tab'); await page.waitForTimeout(200);
+await page.screenshot({ path: `${out}/13_clues.png` });
+await page.keyboard.press('Tab'); await page.waitForTimeout(200);
+const cash4 = (await st()).cash, rep4 = (await st()).rep;
+await goTo('x.m03.doors[2].pos'); await press(); await advance();
+check('Falsche Tuer (Hollerich)', (await st()).obj === 'combine_clues' && await g(() => window.__lux98.m03.wrongDoors === 1));
+await goTo('x.m03.doors[0].pos'); await press(); await advance();
+const s4 = await st();
+check('M03 erfuellt: +2 500 F, Ruf +3', await g(() => window.__lux98.missions.getState('M03_DNUMMER_AN_DER_ZEITUNG') === 'Succeeded') && s4.cash === cash4 + 2500 && s4.rep === rep4 + 3, JSON.stringify(s4));
+
 await page.keyboard.press('Tab'); await page.waitForTimeout(200);
 await page.click('#nb nav button[data-page="map"]'); await page.waitForTimeout(300);
 await g(() => { const x = window.__lux98; x['mapView'].scale = 0.28; x['mapView'].cx = -500; x['mapView'].cz = 800; x['drawNotebookMap'](); });
 await page.screenshot({ path: `${out}/07_map.png` });
 await page.keyboard.press('Tab'); await page.waitForTimeout(200);
 check('Notizbuch mit Tab geschlossen', !(await page.isVisible('#notebook')));
-check('Speichern/Laden', await g(() => window.__lux98.save() && window.__lux98.load()) && await g(() => window.__lux98.missions.getState('M02_ENG_LESCHT_CHANCE') === 'Succeeded' && window.__lux98.flags['m02.path'] === 'honest'));
+check('Speichern/Laden', await g(() => window.__lux98.save() && window.__lux98.load()) && await g(() => window.__lux98.missions.getState('M02_ENG_LESCHT_CHANCE') === 'Succeeded' && window.__lux98.flags['m02.path'] === 'honest' && window.__lux98.missions.getState('M03_DNUMMER_AN_DER_ZEITUNG') === 'Succeeded'));
 const fps = await g(() => { const f = window.__lux98.frameTimes; return Math.round(1000 / (f.reduce((a, b) => a + b, 0) / f.length)); });
 await page.close();
 
@@ -105,7 +140,7 @@ await page.close();
   await advance();
   await g(() => { const x = window.__lux98; for (const o of ['call_friend', 'get_key', 'find_car', 'visit_friend']) x.missions.completeObjective('M01_ZERECK_AN_DSTAD', o); x.m01.completedAtHours = x.absHours(); x.car.locked = false; x.onMissionSucceeded('M01_ZERECK_AN_DSTAD'); x.advanceMinutes(70); });
   await page.waitForTimeout(400);
-  await goTo('x.homeDoor'); await press(); await advance();
+  await goTo('x.homeDoor'); await press(); await press('1'); await advance();
   // zu spaet kommen
   await g(() => { const x = window.__lux98; x.advanceMinutes(60 * 4); });
   await goTo('x.m02.muller.root.position'); await press(); await advance();
@@ -128,6 +163,21 @@ await page.close();
   await goTo('x.m02.muller.root.position'); await press(); await advance();
   const s3 = await st();
   check('M02 erfuellt (Abkuerzung): +2 000 F, Ruf -5', s3.cash === cash + 2000 && s3.rep === -5, JSON.stringify(s3));
+  // M03: Treffen verpassen -> Nachricht auf dem Band, neuer Termin, Anruf bleibt erledigt
+  await goTo('x.m03.kiosk'); await press(); await advance(); await press('e');
+  await g(() => { const x = window.__lux98; x.clock.setDateTime(x.clock.getDate(), 18.5); });
+  await goTo('x.booths[0]'); await press();
+  await page.click('#pcoins button:nth-child(2)');
+  for (const d of '451998') await page.keyboard.press('Digit' + d);
+  await page.click('#pactions .call'); await page.waitForTimeout(200); await advance();
+  const firstMeet = await g(() => window.__lux98.m03.meetFrom);
+  await g(() => window.__lux98.advanceMinutes(60 * 24));
+  await page.waitForTimeout(500);
+  check('Treffen verpasst: neuer Termin, Anruf bleibt erledigt', (await st()).obj === 'meet_stranger' && await g(() => window.__lux98.m03.meetFrom) > firstMeet);
+  await goTo('x.homeDoor'); await press(); await press('1');
+  check('Nachricht von Herrn Reding auf dem Band', (await page.textContent('#dialogue .lb')).includes('Reding'));
+  await advance();
+
   await page.close();
 }
 

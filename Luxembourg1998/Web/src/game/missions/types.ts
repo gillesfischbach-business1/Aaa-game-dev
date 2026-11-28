@@ -13,6 +13,10 @@ export interface MissionController {
   /** Zeilen fuer das Notizbuch (Seite "Notizen") */
   notes(lang: Lang): string;
   update(dt: number): void;
+  /** Anruf an eine Nummer abfangen (true = erledigt) */
+  onCall?(num: string, result: string, fromHome: boolean, finish: () => void): boolean;
+  /** Nachricht auf dem eigenen Anrufbeantworter wurde abgehoert */
+  onMessageHeard?(dialogueId: string): void;
   save(): SaveData;
   load(d: SaveData): void;
 }

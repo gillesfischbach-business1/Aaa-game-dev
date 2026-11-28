@@ -4,7 +4,7 @@ PRICE_BEER_CAFE,Gastronomie,Glas Bier (25 cl) im Cafe,,C,true,,nicht recherchier
 PRICE_FUEL_EUROSUPER_L,Kraftstoff,Liter Eurosuper,,C,true,,Amtliche Hoechstpreise 1998 suchen (Wirtschaftsministerium/Statec)
 PRICE_FUEL_DIESEL_L,Kraftstoff,Liter Diesel,,C,true,,
 PRICE_BUS_TICKET,Verkehr,Einzelfahrschein AVL,,C,true,,Tarifheft AVL 1998 suchen
-PRICE_NEWSPAPER,Medien,Tageszeitung,,C,true,,Preis auf Titelseiten 1998 ablesen (eluxemburgensia)
+PRICE_NEWSPAPER,Medien,Tageszeitung,30,D,true,,Spielwert 30 F (Platzhalter) - Preis auf Titelseiten 1998 ablesen (eluxemburgensia)
 PRICE_RENT_STUDIO,Wohnen,Monatsmiete kleine Wohnung,,C,true,,Kleinanzeigen 1998 auswerten
 PRICE_INTERNETCAFE_HOUR,Internet,Eine Stunde Internetcafe,,D,true,,fiktives Geschaeft - plausibler Wert festlegen
 PRICE_PAYPHONE_UNIT,Telefon,Gespraechseinheit Telefonzelle,,C,true,,P&T-Tarife 1998 suchen

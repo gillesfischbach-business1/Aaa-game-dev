@@ -20,6 +20,7 @@ export const NUMBERS = {
   garage: '49 33 05',
   parts: '40 77 12',
   jang: '48 61 27',
+  reding: '45 19 98',
   weis: '22 45 90',
   taxi: '48 00 48',
   pizza: '40 12 33',
@@ -34,6 +35,9 @@ export const PHONEBOOK = [
   { number: NUMBERS.time, name: 'Zäitansoen (Zeitansage)', address: '—', district: '—', isBusiness: true },
   { number: NUMBERS.garage, name: 'Garage Muller (fiktiv)', address: "Rue de l'Abattoir (fiktive Hausnr.), Hollerich", district: 'Hollerich', isBusiness: true },
   { number: NUMBERS.parts, name: 'Autosdeeler Wagner (fiktiv)', address: "Route d'Esch (fiktive Hausnr.), Hollerich", district: 'Hollerich', isBusiness: true },
+  { number: '22 06 41', name: 'Reding, M.', address: 'Rue fictive 7, Ville Haute', district: 'Ville Haute' },
+  { number: '48 32 10', name: 'Reding, J.-P.', address: 'Rue fictive 22, Gare', district: 'Gare' },
+  { number: '44 90 57', name: 'Reding, A.', address: 'Rue fictive 5, Hollerich', district: 'Hollerich' },
   { number: NUMBERS.home, name: 'Kremer (eigene Wohnung)', address: 'Avenue de la Liberté, 3. Stock', district: 'Gare' },
 ];
 
@@ -63,6 +67,12 @@ export const OBJECTIVE_TEXT: Record<string, { de: string; fr: string; en: string
   buy_parts: { de: 'Bremsteile beim Autosdeeler Wagner an der Route d’Esch kaufen (ca. 1 800 F)', fr: 'Acheter les pièces chez Wagner, route d’Esch (env. 1 800 F)', en: 'Buy brake parts at Wagner’s on Route d’Esch (about 1,800 F)' },
   test_drive: { de: 'Probefahrt: an den Pylonen vorbei (Route d’Esch – Rond-Point Merl) und zurück zur Garage', fr: 'Essai routier : passer les cônes (route d’Esch – rond-point Merl) et revenir au garage', en: 'Test drive: pass the cones (Route d’Esch – Rond-Point Merl) and return to the garage' },
   report_to_owner: { de: 'Herrn Muller Bericht erstatten', fr: 'Faire le rapport à Monsieur Muller', en: 'Report to Mr Muller' },
+  // Mission 03
+  buy_newspaper: { de: 'Zeitung kaufen – Kiosk an der Place de Paris (Kleinanzeigen lesen)', fr: 'Acheter le journal – kiosque place de Paris (lire les petites annonces)', en: 'Buy a newspaper – kiosk at Place de Paris (read the classifieds)' },
+  'group:contact': { de: 'Die Nummer aus der Kleinanzeige anrufen (nur 18–20 Uhr) – Telefonzelle oder von zu Hause', fr: 'Appeler le numéro de l’annonce (18 h–20 h seulement) – cabine ou depuis chez soi', en: 'Call the number from the ad (6–8 pm only) – phone booth or from home' },
+  meet_stranger: { de: 'Treffen im Pétrusse-Tal unter dem Pont Adolphe', fr: 'Rendez-vous dans la vallée de la Pétrusse sous le pont Adolphe', en: 'Meeting in the Pétrusse valley below Pont Adolphe' },
+  combine_clues: { de: 'Die Kiste zur Schwester bringen – Hinweise im Notizbuch kombinieren, die richtige Tür finden', fr: 'Apporter la boîte à la sœur – combiner les indices du carnet, trouver la bonne porte', en: 'Bring the box to the sister – combine the clues in your notebook, find the right door' },
+  done03: { de: 'Freies Spiel – Schichten in der Garage Muller, Stadt erkunden. Weitere Missionen folgen.', fr: 'Jeu libre – postes au garage Muller, explorer la ville. D’autres missions suivront.', en: 'Free roam – shifts at Garage Muller, explore the city. More missions to come.' },
   done02: { de: 'Probearbeit erledigt. Freies Spiel – weitere Missionen folgen.', fr: 'Essai terminé. Jeu libre – d’autres missions suivront.', en: 'Trial job done. Free roam – more missions to come.' },
 };
 
@@ -134,6 +144,53 @@ export const DIALOGUE02 = {
   reportDamaged: { who: 'Här Muller', lb: 'An do ass eng nei Bull un der Karosserie. Déi geet vun Ärem Loun of.', de: 'Und da ist eine neue Beule an der Karosserie. Die geht von Ihrem Lohn ab.', fr: 'Et il y a une nouvelle bosse sur la carrosserie. Elle sera retenue sur votre paie.', en: 'And there’s a new dent in the bodywork. That comes out of your pay.' } as Line,
   wrecked: [{ who: 'Här Muller', lb: 'Wat hutt Dir gemaach?! Den Dépannage hëlt en elo mat. Kommt muer erëm – dann probéiere mer et nach eng Kéier.', de: 'Was haben Sie gemacht?! Der Abschleppdienst holt ihn jetzt. Kommen Sie morgen wieder – dann versuchen wir es noch einmal.', fr: 'Qu’avez-vous fait ?! La dépanneuse l’emmène. Revenez demain – on réessaiera.', en: 'What have you done?! The tow truck is taking it. Come back tomorrow – we’ll try again.' }] as Line[],
 };
+
+export const NEWSPAPER_PRICE = 30;  // Platzhalter (Kategorie D), siehe Data/Economy/prices_1998.csv
+
+// Fiktive Lokalzeitung. Keine echten Meldungen; Inhalte bewusst allgemein und als erfunden gekennzeichnet.
+export const NEWSPAPER = {
+  title: 'D’Stater Owendblat',
+  subtitle: 'Fiktive Lokalzeitung · Méindeg, 20. Abrëll 1998 · 30 F',
+  stories: [
+    { h: 'Neue Busfahrpläne ab Mai', t: 'Die Stadt kündigt geänderte Abfahrtszeiten auf mehreren Linien an. Fahrgäste sollen die Aushänge an den Haltestellen beachten.' },
+    { h: 'Frühlingsmarkt auf der Place Guillaume', t: 'Händler aus dem ganzen Land bieten am Samstag Gemüse, Blumen und Honig an.' },
+    { h: 'Werkstätten melden viel Arbeit', t: 'Nach dem langen Winter sind Bremsen und Reifen gefragt, berichten Betriebe in Hollerich und Bonnevoie.' },
+  ],
+  ads: [
+    { id: 'flat', t: 'Zu vermieten: 2-Zi.-Wohnung, Bonnevoie, 3. Stock, ruhig. Tel. 49 12 77 (abends).' },
+    { id: 'car', t: 'Verk. Kompaktwagen, Bj. 1991, 120 000 km, TÜV neu. Preis VB. Tel. 40 55 31.' },
+    { id: 'reding', t: 'Suche ehrlichen Menschen mit Auto für einen kleinen Botengang. Kein Risiko, gute Belohnung. Chiffre 4711 – Tel. 45 19 98, nur zwischen 18 und 20 Uhr.', special: true },
+    { id: 'piano', t: 'Gebe Klavierunterricht für Kinder und Erwachsene, Limpertsberg. Tel. 47 08 26.' },
+    { id: 'dog', t: 'Entlaufen: brauner Mischlingshund „Bosco“, hört auf seinen Namen. Belohnung! Tel. 43 21 65.' },
+  ],
+  footer: 'Alle Meldungen, Anzeigen, Personen und Telefonnummern in diesem Spiel sind frei erfunden.',
+};
+
+export const DIALOGUE03 = {
+  kiosk: [{ who: 'Kiosk', lb: 'Moien! D’Owendblat? Dat mécht drësseg Frang.', de: 'Guten Tag! Das Owendblat? Das macht dreißig Franken.', fr: 'Bonjour ! L’Owendblat ? Ça fait trente francs.', en: 'Hello! The Owendblat? That’s thirty francs.' }] as Line[],
+  kioskAgain: [{ who: 'Kiosk', lb: 'Dir hutt d’Zeitung vun haut schonn. Muer gëtt et eng nei!', de: 'Sie haben die Zeitung von heute schon. Morgen gibt es eine neue!', fr: 'Vous avez déjà le journal du jour. Demain il y en aura un nouveau !', en: 'You already have today’s paper. There’s a new one tomorrow!' }] as Line[],
+  noAnswer: [{ who: '', lb: '… Et mellt keen sech. An der Annonce stoung: nëmmen tëscht 18 an 20 Auer.', de: '… Niemand meldet sich. In der Anzeige stand: nur zwischen 18 und 20 Uhr.', fr: '… Personne ne répond. L’annonce disait : seulement entre 18 h et 20 h.', en: '… No answer. The ad said: only between 6 and 8 pm.' }] as Line[],
+  call: [
+    { who: 'Här Reding', lb: 'Reding. … Dir rufft wéinst der Annonce un? Gutt. Ech sinn en ale Mann, ech fueren net méi.', de: 'Reding. … Sie rufen wegen der Anzeige an? Gut. Ich bin ein alter Mann, ich fahre nicht mehr.', fr: 'Reding. … Vous appelez pour l’annonce ? Bien. Je suis un vieil homme, je ne conduis plus.', en: 'Reding. … You’re calling about the ad? Good. I’m an old man, I don’t drive anymore.' },
+    { who: 'Här Reding', lb: 'Ech hunn eng Këscht mat ale Bréiwer fir meng Schwëster. Mir hunn eis viru Joren zerstridden. Si soll se kréien.', de: 'Ich habe eine Kiste mit alten Briefen für meine Schwester. Wir haben uns vor Jahren zerstritten. Sie soll sie bekommen.', fr: 'J’ai une boîte de vieilles lettres pour ma sœur. Nous nous sommes brouillés il y a des années. Elle doit les avoir.', en: 'I have a box of old letters for my sister. We fell out years ago. She should have them.' },
+    { who: 'Här Reding', lb: 'Kommt muer tëscht 10 an 12 Auer an de Pétrusdall, ënnert de Pont Adolphe. Ech sëtzen op der Bänk.', de: 'Kommen Sie morgen zwischen 10 und 12 Uhr ins Pétrusse-Tal, unter den Pont Adolphe. Ich sitze auf der Bank.', fr: 'Venez demain entre 10 h et midi dans la vallée de la Pétrusse, sous le pont Adolphe. Je serai sur le banc.', en: 'Come tomorrow between 10 and 12 to the Pétrusse valley, under Pont Adolphe. I’ll be on the bench.' },
+  ] as Line[],
+  callAgain: [{ who: 'Här Reding', lb: 'Mir hu jo ofgemaach: muer, Pétrusdall, ënnert dem Pont Adolphe.', de: 'Wir haben es ja abgemacht: morgen, Pétrusse-Tal, unter dem Pont Adolphe.', fr: 'C’est convenu : demain, vallée de la Pétrusse, sous le pont Adolphe.', en: 'We agreed: tomorrow, Pétrusse valley, under Pont Adolphe.' }] as Line[],
+  notYet: [{ who: 'Här Reding', lb: 'Dir sidd ze fréi – oder ze spéit? Tëscht 10 an 12 Auer, hat ech gesot.', de: 'Sie sind zu früh – oder zu spät? Zwischen 10 und 12 Uhr, hatte ich gesagt.', fr: 'Vous êtes trop tôt – ou trop tard ? Entre 10 h et midi, avais-je dit.', en: 'You’re too early – or too late? Between 10 and 12, I said.' }] as Line[],
+  meet: [
+    { who: 'Här Reding', lb: 'Dir sidd komm. Merci. Hei ass d’Këscht.', de: 'Sie sind gekommen. Danke. Hier ist die Kiste.', fr: 'Vous êtes venu. Merci. Voici la boîte.', en: 'You came. Thank you. Here is the box.' },
+    { who: 'Här Reding', lb: 'Hir Adress hunn ech net méi. Ech weess nëmmen: si wunnt an der Uewerstad, net wäit vun enger Kierch, wou d’Klacke ronderëm ze héieren sinn.', de: 'Ihre Adresse habe ich nicht mehr. Ich weiß nur: Sie wohnt in der Oberstadt, nicht weit von einer Kirche, deren Glocken man ringsum hört.', fr: 'Je n’ai plus son adresse. Je sais seulement : elle habite la Ville Haute, pas loin d’une église dont on entend les cloches partout.', en: 'I no longer have her address. I only know: she lives in the upper town, near a church whose bells you hear all around.' },
+    { who: 'Här Reding', lb: 'Op der Récksäit vun dësem Foto stinn eng Hausnummer – siwen – an „gréng Dier“. Hire Virnumm ass Marie.', de: 'Auf der Rückseite dieses Fotos stehen eine Hausnummer – sieben – und „grüne Tür“. Ihr Vorname ist Marie.', fr: 'Au dos de cette photo il y a un numéro – sept – et « porte verte ». Son prénom est Marie.', en: 'On the back of this photo: a house number – seven – and “green door”. Her first name is Marie.' },
+  ] as Line[],
+  missed: [{ who: 'Äntwerter', lb: 'Reding hei. Dir waart net do. Ech probéieren et muer nach eng Kéier – selwecht Zäit, selwechte Plaz.', de: 'Hier Reding. Sie waren nicht da. Ich versuche es morgen noch einmal – gleiche Zeit, gleicher Ort.', fr: 'Ici Reding. Vous n’étiez pas là. J’essaie encore demain – même heure, même endroit.', en: 'Reding here. You weren’t there. I’ll try again tomorrow – same time, same place.' }] as Line[],
+  wrongDoor: (who: string): Line[] => [{ who, lb: 'Neen, hei wunnt keng Marie Reding. Dir sidd falsch.', de: 'Nein, hier wohnt keine Marie Reding. Sie sind falsch.', fr: 'Non, il n’y a pas de Marie Reding ici. Vous vous êtes trompé.', en: 'No, no Marie Reding here. Wrong door.' }],
+  rightDoor: [
+    { who: 'Madame Marie Reding', lb: 'Jo? … Bréiwer? Vu mengem Brudder?', de: 'Ja? … Briefe? Von meinem Bruder?', fr: 'Oui ? … Des lettres ? De mon frère ?', en: 'Yes? … Letters? From my brother?' },
+    { who: 'Madame Marie Reding', lb: 'Dräisseg Joer hu mir net méi mateneen geschwat. … Merci. Wierklech, merci. Huelt dat hei, ech bestinn drop.', de: 'Dreißig Jahre haben wir nicht mehr miteinander gesprochen. … Danke. Wirklich, danke. Nehmen Sie das, ich bestehe darauf.', fr: 'Trente ans que nous ne nous sommes pas parlé. … Merci. Vraiment, merci. Prenez ceci, j’insiste.', en: 'Thirty years we haven’t spoken. … Thank you. Truly, thank you. Take this, I insist.' },
+  ] as Line[],
+};
+
+export const SLEEP_LINE: Line = { who: '', lb: 'Bis muer de Moien schlofen?', de: 'Bis morgen früh schlafen?', fr: 'Dormir jusqu’à demain matin ?', en: 'Sleep until tomorrow morning?' };
 
 export const PAY = { honest: 4500, partsCost: 1800, shortcut: 2000, damagePenalty: 1500 };
 

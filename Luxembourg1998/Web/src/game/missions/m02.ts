@@ -7,7 +7,7 @@ import { missionDef, nextObjective } from '../missiondata';
 import { makeCone, makePerson, makeSign, type PersonModel } from '../models';
 import { DIALOGUE02, NUMBERS, OBJECTIVE_TEXT, PAY, type Lang, type Line } from '../story';
 import { Vehicle } from '../vehicle';
-import { M01_ID, type Mission01 } from './m01';
+import type { Mission01 } from './m01';
 import type { MissionController } from './types';
 
 export const M02_ID = 'M02_ENG_LESCHT_CHANCE';
@@ -107,6 +107,8 @@ export class Mission02 implements MissionController {
     wSign.rotation.y = Math.atan2(wSide.right.x, wSide.right.z);
     g.scene.add(wSign);
     g.addInteractable({ pos: this.partsSpot, radius: 2.4, label: () => (g.mode === 'walk' ? 'Mam Här Wagner schwätzen' : null), act: () => this.talkWagner() });
+
+    g.registerMessage(MSG_ID, DIALOGUE02.jangMessage);
 
     // Pylonen fuer die Probefahrt
     const routePts = [best ?? P.route_esch, P.rue_bouillon, P.rond_point_merl].filter(Boolean) as THREE.Vector3[];
@@ -398,4 +400,3 @@ export class Mission02 implements MissionController {
   }
 }
 
-export { M01_ID };
