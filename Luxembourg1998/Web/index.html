@@ -143,8 +143,15 @@
   #paper .feature img { width: 100%; filter: grayscale(1) contrast(1.15); display: block; margin-bottom: 6px; }
   #paper .feature h3 { font-size: 24px; }
   #paper .credit { font-size: 11px; color: #666; font-style: italic; }
+  #ending { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(14,16,20,.75), rgba(4,5,7,.96)); pointer-events: auto; padding: 16px; }
+  #ending .endcard { max-width: 640px; width: 100%; max-height: calc(100vh - 32px); overflow: auto; }
+  #ending .kicker { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #8f897c; margin: 0; }
+  #ending h1 { font-family: 'Special Elite', monospace; font-weight: normal; font-size: clamp(28px, 5vw, 44px); margin: 6px 0 16px; color: var(--hud-text); text-wrap: balance; }
+  #ending .text p { font-size: 15px; line-height: 1.6; color: #d8d2c2; margin: 0 0 10px; }
+  #ending .stats { list-style: none; padding: 10px 0; margin: 14px 0; border-top: 1px solid #3a3f48; border-bottom: 1px solid #3a3f48; font-size: 13px; color: #c9c3b4; display: grid; gap: 4px; }
+  #ending .motto { font-family: 'Caveat', cursive; font-size: 22px; color: var(--accent); }
   /* Ebenen: Spielbild < Touch-Flaechen (4) < Anzeigen (5) < Fenster (10) < Menues (20) */
-  #dialogue, #choice, #notebook, #phone, #workshop, #paper, #computer, #photos { z-index: 10; }
+  #dialogue, #choice, #notebook, #phone, #workshop, #paper, #computer, #photos, #ending { z-index: 10; }
   .screen { z-index: 20; }
   /* Touch */
   #touch { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
@@ -280,6 +287,17 @@
 <div id="viewfinder" class="hidden"><div class="frame"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><b class="cross"></b></div><div id="vfinfo"></div></div>
 <div id="flash"></div>
 <div id="photos" class="hidden"><div class="sheet2"><h3>Kontaktofzich · Fotolabo Feller</h3><div class="grid"></div><button class="btn" id="photosClose">Weider [E]</button></div></div>
+
+<div id="ending" class="hidden">
+  <div class="endcard">
+    <p class="kicker">LUXEMBOURG 1998 · Echoes of a City</p>
+    <h1></h1>
+    <div class="text"></div>
+    <ul class="stats"></ul>
+    <p class="motto">A city before the digital age. A life before everything changed.</p>
+    <button class="btn" id="endingClose">Weiter spielen (1999) [E]</button>
+  </div>
+</div>
 
 <div id="notebook" class="hidden">
   <div id="nb">

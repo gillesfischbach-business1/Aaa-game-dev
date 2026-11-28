@@ -335,14 +335,14 @@
       "title_de": "Millennium",
       "district": "Ville Haute",
       "prerequisites": [
-        "M06_ENG_NUECHT_AM_GRONN",
         "M07_DSTAD_AM_WANDEL"
       ],
       "available_from": "1998-12-01",
       "available_until": "1998-12-31",
       "objectives": [
         {
-          "id": "conversations_future"
+          "id": "conversations_future",
+          "checkpoint": true
         },
         {
           "id": "final_choice"
@@ -350,9 +350,16 @@
       ],
       "fail_conditions": [],
       "rewards": {
-        "money_luf": null
+        "money_luf": null,
+        "note": "Ende des ersten Kapitels; Epilog aus allen Entscheidungen"
       },
-      "teaches": []
+      "teaches": [
+        "time_skip",
+        "winter",
+        "consequences",
+        "ending"
+      ],
+      "location_note": "Weihnachtsstaende auf der Place d'Armes sind eine Annaeherung (Kategorie C, nicht belegt); Silvester auf der Place d'Armes"
     }
   ]
 }

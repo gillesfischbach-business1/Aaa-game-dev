@@ -59,6 +59,7 @@ export class Career {
 
   talk(): void {
     const g = this.g;
+    if (g.m08.tryTalk('muller')) return;
     if (!this.canStartShift()) {
       const d = g.clock.getDate(), wd = dayOfWeek(d);
       const line = this.lastDay === this.today()

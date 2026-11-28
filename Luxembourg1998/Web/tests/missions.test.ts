@@ -68,3 +68,19 @@ describe('Missionsdaten aus Data/Missions/missions_main.json', () => {
     expect(t.isObjectiveDone(def.id, 'listen_message')).toBe(true);
   });
 });
+
+describe('M08 Millennium', () => {
+  it('erst ab 1. Dezember 1998 verfuegbar und nur bis 31. Dezember', () => {
+    const t = new MissionTracker();
+    const def = { ...missionDef('M08_MILLENNIUM'), prerequisites: [] };
+    t.register(def);
+    t.refresh({ year: 1998, month: 11, day: 30 });
+    expect(t.getState(def.id)).toBe('Locked');
+    t.refresh({ year: 1998, month: 12, day: 1 });
+    expect(t.getState(def.id)).toBe('Available');
+    const t2 = new MissionTracker();
+    t2.register(def);
+    t2.refresh({ year: 1999, month: 1, day: 2 });
+    expect(t2.getState(def.id)).toBe('Locked');
+  });
+});

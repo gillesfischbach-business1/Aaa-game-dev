@@ -72,7 +72,7 @@ export class Mission02 implements MissionController {
     g.npcs.push(this.muller);
     g.addInteractable({ pos: mPos, radius: 2.4, label: () => (g.mode === 'walk' && g.missions.getState(this.id) !== 'Succeeded' ? 'Mam Här Muller schwätzen' : null), act: () => this.talkMuller() });
     // Nach der Mission: Arbeit als Mechaniker (Schichten)
-    g.addInteractable({ pos: mPos, radius: 2.4, label: () => (g.missions.getState(this.id) === 'Succeeded' ? g.career.label() : null), act: () => g.career.talk() });
+    g.addInteractable({ pos: mPos, radius: 2.4, label: () => (g.missions.getState(this.id) === 'Succeeded' ? (g.m08.current() === 'conversations_future' && g.mode === 'walk' ? 'Mam Här Muller schwätzen' : g.career.label()) : null), act: () => g.career.talk() });
 
     // Kundenwagen: roter Kombi, am Fahrbahnrand vor der Werkstatt
     this.customerCar = new Vehicle(9, 2, 0x8a1c1c);

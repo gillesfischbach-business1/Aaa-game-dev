@@ -106,6 +106,7 @@ export class Mission07 implements MissionController {
   private talkMia(): void {
     const g = this.g, c = this.current(), cam = g.camera35;
     if (!this.open()) { g.ui.dialogue(DIALOGUE07.closed); return; }
+    if (g.m08.tryTalk('mia')) return;
     if (c === 'listen_mia' || c === 'get_camera') {
       g.ui.dialogue(DIALOGUE07.camera, () => {
         cam.owned = true;

@@ -15,6 +15,8 @@ export interface City {
   surfaceAt(x: number, z: number, y: number): number;
   setNight(amount: number): void;  // 0 = Tag, 1 = Nacht (Fensterlicht, Laternen)
   setWet(amount: number): void;    // 0 = trocken, 1 = nass (glaenzender Asphalt, Pfuetzen-Spiegelung)
+  setSeason(month: number): void;  // Laub nur Mitte April bis Oktober (Laubbaeume)
+  setSnow(amount: number): void;   // 0 = kein Schnee, 1 = verschneit
   buildingFootprints: [number, number][][];
 }
 
@@ -164,7 +166,9 @@ export function buildCity(data: WorldData, scene: THREE.Scene, opts: { trees: nu
       if (pointInPolygon(terrain.x0 + c * terrain.step, terrain.z0 + r * terrain.step, poly)) mask[r * terrain.cols + c] = t === 2 || t === 3 ? 2 : 1;
     }
   }
-  root.add(terrain.buildMesh(mask));
+  const terrainMesh = terrain.buildMesh(mask);
+  root.add(terrainMesh);
+  let crownMesh: THREE.InstancedMesh | null = null;
 
   // ---------- Gebaeude ----------
   const { map: facadeMap, emissive: facadeEmissive } = facadeTextures();
@@ -451,6 +455,7 @@ export function buildCity(data: WorldData, scene: THREE.Scene, opts: { trees: nu
     trunks.castShadow = crowns.castShadow = true;
     crowns.receiveShadow = true;
     root.add(trunks, crowns);
+    crownMesh = crowns;
   }
 
   // ---------- Strassenlaternen ----------
@@ -478,6 +483,15 @@ export function buildCity(data: WorldData, scene: THREE.Scene, opts: { trees: nu
       const ground = terrain.heightAt(x, z);
       const br = collision.bridgeAt(x, z, y);
       return br && br.deck > ground ? br.deck : ground;
+    },
+    setSeason(month: number): void {
+      if (crownMesh) crownMesh.visible = month >= 4 && month <= 10;
+    },
+    setSnow(amount: number): void {
+      // Schnee als helle Selbstleuchtung auf Gelaende und Daechern (einfache Naeherung)
+      const tm = terrainMesh.material as THREE.MeshStandardMaterial;
+      tm.emissive.setScalar(0.55 * amount);
+      roofMat.emissive.setScalar(0.45 * amount);
     },
     setWet(amount: number): void {
       asphaltMat.roughness = 0.92 - 0.72 * amount;

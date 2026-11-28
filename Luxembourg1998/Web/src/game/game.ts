@@ -18,6 +18,7 @@ import { Mission06, M06_ID } from './missions/m06';
 import { Radio } from './radio';
 import { PhotoCamera, type Photo } from './camera';
 import { Mission07, M07_ID } from './missions/m07';
+import { Mission08, M08_ID } from './missions/m08';
 import { Internet } from './internet';
 import type { MissionController } from './missions/types';
 import { missionDef } from './missiondata';
@@ -92,6 +93,7 @@ export class Game {
   readonly radio: Radio;
   readonly camera35 = new PhotoCamera();
   readonly m07: Mission07;
+  readonly m08: Mission08;
   photoMode = false;
   private shutterQueued = false;
   /** Eigene Reportage in der Zeitung (ab Tag `day`) */
@@ -149,7 +151,8 @@ export class Game {
     this.m05 = new Mission05(this);
     this.m06 = new Mission06(this);
     this.m07 = new Mission07(this);
-    this.controllers = [this.m01, this.m02, this.m03, this.m05, this.m06, this.m07];
+    this.m08 = new Mission08(this);
+    this.controllers = [this.m01, this.m02, this.m03, this.m05, this.m06, this.m07, this.m08];
     canvas.addEventListener('mousedown', () => { if (this.photoMode) this.shutterQueued = true; });
     this.radio = new Radio({
       hour: () => this.clock.getHour(),
@@ -175,7 +178,7 @@ export class Game {
 
   private registerMissions(): void {
     this.missions = new MissionTracker();
-    for (const id of [M01_ID, M02_ID, M03_ID, M05_ID, M06_ID, M07_ID]) {
+    for (const id of [M01_ID, M02_ID, M03_ID, M05_ID, M06_ID, M07_ID, M08_ID]) {
       const r = this.missions.register(missionDef(id));
       if (!r.ok) console.error(r.error);
     }
@@ -195,7 +198,8 @@ export class Game {
 
   /** Spielzeit in Stunden (Normalzeit) seit 1.1.1998 0 Uhr – fuer Fristen */
   absHours(): number {
-    return (dayOfYear(this.clock.getStandardDate()) - 1) * 24 + this.clock.getStandardHour();
+    const d = this.clock.getStandardDate();
+    return ((d.year - 1998) * 365 + dayOfYear(d) - 1) * 24 + this.clock.getStandardHour();
   }
 
   private absToWall(abs: number): { date: LuxDate; hour: number } {
@@ -219,7 +223,7 @@ export class Game {
     let d = addDays(this.clock.getDate(), 1);
     while (dayOfWeek(d) === 6) d = addDays(d, 1);
     const std = wallHour - (isSummerTime(d, wallHour - 1) ? 1 : 0);
-    return (dayOfYear(d) - 1) * 24 + std;
+    return ((d.year - 1998) * 365 + dayOfYear(d) - 1) * 24 + std;
   }
 
   advanceMinutes(min: number): void {
@@ -310,6 +314,16 @@ export class Game {
     document.getElementById('vfinfo')!.textContent = `Film: ${this.camera35.film}/24 · Klick, F oder E = auslösen · Esc/V = zurück`;
     if (inp.consume('foto') || inp.consume('interact') || this.shutterQueued) { this.shutterQueued = false; this.takePhoto(); }
     if (inp.consume('pause') || inp.consume('view')) this.exitPhotoMode();
+  }
+
+  /** Abspann am Ende eines Kapitels */
+  showEnding(ep: { title: string; paragraphs: string[]; stats: string[] }): void {
+    const root = document.getElementById('ending')!;
+    (root.querySelector('h1') as HTMLElement).textContent = ep.title;
+    (root.querySelector('.text') as HTMLElement).innerHTML = ep.paragraphs.map((p) => `<p>${p}</p>`).join('');
+    (root.querySelector('.stats') as HTMLElement).innerHTML = ep.stats.map((s) => `<li>${s}</li>`).join('');
+    this.openOverlay('ending');
+    this.save();
   }
 
   /** Kontaktbogen nach dem Entwickeln */
@@ -443,12 +457,14 @@ export class Game {
       { value: 'machine', label: { de: 'Anrufbeantworter abhören', fr: 'Écouter le répondeur', en: 'Check the answering machine' } },
       { value: 'call', label: { de: 'Von zu Hause telefonieren (Telefonrechnung)', fr: 'Téléphoner de chez soi (facture)', en: 'Make a call from home (phone bill)' } },
       { value: 'sleep', label: { de: 'Schlafen bis morgen 8 Uhr', fr: 'Dormir jusqu’à demain 8 h', en: 'Sleep until 8 am tomorrow' } },
+      ...(this.m08.canSkip() ? [{ value: 'skip', label: { de: 'Die Monate bis Dezember vergehen lassen', fr: 'Laisser passer les mois jusqu’en décembre', en: 'Let the months pass until December' } }] : []),
       { value: 'leave', label: { de: 'Weitergehen', fr: 'Repartir', en: 'Leave' } },
     ];
     this.ui.choice({ who: '', lb: 'Doheem – drëtte Stack.', de: 'Zu Hause – dritter Stock.', fr: 'Chez soi – troisième étage.', en: 'Home – third floor.' }, opts, (v) => {
       if (v === 'machine') this.checkAnsweringMachine();
       else if (v === 'call') this.openPhone(true);
       else if (v === 'sleep') this.ui.dialogue([SLEEP_LINE], () => this.sleep());
+      else if (v === 'skip') this.m08.skipToDecember();
     });
   }
 
@@ -642,7 +658,7 @@ export class Game {
     const L = this.ui.lang;
     if (this.nbPage === 'notes') {
       // Laufende Mission zuerst und ausfuehrlich, erledigte als eine Zeile
-      const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung', [M05_ID]: 'Déi verluer Diskett', [M06_ID]: 'Eng Nuecht am Gronn', [M07_ID]: 'D’Stad am Wandel' };
+      const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung', [M05_ID]: 'Déi verluer Diskett', [M06_ID]: 'Eng Nuecht am Gronn', [M07_ID]: 'D’Stad am Wandel', [M08_ID]: 'Millennium' };
       const active = this.controllers.filter((c) => this.missions.getState(c.id) === 'Active').map((c) => c.notes(L).replace(' style="margin-top:14px"', '')).join('');
       const doneList = this.controllers.filter((c) => this.missions.getState(c.id) === 'Succeeded').map((c) => `<div class="done">✓ ${titles[c.id] ?? c.id}</div>`).join('');
       const missionsHtml = `${active}${this.career.notes(L)}${this.m07.careerNotes()}${doneList ? `<h3 style="margin-top:14px">ERLEDIGT</h3>${doneList}` : ''}`;
@@ -684,6 +700,7 @@ export class Game {
     // Ueberlagerungen (Zeitung) mit E/Esc schliessen
     document.getElementById('paperClose')?.addEventListener('click', () => this.overlayClose?.());
     document.getElementById('photosClose')?.addEventListener('click', () => this.overlayClose?.());
+    document.getElementById('endingClose')?.addEventListener('click', () => this.overlayClose?.());
     window.addEventListener('keydown', (e) => {
       if (this.overlayClose && ['KeyE', 'Escape', 'Space'].includes(e.code)) { e.preventDefault(); this.overlayClose(); }
     });
@@ -850,6 +867,11 @@ export class Game {
     this.env.update(this.clock, this.activePos(), this.camera, this.running ? dt : 0);
     this.city.setNight(this.env.night);
     this.city.setWet(this.env.wetness);
+    const today = this.clock.getDate();
+    this.city.setSeason(today.month);
+    const winter = today.month === 12 || today.month <= 2;
+    this.env.snowing = winter && !this.env.raining && today.day % 3 !== 0 && this.env.night < 0.9;
+    this.city.setSnow(winter && today.day >= 5 ? 1 : winter ? 0.4 : 0);
     for (const d of this.drivables) if (d.v !== this.veh) d.v.lights = false;
     this.updateCamera(dt);
     this.updateHud();

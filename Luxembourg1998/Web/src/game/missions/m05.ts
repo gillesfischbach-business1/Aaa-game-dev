@@ -177,6 +177,7 @@ export class Mission05 implements MissionController {
 
   private talkTom(): void {
     const g = this.g, c = this.current();
+    if (g.m08.tryTalk('tom')) return;
     if (c === 'listen_tom' || c === 'talk_technician') {
       g.ui.dialogue(DIALOGUE05.tomIntro, () => {
         if (!this.done('listen_tom')) this.complete('listen_tom');

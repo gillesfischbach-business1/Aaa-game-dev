@@ -11,7 +11,8 @@ export class Environment {
   private rain: THREE.LineSegments;
   private rainOn = false;
   wetness = 0;
-  indoor = false;   // im Innenraum: kein Regen, kaum Sonnenlicht
+  indoor = false;
+  snowing = false;   // im Innenraum: kein Regen, kaum Sonnenlicht
   night = 0;
   sunElevation = 0;
 
@@ -100,15 +101,19 @@ export class Environment {
 
     // Naesse steigt bei Regen langsam, trocknet langsam ab
     this.wetness = THREE.MathUtils.clamp(this.wetness + (this.rainOn ? dt / 40 : -dt / 300), 0, 1);
-    this.rain.visible = this.rainOn && !this.indoor;
+    this.rain.visible = (this.rainOn || this.snowing) && !this.indoor;
+    (this.rain.material as THREE.LineBasicMaterial).color.setHex(this.snowing ? 0xffffff : 0xaabbcc);
+    (this.rain.material as THREE.LineBasicMaterial).opacity = this.snowing ? 0.8 : 0.35;
     if (this.indoor) { this.sun.intensity *= 0.05; this.hemi.intensity = 0.35; }
-    if (this.rainOn) {
+    if (this.rainOn || this.snowing) {
+      const fall = this.snowing ? 3 : 24;
       this.rain.position.set(camera.position.x, camera.position.y - 15, camera.position.z);
       const p = this.rain.geometry.attributes.position as THREE.BufferAttribute;
       const arr = p.array as Float32Array;
       for (let i = 0; i < arr.length; i += 6) {
-        arr[i + 1] -= 24 * dt;
-        arr[i + 4] -= 24 * dt;
+        arr[i + 1] -= fall * dt;
+        arr[i + 4] -= fall * dt;
+        if (this.snowing) { const w = Math.sin(arr[i + 1] * 0.7 + i) * 0.02; arr[i] += w; arr[i + 3] += w; }
         if (arr[i + 1] < 0) { arr[i + 1] += 40; arr[i + 4] += 40; }
       }
       p.needsUpdate = true;

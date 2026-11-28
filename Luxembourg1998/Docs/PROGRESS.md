@@ -124,3 +124,15 @@ der engine-unabhaengige Kern und die Werkzeuge.
 ### Nicht geprueft
 - Ob ein Motiv durch Gebaeude verdeckt ist (die Bewertung prueft nur Bildausschnitt, Entfernung und Licht).
 - Fotos werden nicht im Spielstand gespeichert (zu gross); nach dem Laden bleiben nur die Beschreibungen.
+
+## 2026-11-28 – Sitzung 2, Teil 5: Mission 08 „Millennium“ – Ende des ersten Kapitels
+
+### Tatsaechlich geprueft
+- Zeitsprung ueber das Zuhause-Menue (nach M07): Rueckblende, Ersparnisse je nach Beruf (Spielbalance), 1.12.1998.
+- Winter: kahle Laubbaeume (Laub nur April–Oktober), Schneefall, verschneite Daecher/Gelaende (einfache Naeherung),
+  kuerzere Tage durch das Sonnenmodell; Weihnachtsstaende auf der Place d'Armes (Kategorie C, nicht belegt).
+- Gespraeche ueber Euro, Millennium-Bug und Plaene mit Jang, Tom, Mia, Herrn Muller (3 von 4).
+- Silvester: Optionen abhaengig von bisherigen Entscheidungen (Werkstatt nur mit Stelle bei Muller, Fotostudio
+  nur als Fotograf), Mitternacht, Feuerwerk, Abspann mit Epilog aus allen Flags; verpasstes Silvester -> eigener Epilog.
+- Spielzeit-Berechnung jetzt jahresuebergreifend (vorher waere sie am 1.1.1999 auf 0 gesprungen).
+- Eigener Browser-Test `tests/e2e/m08.mjs`: 22 Pruefungen gruen in zwei Spielverlaeufen; Vitest 21.

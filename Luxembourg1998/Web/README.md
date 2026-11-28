@@ -15,7 +15,8 @@ Mission 03 „D’Nummer an der Zeitung“ (Kiosk → Kleinanzeige → Anruf 18�
 richtige von drei Türen finden), Mission 05 „Déi verluer Diskett“ (begehbares Cybercafé, fiktives Offline-Internet
 mit Forum, E-Mail, Chat, Gästebuch; drei Lösungswege), Mission 06 „Eng Nuecht am Gronn“ (abends im Grund, drei
 Ausgänge mit Folgen), Mission 07 „D’Stad am Wandel“ (analoge Kamera mit Sucher, Kontaktbogen, eigene Reportage
-in der Zeitung), Fotoaufträge, Autoradio mit drei fiktiven Sendern (live erzeugte Musik), Arbeit als Mechaniker (Schichten Mo–Fr), Zuhause (Anrufbeantworter, Telefon,
+in der Zeitung), Mission 08 „Millennium“ (Zeitsprung in den Dezember, Winter, Silvester mit Feuerwerk, Abspann
+mit Epilog aus allen Entscheidungen – Ende des ersten Kapitels), Fotoaufträge, Autoradio mit drei fiktiven Sendern (live erzeugte Musik), Arbeit als Mechaniker (Schichten Mo–Fr), Zuhause (Anrufbeantworter, Telefon,
 Schlafen), Touch-Steuerung für Handy/Tablet,
 Fußgänger, Verkehr, echter Sonnenstand, Tag/Nacht, Regen mit nassen Straßen, Fahrphysik mit Hangabtrieb, Schaden
 und Verbrauch, Notizbuch mit handgezeichnetem Stadtplan, Telefonbuch, Zeitansage, Speichern/Laden.
@@ -30,6 +31,7 @@ npm run build:single   # alles in eine HTML-Datei (dist-single/)
 npx vite preview --port 4173 &
 node tests/e2e/smoke.mjs http://localhost:4173/ ./shots   # Browser-Test: M01–M03, Arbeit, Speichern (80 Pruefungen, ca. 12 Minuten)
 node tests/e2e/touch.mjs http://localhost:4173/ ./shots   # Handy-Test (Touch, 390x844)
+node tests/e2e/m08.mjs http://localhost:4173/ ./shots     # Mission 08 mit vorbereitetem Spielstand (2 Verlaeufe)
 ```
 Welt neu erzeugen: `python3 -m lux98.bake_web OSM_ORDNER DEM.json ../Web/src/data/world.json` (aus `Scripts/`),
 Höhen laden: `python3 -m lux98.fetch_dem 49.5975 6.1220 49.6135 6.1400 25 DEM.json`.

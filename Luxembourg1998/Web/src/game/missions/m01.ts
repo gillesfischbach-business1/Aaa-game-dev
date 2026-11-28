@@ -30,7 +30,7 @@ export class Mission01 implements MissionController {
     const jangSpot = g.openSpot(P.place_darmes ?? new THREE.Vector3(-58, 315, 64));
     this.jang.root.position.copy(jangSpot);
     g.npcs.push(this.jang);
-    g.addInteractable({ pos: jangSpot, radius: 2.4, label: () => (g.mode === 'walk' ? 'Mam Jang schwätzen' : null), act: () => this.talkJang() });
+    g.addInteractable({ pos: jangSpot, radius: 2.4, label: () => (g.mode === 'walk' && this.jang.root.visible ? 'Mam Jang schwätzen' : null), act: () => this.talkJang() });
   }
 
   private done(id: string): boolean { return this.g.missions.isObjectiveDone(this.id, id); }
