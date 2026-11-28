@@ -28,3 +28,15 @@ der engine-unabhaengige Kern und die Werkzeuge.
 ### Erledigt, aber NICHT geprueft
 - Unreal-Projektdatei, Build-Regeln, Konfiguration, 6 Unreal-Klassen (Figur, Fahrzeug, Uhr, Wirtschaft, Missionen,
   Spielstaende). Grund: keine Unreal Engine verfuegbar.
+
+## 2026-11-28 – Sitzung 1, Teil 2: spielbare Browser-Fassung (`Web/`)
+
+### Tatsaechlich geprueft
+- TypeScript-Port des Kerns: alle 109 C++-Pruefungen uebernommen, Vitest gruen; `tsc --noEmit` ohne Fehler.
+- Welt aus OSM + EU-DEM gebacken: 2 851 Gebaeude, 2 277 Wege, Bruecken gespannt; 104 Elemente als Nach-1998 entfernt.
+- Browser-Test (Playwright, Software-Rendering): Mission 01 von Anfang bis Ende erfolgreich, Telefonzelle mit
+  Muenzen/Rueckgeld, Fahrt, Speichern/Laden, 0 Konsolenfehler. Bildschirmfotos angesehen.
+- Als privates Artifact veroeffentlicht (eine HTML-Datei, 1,3 MB): https://claude.ai/artifact/K7drvJ9W6rfBKqviY9dpRD
+
+### Nicht geprueft
+- Bildrate auf echter Hardware; Gamepad; Handy-Bedienung (keine Touch-Steuerung).

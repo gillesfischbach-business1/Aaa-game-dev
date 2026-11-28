@@ -6,6 +6,10 @@ Fotorealistisches Open-World-Spiel fuer Windows-PC auf Unreal Engine 5. Schaupla
 
 **Stand:** Phase 0 abgeschlossen, Phase 1 (spielbare Grundlage) begonnen. Siehe `Docs/PROGRESS.md`.
 
+## Jetzt spielbar: Browser-Fassung
+Ordner `Web/` – Three.js, gleiche Spiellogik, Stadtausschnitt Gare bis Oberstadt aus echten Karten- und Hoehendaten.
+Details: `Web/README.md`.
+
 ## Was hier schon funktioniert (ohne Unreal pruefbar)
 
 | Teil | Ort | Geprueft |

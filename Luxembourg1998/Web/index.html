@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Luxembourg 1998</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Special+Elite&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root { color-scheme: dark;
+    --paper: #f3ecd9; --ink: #1f2a44; --ink-soft: #44506b; --red: #a33a2c; --hud: rgba(14, 16, 20, 0.62);
+    --hud-text: #ece6d6; --accent: #e0b74a; --line: rgba(31, 42, 68, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #0d0f12; overflow: hidden; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: var(--hud-text); }
+  canvas#game { display: block; width: 100%; height: 100%; }
+  .hidden { display: none !important; }
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  #clock { position: absolute; top: 14px; left: 16px; background: var(--hud); padding: 6px 12px; border-radius: 4px; font-family: 'Special Elite', monospace; font-size: 15px; letter-spacing: .5px; }
+  #money { position: absolute; bottom: 16px; left: 16px; background: var(--hud); padding: 6px 12px; border-radius: 4px; font-size: 14px; }
+  #money b { color: var(--accent); font-weight: 600; }
+  #note { position: absolute; top: 14px; right: 16px; max-width: min(340px, 60vw); background: var(--paper); color: var(--ink); padding: 10px 14px 12px; border-radius: 2px; font-family: 'Caveat', cursive; font-size: 20px; line-height: 1.15; box-shadow: 0 3px 10px rgba(0,0,0,.35); transform: rotate(0.8deg); }
+  #note small { display: block; font-family: 'IBM Plex Sans', sans-serif; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 2px; }
+  #prompt { position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%); background: var(--hud); padding: 7px 14px; border-radius: 4px; font-size: 15px; }
+  #prompt kbd { display: inline-block; border: 1px solid var(--hud-text); border-radius: 3px; padding: 0 6px; margin-right: 6px; font-family: inherit; }
+  #toast { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); background: var(--hud); padding: 7px 16px; border-radius: 4px; font-size: 14px; transition: opacity .4s; }
+  #speedo { position: absolute; bottom: 16px; right: 16px; width: 150px; height: 150px; }
+  #carinfo { position: absolute; bottom: 172px; right: 16px; background: var(--hud); padding: 4px 10px; border-radius: 4px; font-size: 12px; text-align: right; }
+  #dialogue { position: fixed; left: 50%; bottom: 7%; transform: translateX(-50%); width: min(760px, calc(100vw - 32px)); background: rgba(10, 12, 16, 0.78); padding: 14px 18px; border-radius: 6px; pointer-events: auto; }
+  #dialogue .who { color: var(--accent); font-weight: 600; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
+  #dialogue .lb { font-size: 18px; line-height: 1.35; }
+  #dialogue .sub { font-size: 14px; color: #b9b3a5; margin-top: 6px; font-style: italic; }
+  #dialogue .next { font-size: 12px; color: #8f897c; text-align: right; margin-top: 6px; }
+  /* Notizbuch */
+  #notebook { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); pointer-events: auto; }
+  #nb { width: min(980px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px)); background: var(--paper); color: var(--ink); border-radius: 6px 10px 10px 6px; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 14px 0 0 #2a2f3a; display: flex; flex-direction: column; padding: 14px 18px 14px 34px;
+        background-image: repeating-linear-gradient(transparent 0 27px, var(--line) 27px 28px); }
+  #nb nav { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  #nb nav button { font-family: 'Special Elite', monospace; font-size: 14px; background: #e6dcc2; color: var(--ink); border: 1px solid #c9bd9f; border-radius: 3px 3px 0 0; padding: 5px 12px; cursor: pointer; }
+  #nb nav button.on { background: var(--ink); color: var(--paper); }
+  #nb nav .close { margin-left: auto; }
+  #nbbody { flex: 1; overflow: auto; font-family: 'Caveat', cursive; font-size: 22px; line-height: 28px; }
+  #nbbody h3 { font-family: 'Special Elite', monospace; font-size: 16px; margin: 4px 0 6px; font-weight: normal; letter-spacing: 1px; }
+  #nbbody .done { text-decoration: line-through; color: var(--ink-soft); }
+  #nbbody .cur { color: var(--red); }
+  #nbbody table { border-collapse: collapse; }
+  #nbbody td { padding: 0 18px 0 0; vertical-align: top; }
+  #nbbody .small { font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; line-height: 1.4; color: var(--ink-soft); }
+  #mapcanvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  /* Telefonzelle */
+  #phone { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.4); pointer-events: auto; }
+  #phonebox { background: #2d3136; border: 3px solid #d8b52a; border-radius: 10px; padding: 16px; width: 300px; color: #ddd; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+  #phonebox .title { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #d8b52a; margin-bottom: 8px; }
+  #pdisplay { background: #9fb08a; color: #1a2410; font-family: 'Special Elite', monospace; font-size: 20px; padding: 8px 10px; border-radius: 3px; min-height: 64px; margin-bottom: 10px; white-space: pre-line; }
+  #pkeys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  #pkeys button, #pcoins button, #pactions button { background: #4a4f56; color: #eee; border: 1px solid #222; border-radius: 4px; padding: 10px 0; font-size: 17px; cursor: pointer; font-family: inherit; }
+  #pkeys button:active { background: #666; }
+  #pcoins, #pactions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  #pcoins button { background: #8a7a3a; font-size: 13px; }
+  #pactions { grid-template-columns: 1fr 1fr; }
+  #pactions .call { background: #3d6b3d; }
+  #pactions .hang { background: #7a3030; }
+  /* Menues */
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(14,16,20,.55), rgba(8,9,11,.92)); pointer-events: auto; padding: 16px; }
+  .card { max-width: 620px; width: 100%; }
+  .card h1 { font-family: 'Special Elite', monospace; font-weight: normal; font-size: clamp(30px, 6vw, 52px); margin: 0; letter-spacing: 2px; }
+  .card h2 { font-weight: 400; font-size: 16px; margin: 4px 0 18px; color: #b9b3a5; letter-spacing: 3px; text-transform: uppercase; }
+  .card p { color: #c9c3b4; line-height: 1.5; font-size: 14px; }
+  .card .motto { font-family: 'Caveat', cursive; font-size: 22px; color: var(--accent); }
+  .btn { background: var(--accent); color: #1a1a1a; border: none; padding: 11px 26px; font-size: 16px; font-weight: 600; border-radius: 4px; cursor: pointer; margin: 4px 8px 4px 0; font-family: inherit; }
+  .btn.sec { background: transparent; color: var(--hud-text); border: 1px solid #77705f; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-size: 13px; color: #c9c3b4; margin: 14px 0; }
+  .keys kbd { font-family: inherit; color: var(--hud-text); background: #2a2d33; border-radius: 3px; padding: 0 6px; }
+  .opts { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #c9c3b4; margin: 10px 0 16px; }
+  .opts select, .opts input { margin-left: 6px; }
+  #loading { font-size: 13px; color: #8f897c; margin-top: 10px; }
+  .credits { font-size: 11px; color: #77705f; margin-top: 18px; line-height: 1.5; }
+  @media (max-width: 640px) { #speedo { width: 110px; height: 110px; } #note { font-size: 17px; } .keys { font-size: 12px; } }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="clock">—</div>
+  <div id="money">—</div>
+  <div id="note"><small>Notizbuch</small><span id="notetext"></span></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="toast" class="hidden"></div>
+  <canvas id="speedo" class="hidden" width="300" height="300"></canvas>
+  <div id="carinfo" class="hidden"></div>
+</div>
+
+<div id="dialogue" class="hidden"><div class="who"></div><div class="lb"></div><div class="sub"></div><div class="next">[E] / Klick – weiter</div></div>
+
+<div id="notebook" class="hidden">
+  <div id="nb">
+    <nav>
+      <button data-page="notes" class="on">Notizen</button>
+      <button data-page="contacts">Adressen &amp; Nummern</button>
+      <button data-page="map">Stadtplan</button>
+      <button data-page="calendar">Kalenner</button>
+      <button data-page="about">Iwwer d’Spill</button>
+      <button class="close" data-close="1">Zou [Tab]</button>
+    </nav>
+    <div id="nbbody"></div>
+  </div>
+</div>
+
+<div id="phone" class="hidden">
+  <div id="phonebox">
+    <div class="title">Telefonzelle · Ortsgespräch</div>
+    <div id="pdisplay"></div>
+    <div id="pkeys"></div>
+    <div id="pcoins"></div>
+    <div id="pactions"><button class="call">Wählen</button><button class="hang">Auflegen</button></div>
+  </div>
+</div>
+
+<div id="start" class="screen">
+  <div class="card">
+    <h1>LUXEMBOURG 1998</h1>
+    <h2>Echoes of a City · Browser-Fassung</h2>
+    <p class="motto">A city before the digital age. A life before everything changed.</p>
+    <p>Gare, Avenue de la Liberté, Pétrusse-Tal und Oberstadt – gebaut aus echten Karten- und Höhendaten. Kein Handy, kein Navi: Orientierung über Notizbuch und Stadtplan.</p>
+    <div class="keys">
+      <kbd>W A S D</kbd><span>Gehen · Fahren</span>
+      <kbd>Maus</kbd><span>Umsehen (Klick ins Bild)</span>
+      <kbd>Shift</kbd><span>Rennen</span>
+      <kbd>Leertaste</kbd><span>Springen · Handbremse</span>
+      <kbd>E</kbd><span>Sprechen · Telefonieren · Einsteigen/Aussteigen</span>
+      <kbd>Tab</kbd><span>Notizbuch &amp; Stadtplan</span>
+      <kbd>V</kbd><span>Erste / dritte Person</span>
+      <kbd>L · R · T</kbd><span>Licht · Regen · Zeit schneller</span>
+      <kbd>N</kbd><span>Navigationshilfe (Barrierefreiheit)</span>
+      <kbd>F5 · F9</kbd><span>Speichern · Laden</span>
+    </div>
+    <div class="opts">
+      <label>Untertitel <select id="optLang"><option value="de">Deutsch</option><option value="fr">Français</option><option value="en">English</option></select></label>
+      <label>Grafik <select id="optQuality"><option value="auto">Automatisch</option><option value="high">Hoch</option><option value="low">Niedrig</option></select></label>
+      <label><input type="checkbox" id="optNav" /> Navigationshilfe</label>
+    </div>
+    <button class="btn" id="btnNew" disabled>Neues Spiel</button>
+    <button class="btn sec" id="btnContinue" disabled>Fortsetzen</button>
+    <div id="loading">Stadt wird gebaut …</div>
+    <div class="credits">Kartendaten © OpenStreetMap-Mitwirkende (ODbL) · Höhen: EU-DEM v1.1 (Copernicus) · Geometrie von heute, bekannte Bauten nach 1998 entfernt, sonst historisch noch nicht geprüft. Alle Personen, Firmen, Fahrzeuge und Telefonnummern sind erfunden.</div>
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div class="card">
+    <h1>Paus</h1>
+    <p>Spiel angehalten.</p>
+    <button class="btn" id="btnResume">Weiter</button>
+    <button class="btn sec" id="btnSave">Speichern</button>
+    <button class="btn sec" id="btnLoad">Laden</button>
+  </div>
+</div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

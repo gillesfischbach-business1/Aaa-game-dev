@@ -9,8 +9,9 @@
 4. Vorlagen-Fahrzeug aus dem UE-Vehicle-Template als Blueprint von `ALuxVehiclePawn` einrichten (Platzhalter `PH_`).
 
 ## B – hier sofort weitermachbar
+0. Browser-Fassung: Rueckmeldung des Nutzers zum Spielgefuehl einholen; Touch-Steuerung; Mission 02 (Hollerich,
+   dafuer Spielfeld nach Westen erweitern); Ladengeschaefte/Innenraeume; bessere Figuren (CC0-Modelle).
 1. Dialogsystem im Kern (Knoten, Bedingungen, Sprachen lb/de/fr/en) + Tests.
 2. Notizbuch-Modell (Adressen, Nummern, Termine, Fotos) + Tests.
-3. GIS-Pipeline Schritt 1: OSM-Ausschnitt Gare/Ville Haute laden, nach EPSG:2169 umrechnen, Strassen/Gebaeude als
-   JSON fuer Unreal exportieren (moderne Geometrie, als "nicht historisch geprueft" markiert).
+3. GIS-Pipeline fuer Unreal: `bake_web.py`-Ausgabe (bereits EPSG:2169-basiert) als Import fuer Unreal nutzen.
 4. Quellen beschaffen fuer die offenen Kernfragen in `HISTORICAL_RESEARCH.md` (Fouer-Termine 1998 zuerst).
