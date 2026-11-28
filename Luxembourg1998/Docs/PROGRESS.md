@@ -91,3 +91,8 @@ der engine-unabhaengige Kern und die Werkzeuge.
 - Browser-Test Desktop: 57 Pruefungen gruen (alle drei Wege), Handy-Test gruen, Vitest 20, 0 Konsolenfehler.
 - Behoben: Figuren im Cafe ausserhalb des Raums; Fundbuero konnte auf der Telefonzelle landen (neue Orte halten
   jetzt Abstand zu Interaktionspunkten); CSS-Namenskollision (Monitorrahmen fehlte); Blickrichtung beim Betreten.
+
+## 2026-11-28 – Sitzung 2, Teil 2: Unreal-Huellen fuer Dialog und Notizbuch
+- Geschrieben: `ULuxDialogueSubsystem` (Dialoge aus Data/Dialogue laden, abspielen, Untertitel, Auswahl, Flags)
+  und `ULuxNotebookSubsystem`; beide im Spielstand (`ULuxSaveSubsystem`).
+- **Nicht kompiliert** (keine Unreal Engine in dieser Umgebung). Der darunterliegende Kern ist getestet.

@@ -12,7 +12,7 @@
 0. Browser-Fassung: Rueckmeldung des Nutzers einholen (M01–M03, M05, Arbeit, Touch, Internetcafe sind fertig).
    Danach: M06 „Eng Nuecht am Gronn“ (nachts, drei Ausgaenge); Autoradio mit fiktiven Sendern; weitere
    Innenraeume (Wohnung, Kneipe); bessere Figuren (CC0-Modelle). M04 bleibt gesperrt, bis Fouer-Termine 1998 belegt.
-1. Dialogsystem im C++-Kern (Knoten, Bedingungen, Sprachen lb/de/fr/en) + Tests – siehe Sitzung 1, Teil 5.
-2. Notizbuch-Modell im C++-Kern (Adressen, Nummern, Termine, Hinweise) + Tests – siehe Sitzung 1, Teil 5.
+1. (erledigt) Dialogsystem und Notizbuch im Kern + Unreal-Huellen – Unreal-Huellen beim ersten Windows-Build pruefen.
+2. Weitere Dialoge aus der Browser-Fassung nach Data/Dialogue uebertragen, damit beide Fassungen sie teilen.
 3. GIS-Pipeline fuer Unreal: `bake_web.py`-Ausgabe (bereits EPSG:2169-basiert) als Import fuer Unreal nutzen.
 4. Quellen beschaffen fuer die offenen Kernfragen in `HISTORICAL_RESEARCH.md` (Fouer-Termine 1998 zuerst).

@@ -31,10 +31,17 @@ bleiben duenn und austauschbar.
 | Dialogue | Dialoggraph: Sprecher, Text lb/de/fr/en mit Fallback, Auswahl mit Bedingungen, Flags, Ueberspringen, Pruefung |
 | Notebook | Notizbuch: Adressen, Nummern, Termine (bald faellig/verpasst), Hinweise je Mission, Serialisierung |
 
+## Dialogdateien (`Data/Dialogue/*.json`)
+`dialogue_id`, `start`, `nodes[]` mit `id`, `speaker`, `text{lb,de,fr,en}`, `next` oder `choices[]`
+(`text`, `next`, `set_flags`, `require_flags`, `forbid_flags`), optional `set_flags`, `require_flags`,
+`forbid_flags`, `skip_to`. Gelesen von `ULuxDialogueSubsystem`, geprueft von `validate_history.py`.
+
 ## Unreal-Klassen (Phase 1, noch nicht kompiliert)
 `ALuxGameMode`, `ALuxCharacter` (3rd/1st Person, Interaktion), `ILuxInteractable`, `ALuxVehiclePawn` (Chaos),
 `ULuxWorldClockSubsystem` (dreht DirectionalLight mit Tag `Sun`), `ULuxEconomySubsystem`, `ULuxMissionSubsystem`
-(laedt `Data/Missions/*.json`), `ULuxSaveSubsystem` (Slots unter `Saved/SaveGames/slotNN.lux98`).
+(laedt `Data/Missions/*.json`), `ULuxSaveSubsystem` (Slots unter `Saved/SaveGames/slotNN.lux98`),
+`ULuxDialogueSubsystem` (laedt `Data/Dialogue/*.json`, Untertitelsprache, Auswahl, Flags im Spielstand),
+`ULuxNotebookSubsystem` (Notizbuch fuer Blueprints/UI, im Spielstand).
 
 ## Daten
 - `Data/Missions/missions_main.json` – Missionen (beide Fassungen lesen dieselbe Datei)

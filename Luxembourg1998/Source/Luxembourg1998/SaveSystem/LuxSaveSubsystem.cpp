@@ -8,6 +8,8 @@
 #include "LuxCore/SaveFormat.h"
 #include "LuxEconomySubsystem.h"
 #include "LuxMissionSubsystem.h"
+#include "LuxDialogueSubsystem.h"
+#include "LuxNotebookSubsystem.h"
 #include "LuxWorldClockSubsystem.h"
 #include "Misc/Paths.h"
 
@@ -40,6 +42,14 @@ bool ULuxSaveSubsystem::SaveToSlot(int32 Slot)
 	if (ULuxMissionSubsystem* Missions = GetGameInstance()->GetSubsystem<ULuxMissionSubsystem>())
 	{
 		for (const auto& KV : Missions->GetTracker().Serialize()) Data[KV.first] = KV.second;
+	}
+	if (ULuxDialogueSubsystem* Dlg = GetGameInstance()->GetSubsystem<ULuxDialogueSubsystem>())
+	{
+		for (const auto& KV : Dlg->SaveFlags()) Data[KV.first] = KV.second;
+	}
+	if (ULuxNotebookSubsystem* Nb = GetGameInstance()->GetSubsystem<ULuxNotebookSubsystem>())
+	{
+		for (const auto& KV : Nb->GetBook().Serialize()) Data[KV.first] = KV.second;
 	}
 	if (APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr)
 	{
@@ -99,6 +109,14 @@ bool ULuxSaveSubsystem::LoadFromSlot(int32 Slot)
 	if (ULuxMissionSubsystem* Missions = GetGameInstance()->GetSubsystem<ULuxMissionSubsystem>())
 	{
 		Missions->GetTracker().Deserialize(*Data);
+	}
+	if (ULuxDialogueSubsystem* Dlg = GetGameInstance()->GetSubsystem<ULuxDialogueSubsystem>())
+	{
+		Dlg->LoadFlags(*Data);
+	}
+	if (ULuxNotebookSubsystem* Nb = GetGameInstance()->GetSubsystem<ULuxNotebookSubsystem>())
+	{
+		Nb->GetBook().Deserialize(*Data);
 	}
 	if (APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr)
 	{
