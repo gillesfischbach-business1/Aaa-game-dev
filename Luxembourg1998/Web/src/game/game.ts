@@ -16,6 +16,8 @@ import { Mission03, M03_ID } from './missions/m03';
 import { Mission05, M05_ID } from './missions/m05';
 import { Mission06, M06_ID } from './missions/m06';
 import { Radio } from './radio';
+import { PhotoCamera, type Photo } from './camera';
+import { Mission07, M07_ID } from './missions/m07';
 import { Internet } from './internet';
 import type { MissionController } from './missions/types';
 import { missionDef } from './missiondata';
@@ -88,6 +90,12 @@ export class Game {
   interior: Interior | null = null;
   readonly m06: Mission06;
   readonly radio: Radio;
+  readonly camera35 = new PhotoCamera();
+  readonly m07: Mission07;
+  photoMode = false;
+  private shutterQueued = false;
+  /** Eigene Reportage in der Zeitung (ab Tag `day`) */
+  paperFeature: { h: string; t: string; img: string; day: number } | null = null;
   private computerOpen = false;
   readonly controllers: MissionController[];
   private messages = new Map<string, Line[]>();
@@ -140,7 +148,9 @@ export class Game {
     });
     this.m05 = new Mission05(this);
     this.m06 = new Mission06(this);
-    this.controllers = [this.m01, this.m02, this.m03, this.m05, this.m06];
+    this.m07 = new Mission07(this);
+    this.controllers = [this.m01, this.m02, this.m03, this.m05, this.m06, this.m07];
+    canvas.addEventListener('mousedown', () => { if (this.photoMode) this.shutterQueued = true; });
     this.radio = new Radio({
       hour: () => this.clock.getHour(),
       minute: () => this.clock.getMinute(),
@@ -165,7 +175,7 @@ export class Game {
 
   private registerMissions(): void {
     this.missions = new MissionTracker();
-    for (const id of [M01_ID, M02_ID, M03_ID, M05_ID, M06_ID]) {
+    for (const id of [M01_ID, M02_ID, M03_ID, M05_ID, M06_ID, M07_ID]) {
       const r = this.missions.register(missionDef(id));
       if (!r.ok) console.error(r.error);
     }
@@ -253,6 +263,63 @@ export class Game {
     this.pos.copy(i.exit);
     this.pos.y = this.city.surfaceAt(this.pos.x, this.pos.z, this.pos.y + 1);
     this.camera.position.copy(this.pos).add(new THREE.Vector3(0, 2, 3));
+  }
+
+  // ---------- Kamera ----------
+  /** Blick auf einen Punkt richten (Testhilfe und fuer Zwischenszenen) */
+  aimAt(target: THREE.Vector3): void {
+    const head = this.pos.clone().add(new THREE.Vector3(0, 1.62, 0));
+    const d = target.clone().sub(head);
+    this.camYaw = Math.atan2(-d.x, -d.z);
+    this.camPitch = -Math.atan2(d.y, Math.hypot(d.x, d.z)) / 0.8;
+    this.heading = this.camYaw;
+  }
+
+  enterPhotoMode(): void {
+    if (!this.camera35.owned || this.veh) return;
+    if (this.camera35.film <= 0) { this.ui.toast('Film voll – bei Mia im Fotolabo abgeben.'); return; }
+    this.photoMode = true;
+    this.ui.show('viewfinder', true);
+    this.ui.prompt(null);
+  }
+
+  exitPhotoMode(): void {
+    this.photoMode = false;
+    this.ui.show('viewfinder', false);
+    this.camera.fov = 65;
+    this.camera.updateProjectionMatrix();
+  }
+
+  private takePhoto(): void {
+    const p = this.camera35.shoot(this.renderer, this.scene, this.camera, this.env.night, this.absHours());
+    if (!p) { this.ui.toast('Kein Film mehr.'); return; }
+    const flash = document.getElementById('flash')!;
+    flash.classList.remove('go');
+    void flash.offsetWidth;
+    flash.classList.add('go');
+    const name = p.subject ? this.camera35.subjects.find((s) => s.id === p.subject)?.name ?? p.subject : '—';
+    this.ui.toast(`Klick! Bild ${p.n}: ${name} · ${p.note} · noch ${this.camera35.film}`, 3200);
+    if (this.camera35.film <= 0) this.exitPhotoMode();
+  }
+
+  private updatePhoto(): void {
+    const inp = this.input;
+    const [mx, my] = inp.takeMouse();
+    this.camYaw -= mx * 0.0018;
+    this.camPitch = THREE.MathUtils.clamp(this.camPitch + my * 0.0016, -0.8, 1.0);
+    document.getElementById('vfinfo')!.textContent = `Film: ${this.camera35.film}/24 · Klick, F oder E = auslösen · Esc/V = zurück`;
+    if (inp.consume('foto') || inp.consume('interact') || this.shutterQueued) { this.shutterQueued = false; this.takePhoto(); }
+    if (inp.consume('pause') || inp.consume('view')) this.exitPhotoMode();
+  }
+
+  /** Kontaktbogen nach dem Entwickeln */
+  showContactSheet(batch: Photo[], then: () => void): void {
+    const grid = document.querySelector('#photos .grid') as HTMLElement;
+    const name = (id: string | null) => (id ? this.camera35.subjects.find((s) => s.id === id)?.name ?? id : 'ohne Motiv');
+    grid.innerHTML = batch.length
+      ? batch.map((p) => `<figure>${p.img ? `<img src="${p.img}" alt="Bild ${p.n}: ${name(p.subject)}" />` : '<div class="noimg">Bild nicht mehr verfügbar</div>'}<figcaption>${p.n} · ${name(p.subject)} · ${p.quality}</figcaption></figure>`).join('')
+      : '<p>Der Film ist leer.</p>';
+    this.openOverlay('photos', then);
   }
 
   // ---------- Computer (Internetcafe) ----------
@@ -575,10 +642,10 @@ export class Game {
     const L = this.ui.lang;
     if (this.nbPage === 'notes') {
       // Laufende Mission zuerst und ausfuehrlich, erledigte als eine Zeile
-      const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung', [M05_ID]: 'Déi verluer Diskett', [M06_ID]: 'Eng Nuecht am Gronn' };
+      const titles: Record<string, string> = { [M01_ID]: 'Zeréck an d’Stad', [M02_ID]: 'Eng lescht Chance', [M03_ID]: 'D’Nummer an der Zeitung', [M05_ID]: 'Déi verluer Diskett', [M06_ID]: 'Eng Nuecht am Gronn', [M07_ID]: 'D’Stad am Wandel' };
       const active = this.controllers.filter((c) => this.missions.getState(c.id) === 'Active').map((c) => c.notes(L).replace(' style="margin-top:14px"', '')).join('');
       const doneList = this.controllers.filter((c) => this.missions.getState(c.id) === 'Succeeded').map((c) => `<div class="done">✓ ${titles[c.id] ?? c.id}</div>`).join('');
-      const missionsHtml = `${active}${this.career.notes(L)}${doneList ? `<h3 style="margin-top:14px">ERLEDIGT</h3>${doneList}` : ''}`;
+      const missionsHtml = `${active}${this.career.notes(L)}${this.m07.careerNotes()}${doneList ? `<h3 style="margin-top:14px">ERLEDIGT</h3>${doneList}` : ''}`;
       const last = [...this.controllers].reverse().find((c) => this.missions.getState(c.id) === 'Succeeded');
       const freeRoam = !this.activeController() ? `<p>${last?.objectiveText(L) ?? ''}</p>` : '';
       const hist = this.wallet.getHistory().slice(-6).reverse().map((t) => `<div class="small">${toIso(t.date)} · ${t.memo} · ${formatLuf(t.amount)}</div>`).join('');
@@ -616,6 +683,7 @@ export class Game {
   private setupMapControls(): void {
     // Ueberlagerungen (Zeitung) mit E/Esc schliessen
     document.getElementById('paperClose')?.addEventListener('click', () => this.overlayClose?.());
+    document.getElementById('photosClose')?.addEventListener('click', () => this.overlayClose?.());
     window.addEventListener('keydown', (e) => {
       if (this.overlayClose && ['KeyE', 'Escape', 'Space'].includes(e.code)) { e.preventDefault(); this.overlayClose(); }
     });
@@ -670,6 +738,8 @@ export class Game {
     for (const c of this.controllers) Object.assign(data, c.save());
     Object.assign(data, this.career.save());
     Object.assign(data, this.internet.save());
+    Object.assign(data, this.camera35.save());
+    if (this.paperFeature) data['paper.feature'] = JSON.stringify({ ...this.paperFeature, img: '' });
     data['player.interior'] = this.interior ? '1' : '0';
     try {
       const r = writeSaveToStorage(window.localStorage, SAVE_KEY, data);
@@ -715,6 +785,9 @@ export class Game {
     for (const c of this.controllers) c.load(d);
     this.career.load(d);
     this.internet.load(d);
+    this.camera35.load(d);
+    try { this.paperFeature = d['paper.feature'] ? JSON.parse(d['paper.feature']) : null; } catch { this.paperFeature = null; }
+    if (this.photoMode) this.exitPhotoMode();
     if (this.interior) this.leaveInterior();
     // Aeltere Staende: Mission 01 fertig, Mission 02 noch nicht gestartet
     this.startAvailableMissions();
@@ -760,10 +833,15 @@ export class Game {
       if (this.ui.inDialogue) {
         if (inp.consume('interact') || inp.consume('jump')) this.ui.advanceDialogue();
       } else if (!this.blocked) {
-        this.handleKeys();
-        this.clock.advance(dt);
-        if (this.mode === 'walk') this.updateWalk(dt); else this.updateDrive(dt);
-        this.updateInteract();
+        if (this.photoMode) {
+          this.clock.advance(dt);
+          this.updatePhoto();
+        } else {
+          this.handleKeys();
+          this.clock.advance(dt);
+          if (this.mode === 'walk') this.updateWalk(dt); else this.updateDrive(dt);
+          this.updateInteract();
+        }
         for (const c of this.controllers) c.update(dt);
         this.career.update();
       }
@@ -798,6 +876,7 @@ export class Game {
       this.ui.toast(`Zeit ×${this.timeScales[this.timeIdx] / 5}`);
     }
     if (inp.consume('lights') && this.veh) this.veh.lights = !this.veh.lights;
+    if (inp.consume('foto') && !this.veh) this.enterPhotoMode();
     if (inp.consume('radio') && this.veh) {
       const st = this.radio.cycle();
       this.ui.toast(st ? `Radio: ${st.name} ${st.freq}` : 'Radio aus');
@@ -915,6 +994,14 @@ export class Game {
     const v = this.veh;
     if (!v) {
       const head = this.pos.clone().add(new THREE.Vector3(0, 1.62, 0));
+      if (this.photoMode) {
+        cam.position.copy(head);
+        cam.rotation.order = 'YXZ';
+        cam.rotation.set(-this.camPitch * 0.8, this.camYaw, 0);
+        if (cam.fov !== 40) { cam.fov = 40; cam.updateProjectionMatrix(); }  // 50-mm-Objektiv
+        this.player.root.visible = false;
+        return;
+      }
       if (this.firstPerson) {
         cam.position.copy(head);
         cam.rotation.order = 'YXZ';

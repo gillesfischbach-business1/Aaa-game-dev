@@ -40,7 +40,7 @@ export const PHONEBOOK = [
   { number: '48 32 10', name: 'Reding, J.-P.', address: 'Rue fictive 22, Gare', district: 'Gare' },
   { number: '44 90 57', name: 'Reding, A.', address: 'Rue fictive 5, Hollerich', district: 'Hollerich' },
   { number: NUMBERS.fund, name: 'Fundbüro / Objets trouvés (fiktiv)', address: 'Rue fictive 1, bei der Place de Metz', district: 'Ville Haute', isBusiness: true },
-  { number: '49 05 81', name: 'Feller, Mia – Fotolabo (fiktiv)', address: 'Rue fictive 9, Bonnevoie', district: 'Bonnevoie-Nord / Verlorenkost', isBusiness: true },
+  { number: '49 05 81', name: 'Feller, Mia – Fotolabo (fiktiv)', address: 'Rue fictive 9, Gare', district: 'Gare', isBusiness: true },
   { number: NUMBERS.home, name: 'Kremer (eigene Wohnung)', address: 'Avenue de la Liberté, 3. Stock', district: 'Gare' },
 ];
 
@@ -87,6 +87,14 @@ export const OBJECTIVE_TEXT: Record<string, { de: string; fr: string; en: string
   arrive_grund: { de: 'Abends (21–3 Uhr) auf die Terrasse „Am Pëtz“ im Grund, unten an der Alzette', fr: 'Le soir (21 h–3 h) sur la terrasse « Am Pëtz » au Grund, au bord de l’Alzette', en: 'In the evening (9 pm–3 am) to the “Am Pëtz” terrace in the Grund, down by the Alzette' },
   'group:outcome': { de: 'Der Abend im Grund – wie gehst du mit Steve um?', fr: 'La soirée au Grund – comment réagir face à Steve ?', en: 'The evening in the Grund – how do you handle Steve?' },
   done06: { de: 'Freies Spiel – Stadt erkunden, arbeiten, Radio hören (im Auto: C). Weitere Missionen folgen.', fr: 'Jeu libre – explorer, travailler, écouter la radio (en voiture : C). D’autres missions suivront.', en: 'Free roam – explore, work, listen to the radio (in the car: C). More missions to come.' },
+  // Mission 07
+  listen_mia: { de: 'Mia hat angerufen? Anrufbeantworter zu Hause abhören', fr: 'Mia a appelé ? Écouter le répondeur à la maison', en: 'Did Mia call? Check the answering machine at home' },
+  get_camera: { de: 'Ins Fotolabo Feller beim Bahnhof – Mia hat einen Auftrag', fr: 'Au labo photo Feller près de la gare – Mia a une commande', en: 'Go to Fotolabo Feller near the station – Mia has a job' },
+  photograph_old_building: { de: 'Fotografieren (F): Pont Adolphe, die alte Schlosserei an der Route d’Esch, den Bahnhof', fr: 'Photographier (F) : pont Adolphe, la vieille serrurerie route d’Esch, la gare', en: 'Photograph (F): Pont Adolphe, the old metal workshop on Route d’Esch, the station' },
+  interview_resident: { de: 'Mit Madame Thill an der alten Schlosserei sprechen', fr: 'Parler à Madame Thill près de la vieille serrurerie', en: 'Talk to Madame Thill at the old workshop' },
+  deliver_film: { de: 'Den Film bei Mia abgeben (Fotolabo, 9–18 Uhr)', fr: 'Déposer la pellicule chez Mia (labo, 9 h–18 h)', en: 'Drop off the film with Mia (lab, 9 am–6 pm)' },
+  decide_story: { de: 'Mit Mia entscheiden, welche Geschichte die Zeitung erzählt', fr: 'Décider avec Mia quelle histoire le journal racontera', en: 'Decide with Mia which story the paper will tell' },
+  done07: { de: 'Freies Spiel – Fotoaufträge bei Mia, Schichten bei Muller, Stadt erkunden. Weitere Missionen folgen.', fr: 'Jeu libre – commandes photo chez Mia, postes chez Muller, explorer. D’autres missions suivront.', en: 'Free roam – photo jobs for Mia, shifts at Muller’s, explore. More missions to come.' },
   done02: { de: 'Probearbeit erledigt. Freies Spiel – weitere Missionen folgen.', fr: 'Essai terminé. Jeu libre – d’autres missions suivront.', en: 'Trial job done. Free roam – more missions to come.' },
 };
 
@@ -262,12 +270,40 @@ export const DIALOGUE06 = {
   ],
   job: [
     T('Du', 'Waart, Mia – weis mol. D’Objektiv ass ganz, nëmmen de Deckel ass ofgesprongen.', 'Warte, Mia – zeig mal. Das Objektiv ist heil, nur der Deckel ist abgesprungen.', 'Attends, Mia – montre. L’objectif est intact, seul le bouchon a sauté.', 'Wait, Mia – let me see. The lens is fine, only the cap popped off.'),
-    T('Mia', 'Du kenns dech mat Kameraen aus? Ech hunn e klenge Fotolabo zu Bouneweg. Ech brauch een, deen Fotoe fir d’Zeitung mécht – Stroossen, Haiser, Leit.', 'Du kennst dich mit Kameras aus? Ich habe ein kleines Fotolabor in Bonnevoie. Ich brauche jemanden, der Fotos für die Zeitung macht – Straßen, Häuser, Leute.', 'Tu t’y connais en appareils ? J’ai un petit labo photo à Bonnevoie. Il me faut quelqu’un pour faire des photos pour le journal – rues, maisons, gens.', 'You know cameras? I have a small photo lab in Bonnevoie. I need someone to shoot photos for the paper – streets, houses, people.'),
+    T('Mia', 'Du kenns dech mat Kameraen aus? Ech hunn e klenge Fotolabo bei der Gare. Ech brauch een, deen Fotoe fir d’Zeitung mécht – Stroossen, Haiser, Leit.', 'Du kennst dich mit Kameras aus? Ich habe ein kleines Fotolabor beim Bahnhof. Ich brauche jemanden, der Fotos für die Zeitung macht – Straßen, Häuser, Leute.', 'Tu t’y connais en appareils ? J’ai un petit labo photo près de la gare. Il me faut quelqu’un pour faire des photos pour le journal – rues, maisons, gens.', 'You know cameras? I have a small photo lab near the station. I need someone to shoot photos for the paper – streets, houses, people.'),
     T('Mia', 'Ruff mech un, wann s de Loscht hues. Meng Nummer schreiwen ech der an de Carnet.', 'Ruf mich an, wenn du Lust hast. Meine Nummer schreibe ich dir ins Notizbuch.', 'Appelle-moi si ça te dit. J’écris mon numéro dans ton carnet.', 'Call me if you’re interested. I’ll write my number in your notebook.'),
   ],
   after: [T('Jang', 'Schéin Owend, oder? Komm gutt heem.', 'Schöner Abend, oder? Komm gut heim.', 'Belle soirée, non ? Rentre bien.', 'Nice evening, right? Get home safe.')],
   steveRevenge: [T('Äntwerter', 'Jang hei. De Steve ass nach ëmmer sauer … ech mengen, hien huet eppes mat dengem Auto gemaach. Kuck emol no. Sorry.', 'Jang hier. Steve ist immer noch sauer … ich glaube, er hat etwas mit deinem Auto gemacht. Schau mal nach. Sorry.', 'Ici Jang. Steve est toujours fâché … je crois qu’il a fait quelque chose à ta voiture. Va voir. Désolé.', 'Jang here. Steve’s still angry … I think he did something to your car. Have a look. Sorry.')],
 };
+
+export const DIALOGUE07 = {
+  message: [T('Äntwerter', 'Moien, hei ass d’Mia. Ech hunn e Projet fir d’Zeitung: „D’Stad am Wandel“. Ech brauch een, dee fotograféiert. Komm an de Labo bei der Gare!', 'Hallo, hier ist Mia. Ich habe ein Projekt für die Zeitung: „Die Stadt im Wandel“. Ich brauche jemanden, der fotografiert. Komm ins Labor beim Bahnhof!', 'Salut, c’est Mia. J’ai un projet pour le journal : « La ville en mutation ». Il me faut un photographe. Passe au labo près de la gare !', 'Hi, it’s Mia. I have a project for the paper: “The city in transition”. I need someone to take photos. Come to the lab near the station!')],
+  closed: [T('', 'Op der Dier: „Fotolabo Feller – Méindeg bis Samschdeg 9–18 Auer.“', 'An der Tür: „Fotolabo Feller – Montag bis Samstag 9–18 Uhr.“', 'Sur la porte : « Labo photo Feller – du lundi au samedi 9 h–18 h. »', 'On the door: “Fotolabo Feller – Mon–Sat 9 am–6 pm.”')],
+  camera: [
+    T('Mia', 'Hei, meng al Kamera – en analoge Spigelreflex. 24 Biller pro Film. Mat F kuck s de duerch de Sicher.', 'Hier, meine alte Kamera – eine analoge Spiegelreflex. 24 Bilder pro Film. Mit F schaust du durch den Sucher.', 'Tiens, mon vieil appareil – un reflex argentique. 24 vues par pellicule. Avec F tu regardes dans le viseur.', 'Here, my old camera – an analogue SLR. 24 shots per roll. Press F to look through the viewfinder.'),
+    T('Mia', 'Ech brauch dräi Motiver: de Pont Adolphe, déi al Schlosserei op der Route d’Esch – déi gëtt geschwënn ofgerappt – an d’Gare.', 'Ich brauche drei Motive: den Pont Adolphe, die alte Schlosserei an der Route d’Esch – die wird bald abgerissen – und den Bahnhof.', 'Il me faut trois motifs : le pont Adolphe, la vieille serrurerie route d’Esch – elle sera bientôt démolie – et la gare.', 'I need three subjects: Pont Adolphe, the old metal workshop on Route d’Esch – it’s being torn down soon – and the station.'),
+    T('Mia', 'An schwätz mat der Madame Thill, si wunnt niewent der Schlosserei. Si weess vill. Bei Dag fotograféieren – nuets gëtt näischt drop!', 'Und sprich mit Madame Thill, sie wohnt neben der Schlosserei. Sie weiß viel. Bei Tageslicht fotografieren – nachts wird nichts drauf sein!', 'Et parle à Madame Thill, elle habite à côté. Elle sait beaucoup de choses. Photographie de jour – la nuit, rien ne sortira !', 'And talk to Madame Thill, she lives next to the workshop. She knows a lot. Shoot in daylight – nothing will come out at night!'),
+  ],
+  waiting: [T('Mia', 'Hues de alles? Dräi Motiver an d’Gespréich mat der Madame Thill.', 'Hast du alles? Drei Motive und das Gespräch mit Madame Thill.', 'Tu as tout ? Trois motifs et l’entretien avec Madame Thill.', 'Got everything? Three subjects and the talk with Madame Thill.')],
+  thill: [
+    T('Madame Thill', 'Dir sidd vun der Zeitung? … Ech wunnen hei zënter 1961. Do an der Schlosserei huet mäi Mann geschafft.', 'Sie sind von der Zeitung? … Ich wohne hier seit 1961. In der Schlosserei hat mein Mann gearbeitet.', 'Vous êtes du journal ? … J’habite ici depuis 1961. Mon mari travaillait à la serrurerie.', 'You’re from the paper? … I’ve lived here since 1961. My husband worked at the workshop.'),
+    T('Madame Thill', 'Fréier huet een hei de ganzen Dag d’Hummer héieren. Elo kommen Büroen. Dat ass de Laf vun der Zäit, mee et deet wéi.', 'Früher hörte man hier den ganzen Tag die Hämmer. Jetzt kommen Büros. Das ist der Lauf der Zeit, aber es tut weh.', 'Avant, on entendait les marteaux toute la journée. Maintenant viennent des bureaux. C’est le cours du temps, mais ça fait mal.', 'You used to hear hammers here all day. Now offices are coming. That’s how time goes, but it hurts.'),
+    T('Madame Thill', 'Mäi Jong seet, et bréngt Aarbecht fir d’Jonk. Vläicht huet hie Recht. Schreift dat och.', 'Mein Sohn sagt, es bringt Arbeit für die Jungen. Vielleicht hat er recht. Schreiben Sie das auch.', 'Mon fils dit que ça apporte du travail aux jeunes. Il a peut-être raison. Écrivez-le aussi.', 'My son says it brings jobs for young people. Maybe he’s right. Write that too.'),
+  ],
+  deliver: [T('Mia', 'Super! Ech entwéckelen de Film direkt. … Hei sinn d’Kontaktofzich.', 'Super! Ich entwickle den Film sofort. … Hier sind die Kontaktabzüge.', 'Super ! Je développe la pellicule tout de suite. … Voici les planches-contacts.', 'Great! I’ll develop the film right away. … Here are the contact sheets.')],
+  missing: [T('Mia', 'Mir feelen nach Biller. Ech brauch de Pont Adolphe, d’Schlosserei an d’Gare – gutt belicht, net ze wäit ewech.', 'Mir fehlen noch Bilder. Ich brauche den Pont Adolphe, die Schlosserei und den Bahnhof – gut belichtet, nicht zu weit weg.', 'Il me manque des photos. Il me faut le pont Adolphe, la serrurerie et la gare – bien exposés, pas trop loin.', 'I’m still missing photos. I need Pont Adolphe, the workshop and the station – well exposed, not too far away.')],
+  choice: T('Mia', 'Wéi eng Geschicht erzielen mir?', 'Welche Geschichte erzählen wir?', 'Quelle histoire raconte-t-on ?', 'Which story do we tell?'),
+  after: [T('Mia', 'Muer steet et an der Zeitung! Kaaf der eng um Kiosk. A wann s de méi Aufträg wëlls – komm laanscht.', 'Morgen steht es in der Zeitung! Kauf dir eine am Kiosk. Und wenn du mehr Aufträge willst – komm vorbei.', 'Demain ce sera dans le journal ! Achètes-en un au kiosque. Et si tu veux d’autres commandes – passe.', 'It’ll be in the paper tomorrow! Get one at the kiosk. And if you want more jobs – drop by.')],
+};
+
+export const STORY_ANGLES = {
+  preserve: { label: { de: 'Was verloren geht: Erinnerungen, Handwerk, Nachbarschaft', fr: 'Ce qui se perd : souvenirs, artisanat, voisinage', en: 'What is being lost: memories, craft, neighbourhood' }, h: 'Wann d’Hummere schweigen', t: 'In Hollerich verschwindet eine alte Schlosserei. Anwohner erzählen von Jahrzehnten Handwerk (Reportage, fiktiv).' },
+  progress: { label: { de: 'Was entsteht: neue Arbeitsplätze, eine Stadt im Aufbruch', fr: 'Ce qui naît : nouveaux emplois, une ville en mouvement', en: 'What is emerging: new jobs, a city on the move' }, h: 'Eng Stad am Opbroch', t: 'Wo früher Funken flogen, sollen Büros entstehen. Junge Leute hoffen auf Arbeit (Reportage, fiktiv).' },
+  balanced: { label: { de: 'Beides zeigen: Abschied und Aufbruch nebeneinander', fr: 'Montrer les deux : adieu et renouveau côte à côte', en: 'Show both: farewell and new beginning side by side' }, h: 'D’Stad am Wandel', t: 'Zwischen Abschied und Aufbruch: Bilder vom Pont Adolphe bis Hollerich (Reportage, fiktiv).' },
+} as const;
+
+export const PHOTO_JOB_PAY = 800;  // je Auftragsfoto (Platzhalter, Kategorie D)
 
 export const ROUND_PRICE = 600;  // eine Runde fuer vier (Platzhalter, Kategorie D)
 

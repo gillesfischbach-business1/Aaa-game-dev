@@ -288,11 +288,19 @@
       "mission_id": "M07_DSTAD_AM_WANDEL",
       "title_lb": "D'Stad am Wandel",
       "title_de": "Die Stadt im Wandel",
-      "district": "Kirchberg",
+      "district": "Hollerich",
       "prerequisites": [
         "M06_ENG_NUECHT_AM_GRONN"
       ],
       "objectives": [
+        {
+          "id": "listen_mia",
+          "checkpoint": true
+        },
+        {
+          "id": "get_camera",
+          "checkpoint": true
+        },
         {
           "id": "photograph_old_building"
         },
@@ -300,16 +308,26 @@
           "id": "interview_resident"
         },
         {
+          "id": "deliver_film",
+          "checkpoint": true
+        },
+        {
           "id": "decide_story"
         }
       ],
       "fail_conditions": [],
       "rewards": {
-        "money_luf": null
+        "money_luf": 3000,
+        "note": "Spielbalance, Kategorie D"
       },
       "teaches": [
-        "photography"
-      ]
+        "camera",
+        "photo_mode",
+        "interview",
+        "editorial_choice",
+        "newspaper"
+      ],
+      "location_note": "Kirchberg liegt ausserhalb des aktuellen Kartenausschnitts; daher Hollerich (fiktive alte Werkstatt an der Route d'Esch), Pont Adolphe und Gare. Fotolabor Mia Feller (fiktiv) nahe Gare."
     },
     {
       "mission_id": "M08_MILLENNIUM",

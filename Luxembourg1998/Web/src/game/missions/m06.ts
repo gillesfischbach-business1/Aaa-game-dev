@@ -136,6 +136,7 @@ export class Mission06 implements MissionController {
       g.flags['career.photographer'] = 'offer';
     }
     g.flags['m06.outcome'] = v;
+    g.flags['m06.done_at'] = String(g.absHours());
     this.complete(v === 'friendship' ? 'outcome_friendship' : v === 'conflict' ? 'outcome_conflict' : 'outcome_job');
     const msg = { friendship: 'Freundschaft gefestigt', conflict: 'Streit mit Steve – das hat Folgen', job: 'Mia bietet dir Fotoaufträge an' }[v] ?? '';
     g.ui.toast(`Mission erfüllt: „Eng Nuecht am Gronn“ · ${msg}`, 5000);

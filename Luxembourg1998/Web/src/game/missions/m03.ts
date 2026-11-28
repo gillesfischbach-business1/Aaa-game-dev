@@ -158,7 +158,9 @@ export class Mission03 implements MissionController {
     const days = ['Méindeg', 'Dënschdeg', 'Mëttwoch', 'Donneschdeg', 'Freideg', 'Samschdeg', 'Sonndeg'];
     (root.querySelector('.mast') as HTMLElement).textContent = NEWSPAPER.title;
     (root.querySelector('.sub') as HTMLElement).textContent = `Fiktive Lokalzeitung · ${days[(new Date(Date.UTC(d.year, d.month - 1, d.day)).getUTCDay() + 6) % 7]}, ${d.day}.${d.month}.${d.year} · ${NEWSPAPER_PRICE} F`;
-    (root.querySelector('.news') as HTMLElement).innerHTML = NEWSPAPER.stories.map((s) => `<h3>${s.h}</h3><p>${s.t}</p>`).join('');
+    const f = g.paperFeature && this.today() >= g.paperFeature.day ? g.paperFeature : null;
+    const feature = f ? `<div class="feature">${f.img ? `<img src="${f.img}" alt="Foto zur Reportage" />` : ''}<h3>${f.h}</h3><p>${f.t}</p><p class="credit">Fotoen: Kremer / Fotolabo Feller</p></div>` : '';
+    (root.querySelector('.news') as HTMLElement).innerHTML = feature + NEWSPAPER.stories.map((s) => `<h3>${s.h}</h3><p>${s.t}</p>`).join('');
     const ads = root.querySelector('.ads') as HTMLElement;
     ads.innerHTML = '<h4>Kleinannoncen</h4>' + NEWSPAPER.ads.map((a) => `<div class="ad${a.id === 'reding' && this.adNoted ? ' noted' : ''}" data-id="${a.id}">${a.t}${a.special ? `<br/><button>${this.adNoted ? 'notéiert ✓' : 'Notéieren'}</button>` : ''}</div>`).join('');
     ads.querySelector('.ad[data-id="reding"] button')?.addEventListener('click', (e) => {

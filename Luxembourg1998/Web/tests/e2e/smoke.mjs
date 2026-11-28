@@ -218,6 +218,64 @@ const cash7 = (await st()).cash, rep7 = (await st()).rep;
 await page.keyboard.press('1'); await page.waitForTimeout(200); await advance();
 const s7 = await st();
 check('M06 Freundschaft: Runde -600 F, Ruf +2', await g(() => window.__lux98.missions.getState('M06_ENG_NUECHT_AM_GRONN') === 'Succeeded' && window.__lux98.flags['m06.outcome'] === 'friendship') && s7.cash === cash7 - 600 && s7.rep === rep7 + 2, JSON.stringify(s7));
+
+// ---------- Mission 07, Kamera und Reportage ----------
+await g(() => window.__lux98.advanceMinutes(90));
+await page.waitForTimeout(500);
+check('M07 aktiv nach M06', (await st()).mission === 'M07_DSTAD_AM_WANDEL', JSON.stringify(await st()));
+await goTo('x.homeDoor'); await press(); await press('1'); await advance();
+check('Nachricht von Mia abgehoert', (await st()).obj === 'get_camera');
+// naechster Morgen 10 Uhr (Labor offen, Tageslicht)
+await g(() => { const x = window.__lux98; x.advanceMinutes((24 - x.clock.getHourLocal() + 10) * 60); });
+await page.waitForTimeout(500);
+await goTo('x.m07.mia.root.position'); await press(); await advance();
+check('Kamera erhalten (24 Aufnahmen)', await g(() => window.__lux98.camera35.owned && window.__lux98.camera35.film === 24));
+// Fotos: aus passender Entfernung auf das Motiv zielen und ausloesen
+const photo = async (id, dist) => {
+  await g(([id, dist]) => {
+    const x = window.__lux98, s = x.camera35.subjects.find((q) => q.id === id);
+    const spot = x.openSpot(s.pos.clone().add({ x: dist, y: 0, z: dist * 0.3 }));
+    x.pos.copy(spot);
+    x.aimAt(s.pos);
+  }, [id, dist]);
+  await page.waitForTimeout(300);
+  await page.keyboard.press('f'); await page.waitForTimeout(500);
+  await g(([id]) => { const x = window.__lux98; x.aimAt(x.camera35.subjects.find((q) => q.id === id).pos); }, [id]);
+  await page.waitForTimeout(400);
+  await page.keyboard.press('f'); await page.waitForTimeout(600);
+  const last = await g(() => { const p = window.__lux98.camera35.photos.at(-1); return p ? `${p.subject}/${p.quality}/${p.note}` : 'keins'; });
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  return last;
+};
+const r1 = await photo('pont_adolphe', 60);
+await page.screenshot({ path: `${out}/21_photo.png` });
+const r2 = await photo('workshop', 18);
+const r3 = await photo('gare', 60);
+check('Drei Motive fotografiert', await g(() => ['pont_adolphe', 'workshop', 'gare'].every((s) => window.__lux98.camera35.hasGood(s))), [r1, r2, r3].join(' | '));
+await goTo('x.m07.thill.root.position'); await press(); await advance();
+check('Madame Thill befragt', (await st()).obj === 'deliver_film', JSON.stringify(await st()));
+await goTo('x.m07.mia.root.position'); await press(); await advance();
+await page.waitForTimeout(300);
+check('Kontaktbogen mit Bildern', await page.isVisible('#photos') && (await page.$$('#photos .grid img')).length >= 3);
+await page.screenshot({ path: `${out}/22_contactsheet.png` });
+await page.click('#photosClose'); await page.waitForTimeout(300);
+const cash8 = (await st()).cash;
+await page.keyboard.press('3'); await page.waitForTimeout(200); await advance();
+check('M07 erfuellt: +3 000 F, Reportage gewaehlt', await g(() => window.__lux98.missions.getState('M07_DSTAD_AM_WANDEL') === 'Succeeded' && window.__lux98.flags['m07.angle'] === 'balanced') && (await st()).cash === cash8 + 3000);
+await g(() => { const x = window.__lux98; x.advanceMinutes((24 - x.clock.getHourLocal() + 9) * 60); });
+await goTo('x.m03.kiosk'); await press(); await advance();
+check('Reportage mit Foto am naechsten Tag in der Zeitung', await page.isVisible('#paper .feature img'));
+await page.screenshot({ path: `${out}/23_paper_feature.png` });
+await press('e');
+// Fotoauftrag
+await g(() => { const x = window.__lux98; if (x.clock.getHourLocal() < 9 || x.clock.getHourLocal() >= 17) x.advanceMinutes((24 - x.clock.getHourLocal() + 10) * 60); });
+await goTo('x.m07.mia.root.position'); await press(); await advance();
+const jobSubject = await g(() => window.__lux98.m07.job?.subject);
+check('Fotoauftrag erhalten', !!jobSubject, jobSubject);
+const rj = await photo(jobSubject, jobSubject === 'kiosk' ? 10 : 30);
+const cash9 = (await st()).cash;
+await goTo('x.m07.mia.root.position'); await press(); await advance();
+check('Fotoauftrag bezahlt (+800 F)', (await st()).cash === cash9 + 800, rj);
 await page.keyboard.press('Tab'); await page.waitForTimeout(200);
 await page.click('#nb nav button[data-page="map"]'); await page.waitForTimeout(300);
 await g(() => { const x = window.__lux98; x['mapView'].scale = 0.28; x['mapView'].cx = -500; x['mapView'].cz = 800; x['drawNotebookMap'](); });

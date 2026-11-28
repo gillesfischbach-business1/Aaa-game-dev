@@ -15,6 +15,7 @@ export const KEYS = {
   rain: ['KeyR'],
   lights: ['KeyL'],
   radio: ['KeyC'],
+  foto: ['KeyF'],
   save: ['F5'],
   load: ['F9'],
   pause: ['Escape', 'KeyP'],
