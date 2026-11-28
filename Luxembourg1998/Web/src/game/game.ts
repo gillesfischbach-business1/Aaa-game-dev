@@ -14,6 +14,7 @@ import { Mission01, M01_ID } from './missions/m01';
 import { Mission02, M02_ID } from './missions/m02';
 import { Mission03, M03_ID } from './missions/m03';
 import { Mission05, M05_ID } from './missions/m05';
+import { Aldringen } from './aldringen';
 import { Mission06, M06_ID } from './missions/m06';
 import { Radio } from './radio';
 import { PhotoCamera, type Photo } from './camera';
@@ -87,6 +88,7 @@ export class Game {
   readonly m03: Mission03;
   readonly career: Career;
   readonly m05: Mission05;
+  readonly aldringen: Aldringen;
   readonly internet: Internet;
   interior: Interior | null = null;
   readonly m06: Mission06;
@@ -150,6 +152,7 @@ export class Game {
       playerName: 'kremer',
     });
     this.m05 = new Mission05(this);
+    this.aldringen = new Aldringen(this);
     this.m06 = new Mission06(this);
     this.m07 = new Mission07(this);
     this.m08 = new Mission08(this);
@@ -700,7 +703,7 @@ export class Game {
     if (!c) return;
     const p = this.activePos();
     const marks = this.controllers.flatMap((ctl) => ctl.mapMarks());
-    marks.push({ x: this.homeDoor.x, z: this.homeDoor.z, label: 'Heem', done: true });
+    marks.push({ x: this.homeDoor.x, z: this.homeDoor.z, label: 'Heem', done: true }, this.aldringen.mapMark());
     drawMap(c, this.city, { x: p.x, z: p.z, heading: this.veh ? this.veh.heading : this.heading }, marks, this.mapView);
   }
 
