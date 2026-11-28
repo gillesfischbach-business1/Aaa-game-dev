@@ -1,0 +1,21 @@
+name: LUX98 checks
+
+on:
+  push:
+    paths: ["Luxembourg1998/**", ".github/workflows/lux98-checks.yml"]
+  pull_request:
+    paths: ["Luxembourg1998/**", ".github/workflows/lux98-checks.yml"]
+
+jobs:
+  core-and-tools:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Luxembourg1998
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyproj pytest
+      - run: Scripts/run_checks.sh

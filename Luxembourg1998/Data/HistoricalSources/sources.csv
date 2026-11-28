@@ -1,0 +1,17 @@
+source_id,title,type,where_to_find,status,notes
+SRC_PENDING_PONT_ADOLPHE,Bau- und Renovierungsgeschichte Pont Adolphe,Archiv/Fachliteratur,Ponts et Chaussées Luxembourg; Photothèque de la Ville de Luxembourg,zu beschaffen,
+SRC_PENDING_PASSERELLE,Geschichte der Passerelle,Archiv,Ponts et Chaussées; Archives nationales,zu beschaffen,
+SRC_PENDING_PONT_GDC,Geschichte Pont Grande-Duchesse Charlotte,Archiv,Ponts et Chaussées,zu beschaffen,
+SRC_PENDING_PALAIS,Palais grand-ducal Baugeschichte,Fachliteratur,Cour grand-ducale; Photothèque,zu beschaffen,
+SRC_PENDING_CATHEDRALE,Kathedrale Baugeschichte,Fachliteratur,Erzbistum Luxemburg; Photothèque,zu beschaffen,
+SRC_PENDING_GARE,Bahnhof Luxemburg Baugeschichte,Archiv,CFL-Archiv; Photothèque,zu beschaffen,
+SRC_PENDING_FOUER,Schueberfouer 1998 – Termine und Fahrgeschaefte,Zeitung,Luxemburger Wort / Tageblatt August 1998 (eluxemburgensia.lu pruefen),zu beschaffen,
+SRC_PENDING_WIN98,Erscheinungsdatum Windows 98,Presse,Computerzeitschriften 1998,zu beschaffen,
+SRC_PENDING_EURO,Einfuehrung des Euro,Amtlich,Banque centrale du Luxembourg; EU-Verordnungen,zu beschaffen,
+SRC_PENDING_TRAM,Eroeffnung Luxtram und Standseilbahn,Amtlich/Presse,Luxtram S.A.; Presse Dezember 2017,zu beschaffen,
+SRC_PENDING_PHILHARMONIE,Eroeffnung Philharmonie,Presse,Philharmonie Luxembourg,zu beschaffen,
+SRC_PENDING_MUDAM,Eroeffnung Mudam,Presse,Mudam,zu beschaffen,
+SRC_PENDING_LIFT,Eroeffnung Panoramalift Pfaffenthal,Amtlich,Ville de Luxembourg,zu beschaffen,
+SRC_GEO_ORTHO_2001,Orthofotos 2001,Geodaten,data.public.lu / Administration du cadastre et de la topographie (ACT),zu beschaffen,Lizenz pruefen
+SRC_GEO_AERIAL_1994,Luftbilder 1994,Geodaten,ACT / geoportail.lu,zu beschaffen,Lizenz pruefen
+SRC_GEO_OSM,OpenStreetMap (nur heutige Geometrie),Geodaten,openstreetmap.org,verfuegbar,ODbL – Namensnennung noetig; nicht historisch

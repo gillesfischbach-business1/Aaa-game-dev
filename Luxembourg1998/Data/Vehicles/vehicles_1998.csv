@@ -1,0 +1,29 @@
+vehicle_id,reference_model,generation,market_intro_year,production_end_year,accuracy,verification_status,license_status,ingame_name,notes
+VEH_REF_GOLF2,Volkswagen Golf,II,1983,1992,C,unverified,Markenrecht ungeklaert -> fiktives Modell,Lëtz Kompakt '86 (Arbeitstitel),Haeufiger Gebrauchtwagen 1998
+VEH_REF_GOLF3,Volkswagen Golf,III,1991,1997,C,unverified,Markenrecht ungeklaert -> fiktives Modell,Lëtz Kompakt '93 (Arbeitstitel),
+VEH_REF_GOLF4,Volkswagen Golf,IV,1997,2003,C,unverified,Markenrecht ungeklaert -> fiktives Modell,Lëtz Kompakt '98 (Arbeitstitel),Marktstart 1997 pruefen
+VEH_REF_SANTANA83,Volkswagen Santana,B2 Limousine,1981,1985,C,unverified,Markenrecht ungeklaert -> eigenstaendige Hommage,Silber-Limousine '83 (Arbeitstitel),Sammlerfahrzeug Oldtimer-Strang; Rueckleuchten anhand Fotos pruefen
+VEH_REF_PASSAT_B3,Volkswagen Passat,B3,1988,1993,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_PASSAT_B4,Volkswagen Passat,B4,1993,1997,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_PASSAT_B5,Volkswagen Passat,B5,1996,2005,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_BMW_E30,BMW 3er,E30,1982,1994,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_BMW_E36,BMW 3er,E36,1990,2000,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_BMW_E46,BMW 3er,E46,1998,2006,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,Marktstart 1998: erst ab Erscheinungsmonat zeigen (Monat pruefen)
+VEH_REF_MB_W124,Mercedes-Benz,W124,1984,1997,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,Typisches Taxi 1998
+VEH_REF_MB_W202,Mercedes-Benz C-Klasse,W202,1993,2000,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_MB_W210,Mercedes-Benz E-Klasse,W210,1995,2002,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_ASTRA_F,Opel Astra,F,1991,1998,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_CORSA_B,Opel Corsa,B,1993,2000,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_PEUGEOT_205,Peugeot 205,,1983,1998,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_PEUGEOT_306,Peugeot 306,,1993,2002,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_PEUGEOT_406,Peugeot 406,,1995,2004,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_CLIO1,Renault Clio,I,1990,1998,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,Clio II ab 1998 (Monat pruefen)
+VEH_REF_MEGANE1,Renault Mégane,I,1995,2002,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_LAGUNA1,Renault Laguna,I,1993,2000,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_AUDI80_B4,Audi 80,B4,1991,1996,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_A4_B5,Audi A4,B5,1994,2001,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_ESCORT,Ford Escort,Mk V/VI,1990,2000,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_MONDEO1,Ford Mondeo,I,1993,1996,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_PUNTO1,Fiat Punto,I,1993,1999,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_IBIZA2,Seat Ibiza,II,1993,2002,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,
+VEH_REF_IMPREZA1,Subaru Impreza,I,1992,2000,C,unverified,Markenrecht ungeklaert -> fiktives Modell,,

@@ -1,0 +1,25 @@
+district_id,name,production_priority,character_notes
+D01,Beggen,4,Wohngebiet im Alzettetal Richtung Norden
+D02,Belair,3,Buergerliches Wohnviertel; Villen und Stadthaeuser
+D03,Bonnevoie-Nord / Verlorenkost,3,Arbeiter- und Wohnviertel nahe Bahnhof
+D04,Bonnevoie-Sud,3,Dichtes Wohnviertel; Alltagsleben
+D05,Cents,4,Ruhiges Wohngebiet auf der Hochebene
+D06,Cessange,5,Stadtrand; teils laendlich
+D07,Clausen,2,Talviertel; Brauereigeschichte; Nachtleben (Zustand 1998 pruefen)
+D08,Dommeldange,4,Talviertel im Norden; Bahnlinie
+D09,Eich,4,Talviertel; Industriegeschichte
+D10,Gare,1,Bahnhofsviertel; Vertical Slice
+D11,Gasperich,5,Stadtrand; Cloche-d'Or-Skyline existiert 1998 NICHT
+D12,Grund,2,Altstadt im Tal; Alzette; Festungsmauern
+D13,Hamm,5,Randgebiet; Friedhof und Felder
+D14,Hollerich,2,Gewerbe und Werkstaetten; Mission 02
+D15,Kirchberg,3,EU-Institutionen; viele Baustellen und freie Flaechen 1998
+D16,Limpertsberg,2,Glacis; Schueberfouer
+D17,Merl,4,Wohnviertel; Parc de Merl
+D18,Mühlenbach,5,Kleines Talviertel
+D19,Neudorf / Weimershof,4,Talviertel und Hochplateau im Osten
+D20,Pfaffenthal,2,Talviertel unter der Roten Bruecke; KEIN Panoramalift 1998
+D21,Pulvermühl,4,Kleines Talviertel; Viadukt
+D22,Rollingergrund / Belair-Nord,4,Wohngebiet im Tal
+D23,Ville Haute,1,Altstadt; Vertical Slice (Teilbereich)
+D24,Weimerskirch,4,Wohnviertel im Norden
