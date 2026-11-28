@@ -9,9 +9,10 @@
 4. Vorlagen-Fahrzeug aus dem UE-Vehicle-Template als Blueprint von `ALuxVehiclePawn` einrichten (Platzhalter `PH_`).
 
 ## B – hier sofort weitermachbar
-0. Browser-Fassung: Rueckmeldung des Nutzers einholen; Mission 03 „D'Nummer an der Zeitung“ (Zeitungskiosk,
-   Kleinanzeige); Arbeitsschichten in der Garage (Karriere Mechaniker); Touch-Steuerung; Innenraeume; CC0-Figuren.
-1. Dialogsystem im Kern (Knoten, Bedingungen, Sprachen lb/de/fr/en) + Tests.
-2. Notizbuch-Modell (Adressen, Nummern, Termine, Fotos) + Tests.
+0. Browser-Fassung: Rueckmeldung des Nutzers einholen (M01–M03, Arbeit, Touch sind fertig). Danach: Mission 05
+   „Déi verluer Diskett“ (Internetcafe, fiktives Offline-Internet) – M04 Schueberfouer bleibt gesperrt, bis die
+   Termine 1998 belegt sind; Innenraeume; bessere Figuren (CC0-Modelle); Radiosender.
+1. Dialogsystem im C++-Kern (Knoten, Bedingungen, Sprachen lb/de/fr/en) + Tests – siehe Sitzung 1, Teil 5.
+2. Notizbuch-Modell im C++-Kern (Adressen, Nummern, Termine, Hinweise) + Tests – siehe Sitzung 1, Teil 5.
 3. GIS-Pipeline fuer Unreal: `bake_web.py`-Ausgabe (bereits EPSG:2169-basiert) als Import fuer Unreal nutzen.
 4. Quellen beschaffen fuer die offenen Kernfragen in `HISTORICAL_RESEARCH.md` (Fouer-Termine 1998 zuerst).

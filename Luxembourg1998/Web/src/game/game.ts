@@ -122,7 +122,7 @@ export class Game {
     this.registerMissions();
 
     this.setupPhoneUI();
-    this.ui.bindNotebook((p) => { this.nbPage = p; this.renderNotebook(); });
+    this.ui.bindNotebook((p) => { this.nbPage = p; this.renderNotebook(); }, () => { if (this.ui.isOpen('notebook')) this.toggleNotebook(); });
     this.setupMapControls();
     window.addEventListener('resize', () => this.resize());
     this.resize();
@@ -547,9 +547,9 @@ export class Game {
     });
     let drag: { x: number; y: number } | null = null;
     const body = this.ui.notebookBody();
-    body.addEventListener('mousedown', (e) => { if ((e.target as HTMLElement).id === 'mapcanvas') drag = { x: e.clientX, y: e.clientY }; });
-    window.addEventListener('mouseup', () => { drag = null; });
-    window.addEventListener('mousemove', (e) => {
+    body.addEventListener('pointerdown', (e) => { if ((e.target as HTMLElement).id === 'mapcanvas') { drag = { x: e.clientX, y: e.clientY }; try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch { /* egal */ } } });
+    window.addEventListener('pointerup', () => { drag = null; });
+    window.addEventListener('pointermove', (e) => {
       if (!drag) return;
       this.mapView.cx -= (e.clientX - drag.x) / this.mapView.scale;
       this.mapView.cz -= (e.clientY - drag.y) / this.mapView.scale;

@@ -1,5 +1,6 @@
 import worldData from './data/world.json';
 import { Game, type Quality } from './game/game';
+import { isTouchDevice, setupTouch } from './game/touch';
 import type { Lang } from './game/story';
 import type { WorldData } from './world/types';
 
@@ -43,14 +44,21 @@ function boot(): void {
     game.ui.lang = langSel.value as Lang;
     game.navHelp = $<HTMLInputElement>('optNav').checked;
     $('start').classList.add('hidden');
-    game.input.requestLock();
+    if (isTouchDevice()) {
+      setupTouch(game.input, (a) => {
+        if (a === 'pause') { game.setPaused(true); return; }
+        if (a === 'notebook' && game.ui.isOpen('notebook')) { game.toggleNotebook(); return; }
+        if (a === 'interact' && game.ui.inDialogue) { game.ui.advanceDialogue(); return; }
+        game.input.press(a);
+      });
+    } else game.input.requestLock();
   };
   btnNew.onclick = () => { begin(); game.newGame(); };
   btnCont.onclick = () => { begin(); if (!game.load()) game.newGame(); };
-  $('btnResume').onclick = () => { game.setPaused(false); game.input.requestLock(); };
+  $('btnResume').onclick = () => { game.setPaused(false); if (!isTouchDevice()) game.input.requestLock(); };
   $('btnSave').onclick = () => game.save();
   $('btnLoad').onclick = () => { game.load(); game.setPaused(false); };
-  $('game').addEventListener('click', () => { if (game.running && !game.ui.inDialogue) game.input.requestLock(); });
+  $('game').addEventListener('click', () => { if (game.running && !game.ui.inDialogue && !isTouchDevice()) game.input.requestLock(); });
   if (params.has('autostart')) { begin(); game.newGame(); }
 }
 

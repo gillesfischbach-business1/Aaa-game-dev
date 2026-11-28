@@ -54,3 +54,18 @@ der engine-unabhaengige Kern und die Werkzeuge.
 
 ### Nicht geprueft
 - Echte Fahrt der Pylonen-Route mit Tastatur (im Test teleportiert, wegen ~5 FPS im Software-Rendering).
+
+## 2026-11-28 – Sitzung 1, Teil 4 (autonom, Nutzer schlaeft): M03, Arbeit, Touch
+
+### Tatsaechlich geprueft
+- Mission 03 „D'Nummer an der Zeitung“: Kiosk, fiktive Zeitung mit Kleinanzeigen, Anruf nur 18–20 Uhr
+  (Telefonzelle oder von zu Hause), Treffen mit Zeitfenster, verpasst -> neuer Termin per Band, drei Tueren.
+- Zuhause-Menue: Anrufbeantworter, Telefon (Telefonrechnung), Schlafen bis 8 Uhr.
+- Karriere Mechaniker: Schichten Mo–Fr, drei Auftragsarten, Lohn aufs Konto, Abzug bei Verspaetung/Fehlern.
+- Touch-Steuerung (Joystick, Wischen, Knoepfe), Handy-Layout, Ebenen-Reihenfolge der Oberflaeche.
+- Browser-Test Desktop: 40 Pruefungen gruen. Handy-Test (390x844, Touch): 8 Pruefungen gruen. 0 Konsolenfehler.
+- Gefundene und behobene Fehler: Kleinanzeigen-Nummer fehlte im Telefonnetz; „Zou“-Knopf gab Steuerung nicht frei;
+  Touch-Flaeche verdeckte Hinweis und Notizbuch.
+
+### Nicht geprueft
+- Echte Handys/Tablets (nur nachgebildet); Bildrate auf echten Geraeten.

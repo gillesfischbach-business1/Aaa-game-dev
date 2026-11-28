@@ -28,6 +28,9 @@ export class Input {
   mouseDY = 0;
   locked = false;
   enabled = true;
+  // Virtuelle Steuerung (Touch): Joystick-Achsen und gehaltene Knoepfe
+  touchAxis = { x: 0, y: 0 };
+  touchHeld = new Set<Action>();
 
   constructor(private canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
@@ -61,7 +64,7 @@ export class Input {
 
   held(action: Action): boolean {
     if (!this.enabled) return false;
-    return KEYS[action].some((c) => this.down.has(c)) || this.padHeld(action);
+    return KEYS[action].some((c) => this.down.has(c)) || this.touchHeld.has(action) || this.padHeld(action);
   }
 
   // true genau einmal pro Tastendruck
@@ -71,7 +74,14 @@ export class Input {
     return had;
   }
 
+  /** Einmaliger Tastendruck von aussen (Touch-Knopf, Klick auf den Hinweis) */
+  press(action: Action): void { if (this.enabled) this.pressed.add(action); }
+
   axis(neg: Action, pos: Action): number {
+    if (this.enabled) {
+      if (neg === 'left' && pos === 'right' && Math.abs(this.touchAxis.x) > 0.12) return this.touchAxis.x;
+      if (neg === 'back' && pos === 'forward' && Math.abs(this.touchAxis.y) > 0.12) return this.touchAxis.y;
+    }
     const pad = this.padAxis(neg, pos);
     if (Math.abs(pad) > 0.15) return pad;
     return (this.held(pos) ? 1 : 0) - (this.held(neg) ? 1 : 0);

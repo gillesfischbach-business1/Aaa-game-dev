@@ -154,10 +154,10 @@ export class UI {
   }
 
   // ---- Notizbuch ----
-  bindNotebook(render: (page: string) => void): void {
+  bindNotebook(render: (page: string) => void, close: () => void): void {
     $('nb').querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => {
       const btn = b as HTMLButtonElement;
-      if (btn.dataset.close) { this.show('notebook', false); return; }
+      if (btn.dataset.close) { close(); return; }
       $('nb').querySelectorAll('nav button').forEach((x) => x.classList.remove('on'));
       btn.classList.add('on');
       render(btn.dataset.page!);
